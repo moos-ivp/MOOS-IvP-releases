@@ -1,0 +1,28 @@
+language: cpp
+
+os:
+  - linux
+  - osx
+
+compiler:
+  - gcc
+
+addons:
+  apt:
+    packages:
+    - cmake
+    - subversion
+    - g++
+    - xterm
+    - libfltk1.3-dev
+    - freeglut3-dev
+    - libpng12-dev
+    - libjpeg-dev
+    - libxft-dev
+    - libxinerama-dev
+    - libtiff4-dev
+    - tree
+
+script:
+  - ./build-moos.sh -j 2
+  - ./build-ivp.sh -m -f -j 2
