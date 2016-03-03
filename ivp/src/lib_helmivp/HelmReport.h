@@ -37,6 +37,9 @@ public:
   void addMsg(const std::string& str) 
     {m_messages.push_back(str);};
   
+  void setHaltMsg(const std::string& str) 
+    {m_halt_message = str;};
+  
   void addActiveBHV(const std::string& descriptor, 
 		    double time, double pwt, int pcs, double cpu,
 		    const std::string& update_summary);
@@ -57,6 +60,8 @@ public:
   std::vector<std::string> getMsgs() const  
     {return(m_messages);};
   
+  std::string getHaltMsg() const {return(m_halt_message);};
+  
   std::string getRunningBehaviors();
   std::string getActiveBehaviors();
 
@@ -66,8 +71,9 @@ public:
   bool   hasDecision(const std::string &var);
   void   delDecision(const std::string &var);
 
-  int    getIteration() const      {return(m_iteration);};
-  int    getOFNUM() const          {return(m_ofnum);};
+  unsigned int getIteration() const {return(m_iteration);};
+  unsigned int getOFNUM() const     {return(m_ofnum);};
+
   double getCreateTime() const     {return(m_create_time);};
   double getSolveTime() const      {return(m_solve_time);};
   double getLoopTime() const       {return(m_loop_time);};
@@ -77,6 +83,7 @@ public:
 
 protected:
   std::vector<std::string>  m_messages;
+  std::string               m_halt_message;
   std::string               m_running_bhvs;
   std::string               m_active_bhvs;
   std::string               m_all_bhvs;
@@ -84,10 +91,10 @@ protected:
   std::string               m_idle_bhvs;
   std::string               m_modes;
 
-  int                       m_warning_count;
+  unsigned int              m_warning_count;
   double                    m_time_utc;
-  int                       m_iteration;
-  int                       m_ofnum;
+  unsigned int              m_iteration;
+  unsigned int              m_ofnum;
   double                    m_create_time;
   double                    m_solve_time;
   double                    m_loop_time;

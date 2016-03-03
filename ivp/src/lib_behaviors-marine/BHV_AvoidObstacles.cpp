@@ -205,7 +205,6 @@ void BHV_AvoidObstacles::handleVisualHint(string hint)
 {
   string param = tolower(stripBlankEnds(biteString(hint, '=')));
   string value = stripBlankEnds(hint);
-  double dval  = atof(value.c_str());
 
   if((param == "obstacle_edge_color") && isColor(value))
     m_hint_obst_edge_color = value;
@@ -223,8 +222,8 @@ void BHV_AvoidObstacles::postViewablePolygons()
   
   unsigned int i;
   for(i=0; i<m_aof_avoid->size(); i++) {
-    string spec_orig = m_aof_avoid->getObstacleSpec(i,false);
-    string spec_buff = m_aof_avoid->getObstacleSpec(i,true);
+    string spec_orig = m_aof_avoid->getObstacleSpec(i,false,true);
+    string spec_buff = m_aof_avoid->getObstacleSpec(i,true, true);
 
     double range = m_aof_avoid->rangeToObstacle(i);
     if(range > m_activation_dist) {
@@ -239,6 +238,25 @@ void BHV_AvoidObstacles::postViewablePolygons()
       postMessage("VIEW_POLYGON", spec_orig, "orig");
       postMessage("VIEW_POLYGON", spec_buff, "buff");
     }
+  }
+}
+
+
+//-----------------------------------------------------------
+// Procedure: postErasablePolygons
+
+void BHV_AvoidObstacles::postErasablePolygons()
+{
+  if(!m_aof_avoid)
+    return;
+  
+  unsigned int i, vsize = m_aof_avoid->size();
+  for(i=0; i<vsize; i++) {
+    string spec_orig = m_aof_avoid->getObstacleSpec(i, false, false);
+    string spec_buff = m_aof_avoid->getObstacleSpec(i, true, false);
+
+    postMessage("VIEW_POLYGON", spec_orig, "orig");
+    postMessage("VIEW_POLYGON", spec_buff, "buff");
   }
 }
 

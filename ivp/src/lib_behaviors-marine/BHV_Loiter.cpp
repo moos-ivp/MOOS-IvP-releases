@@ -5,7 +5,7 @@
 /*    DATE: July 26th 2005 In Elba w/ M.Grund, P.Newman          */
 /*                                                               */
 /* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
+/* modify it under the termxs of the GNU General Public License   */
 /* as published by the Free Software Foundation; either version  */
 /* 2 of the License, or (at your option) any later version.      */
 /*                                                               */
@@ -85,10 +85,10 @@ BHV_Loiter::BHV_Loiter(IvPDomain gdomain) :
 //-----------------------------------------------------------
 // Procedure: setParam
 
-bool BHV_Loiter::setParam(string g_param, string g_val) 
+bool BHV_Loiter::setParam(string param, string value) 
 {
-  if(g_param == "polygon") {
-    XYPolygon new_poly = string2Poly(g_val);
+  if(param == "polygon") {
+    XYPolygon new_poly = string2Poly(value);
     if(!new_poly.is_convex())  // Should be convex - false otherwise
       return(false);
     if(new_poly.is_clockwise() != m_clockwise)
@@ -99,109 +99,119 @@ bool BHV_Loiter::setParam(string g_param, string g_val)
     m_acquire_mode  = true;
     return(true);
   }  
-  else if(g_param == "center_assign") {
-    m_center_assign  = g_val;
+  else if(param == "center_assign") {
+    m_center_assign  = value;
     m_center_pending = true;
     return(true);
   }  
-  else if(g_param == "xcenter_assign") {
-    m_center_assign  += (",x=" + g_val);
+  else if(param == "xcenter_assign") {
+    m_center_assign  += (",x=" + value);
     m_center_pending = true;
     return(true);
   }  
-  else if(g_param == "ycenter_assign") {
-    m_center_assign  += (",y=" + g_val);
+  else if(param == "ycenter_assign") {
+    m_center_assign  += (",y=" + value);
     m_center_pending = true;
     return(true);
   }  
-  else if(g_param == "center_activate") {
-    g_val = tolower(g_val);
-    if((g_val!="true")&&(g_val!="false"))
+  else if(param == "center_activate") {
+    value = tolower(value);
+    if((value!="true")&&(value!="false"))
       return(false);
-    m_center_activate = (g_val == "true");
+    m_center_activate = (value == "true");
     return(true);
   }  
-  else if(g_param == "clockwise") {
-    g_val = tolower(g_val);
-    if((g_val!="true")&&(g_val!="false"))
+  else if(param == "clockwise") {
+    bool ok = setBooleanOnString(m_clockwise, value);
+    if(!ok)
       return(false);
-    m_clockwise = (g_val == "true");
     m_loiter_engine.setClockwise(m_clockwise);
     m_waypoint_engine.setSegList(m_loiter_engine.getPolygon());
     return(true);
   }  
-  else if(g_param == "speed") {
-    double dval = atof(g_val.c_str());
-    if((dval < 0) || (!isNumber(g_val)))
+  else if(param == "speed") {
+    double dval = atof(value.c_str());
+    if((dval < 0) || (!isNumber(value)))
       return(false);
     m_desired_speed = dval;
     return(true);
   }
-  else if(g_param == "radius") {
-    double dval = atof(g_val.c_str());
-    if((dval < 0) || (!isNumber(g_val)))
+  else if((param == "radius") || (param == "capture_radius")) {
+    double dval = atof(value.c_str());
+    if((dval < 0) || (!isNumber(value)))
       return(false);
     m_waypoint_engine.setCaptureRadius(dval);
     return(true);
   }
-  else if(g_param == "acquire_dist") {
-    double dval = atof(g_val.c_str());
-    if((dval < 0) || (!isNumber(g_val)))
+  else if((param == "acquire_dist") || (param == "acquire_distance")) {
+    double dval = atof(value.c_str());
+    if((dval < 0) || (!isNumber(value)))
       return(false);
     m_acquire_dist = dval;
     return(true);
   }
-  else if(g_param == "nm_radius")  {
-    double dval = atof(g_val.c_str());
+  else if((param == "nm_radius") || (param == "slip_radius")) {
+    double dval = atof(value.c_str());
     // val=0 is ok, interpreted as inactive
-    if((dval < 0) || (!isNumber(g_val)))
+    if((dval < 0) || (!isNumber(value)))
       return(false);
     m_waypoint_engine.setNonmonotonicRadius(dval);
     return(true);
   }
-  else if(g_param == "post_suffix")  {
-    if(strContainsWhite(g_val) || (g_val == ""))
+  else if(param == "post_suffix")  {
+    if(strContainsWhite(value) || (value == ""))
       return(false);
-    m_var_suffix = "_" + toupper(g_val);
+    m_var_suffix = "_" + toupper(value);
     return(true);
   }
-  else if(g_param == "var_report")  {
-    if(strContainsWhite(g_val) || (g_val == ""))
+  else if(param == "var_report")  {
+    if(strContainsWhite(value) || (value == ""))
       return(false);
-    m_var_report = g_val;
+    m_var_report = value;
     return(true);
   }
-  else if(g_param == "var_acquire")  {
-    if(strContainsWhite(g_val) || (g_val == ""))
+  else if(param == "var_acquire")  {
+    if(strContainsWhite(value) || (value == ""))
       return(false);
-    m_var_acquire = g_val;
+    m_var_acquire = value;
     return(true);
   }
-  else if(g_param == "var_dist2poly")  {
-    if(strContainsWhite(g_val) || (g_val == ""))
+  else if(param == "var_dist2poly")  {
+    if(strContainsWhite(value) || (value == ""))
       return(false);
-    m_var_dist2poly = g_val;
+    m_var_dist2poly = value;
     return(true);
   }
-  else if(g_param == "var_index")  {
-    if(strContainsWhite(g_val) || (g_val == ""))
+  else if(param == "var_index")  {
+    if(strContainsWhite(value) || (value == ""))
       return(false);
-    m_var_index = g_val;
+    m_var_index = value;
     return(true);
   }
-  else if(g_param == "visual_hints")  {
-    vector<string> svector = parseStringQ(g_val, ',');
+  else if(param == "visual_hints")  {
+    vector<string> svector = parseStringQ(value, ',');
     unsigned int i, vsize = svector.size();
     for(i=0; i<vsize; i++) 
       handleVisualHint(svector[i]);
     return(true);
   }
-  else if(g_param == "spiral_factor")  {
-    m_loiter_engine.setSpiralFactor(atof(g_val.c_str()));
+  else if(param == "spiral_factor")  {
+    m_loiter_engine.setSpiralFactor(atof(value.c_str()));
     return(true);
   }
   return(false);
 }
+
+//-----------------------------------------------------------
+// Procedure: onCompleteState
+//      Note: Invoked once by helm prior to behavior deletion.
+
+void BHV_Loiter::onCompleteState()
+{
+  postErasablePoint();
+  postErasablePolygon();
+}
+
 
 //-----------------------------------------------------------
 // Procedure: onIdleState
@@ -338,7 +348,7 @@ void BHV_Loiter::updateCenter()
     unsigned int i, vsize = svector.size();
     for(i=0; i<vsize; i++) {
       vector<string> ivector = parseString(svector[i], '=');
-      unsigned int j, isize = ivector.size();
+      unsigned int isize = ivector.size();
       if(isize == 2) {
 	string left  = stripBlankEnds(ivector[0]);
 	string right = stripBlankEnds(ivector[1]);
@@ -409,13 +419,13 @@ IvPFunction *BHV_Loiter::buildIPF(const string& method)
 
 void BHV_Loiter::postStatusReports()
 {
-  int nonmono_hits = m_waypoint_engine.getNonmonoHits();
-  int capture_hits = m_waypoint_engine.getCaptureHits();
+  unsigned int nonmono_hits = m_waypoint_engine.getNonmonoHits();
+  unsigned int capture_hits = m_waypoint_engine.getCaptureHits();
   int curr_index   = m_waypoint_engine.getCurrIndex();
 
   string loiter_report = "index=" + intToString(curr_index);
-  loiter_report += ",capture_hits=" + intToString(capture_hits);
-  loiter_report += ",nonmono_hits=" + intToString(nonmono_hits);
+  loiter_report += ",capture_hits=" + uintToString(capture_hits);
+  loiter_report += ",nonmono_hits=" + uintToString(nonmono_hits);
   loiter_report += ",acquire_mode=" + boolToString(m_acquire_mode);
 
   // Default for m_var_dist2poly = LOITER_REPORT
@@ -447,14 +457,18 @@ void BHV_Loiter::postStatusReports()
 void BHV_Loiter::postViewablePolygon()
 {
   XYSegList seglist = m_waypoint_engine.getSegList();
-  string bhv_tag = toupper(getDescriptor());
-  bhv_tag = findReplace(bhv_tag, "(d)", "");
-  bhv_tag = m_us_name + "-" + bhv_tag;
-  seglist.set_label(bhv_tag);
   seglist.set_vertex_color(m_hint_vertex_color);
   seglist.set_edge_color(m_hint_edge_color);
   seglist.set_edge_size(m_hint_edge_size);
   seglist.set_vertex_size(m_hint_vertex_size);
+  // Handle the label setting
+  string bhv_tag = tolower(getDescriptor());
+  bhv_tag = m_us_name + "_" + bhv_tag;
+  seglist.set_label(bhv_tag);
+  if(m_hint_poly_label == "")
+    seglist.set_label(bhv_tag);
+  else
+    seglist.set_label(m_hint_poly_label);
 
   string poly_spec = seglist.get_spec();
   postMessage("VIEW_POLYGON", poly_spec);
@@ -468,9 +482,9 @@ void BHV_Loiter::postViewablePolygon()
 void BHV_Loiter::postErasablePolygon()
 {
   XYSegList seglist = m_waypoint_engine.getSegList();
-  string bhv_tag = toupper(getDescriptor());
+  string bhv_tag = tolower(getDescriptor());
   bhv_tag = findReplace(bhv_tag, "(d)", "");
-  bhv_tag = m_us_name + "-" + bhv_tag;
+  bhv_tag = m_us_name + "_" + bhv_tag;
   seglist.set_label(bhv_tag);
   seglist.set_active(false);
 
@@ -483,10 +497,11 @@ void BHV_Loiter::postErasablePolygon()
 
 void BHV_Loiter::postViewablePoint()
 {
-  string bhv_tag = toupper(getDescriptor());
+  string bhv_tag = tolower(getDescriptor());
 
   XYPoint view_point(m_ptx, m_pty);
-  view_point.set_label(m_us_name + "'s next waypoint");
+  //view_point.set_label(m_us_name + "'s next_waypoint");
+  view_point.set_label(m_us_name + "_waypoint");
   view_point.set_type("waypoint");
   view_point.set_source(m_us_name + "_" + bhv_tag);
   view_point.set_label_color(m_hint_nextpt_lcolor);
@@ -500,10 +515,11 @@ void BHV_Loiter::postViewablePoint()
 
 void BHV_Loiter::postErasablePoint()
 {
-  string bhv_tag = toupper(getDescriptor());
+  string bhv_tag = tolower(getDescriptor());
 
   XYPoint view_point(m_ptx, m_pty);
-  view_point.set_label(m_us_name + "'s next waypoint");
+  //view_point.set_label(m_us_name + "'s next waypoint");
+  view_point.set_label(m_us_name + "_waypoint");
   view_point.set_type("waypoint");
   view_point.set_source(m_us_name + "_" + bhv_tag);
   view_point.set_active(false);
@@ -531,4 +547,6 @@ void BHV_Loiter::handleVisualHint(string hint)
     m_hint_edge_size = atof(value.c_str());
   else if((param == "vertex_size") && isNumber(value))
     m_hint_vertex_size = atof(value.c_str());
+  else if(param == "label")
+    m_hint_poly_label = value;
 }

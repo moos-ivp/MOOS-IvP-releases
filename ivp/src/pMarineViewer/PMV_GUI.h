@@ -49,22 +49,23 @@ public:
   void         pushPending(std::string, std::string);
   unsigned int getPendingSize() {return(m_pending_vars.size());};
   bool         addScopeVariable(std::string);
-  void         addContext(std::string side, std::string context);
+  void         addMousePoke(std::string side, std::string key, 
+			    std::string vardata_pair);
   void         addReferenceVehicle(std::string vname);
 
  private:
-  inline void cb_MOOS_Button_i(int);
-  static void cb_MOOS_Button(Fl_Widget*, int);
-  inline void cb_DoAction_i(int);
-  static void cb_DoAction(Fl_Widget*, int);
-  inline void cb_Scope_i(int);
-  static void cb_Scope(Fl_Widget*, int);
-  inline void cb_LeftContext_i(int);
-  static void cb_LeftContext(Fl_Widget*, int);
-  inline void cb_RightContext_i(int);
-  static void cb_RightContext(Fl_Widget*, int);
-  inline void cb_Reference_i(int);
-  static void cb_Reference(Fl_Widget*, int);
+  inline void cb_MOOS_Button_i(unsigned int);
+  static void cb_MOOS_Button(Fl_Widget*, unsigned int);
+  inline void cb_DoAction_i(unsigned int);
+  static void cb_DoAction(Fl_Widget*, unsigned int);
+  inline void cb_Scope_i(unsigned int);
+  static void cb_Scope(Fl_Widget*, unsigned int);
+  inline void cb_LeftContext_i(unsigned int);
+  static void cb_LeftContext(Fl_Widget*, unsigned int);
+  inline void cb_RightContext_i(unsigned int);
+  static void cb_RightContext(Fl_Widget*, unsigned int);
+  inline void cb_Reference_i(unsigned int);
+  static void cb_Reference(Fl_Widget*, unsigned int);
 
 protected:
   Fl_Output  *v_nam;
@@ -91,18 +92,21 @@ protected:
   MY_Button  *user_button_3;
   MY_Button  *user_button_4;
 
+  std::vector<std::string> m_scope_vars;
+  
+  // Poking via on-screen buttons
   std::vector<std::string> m_button_keys;
   std::vector<std::string> m_button_vars;
   std::vector<std::string> m_button_vals;
 
+  // Poking via pull-down menu selections
   std::vector<std::string> m_action_vars;
   std::vector<std::string> m_action_vals;
   std::vector<std::string> m_action_keys;
 
-  std::vector<std::string> m_scope_vars;
-
-  std::vector<std::string> m_left_context;
-  std::vector<std::string> m_right_context;
+  // Poking via mouse clicking
+  std::vector<std::string> m_left_mouse_keys;
+  std::vector<std::string> m_right_mouse_keys;
 
   std::vector<std::string> m_reference_tags;
 

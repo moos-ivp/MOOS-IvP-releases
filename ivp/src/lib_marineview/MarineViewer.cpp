@@ -35,6 +35,7 @@
 #include <math.h>
 #include "MarineViewer.h"
 #include "MBUtils.h"
+#include "GeomUtils.h"
 #include "FColorMap.h"
 #include "ColorParse.h"
 #include "Shape_Ship.h"
@@ -49,6 +50,7 @@
 #include "Shape_Square.h"
 #include "Shape_Kelp.h"
 #include "XYFormatUtilsPoly.h"
+#include "BearingLine.h"
 
 using namespace std;
 
@@ -520,6 +522,7 @@ void MarineViewer::drawGLPoly(double *points, int numPoints,
 
 void MarineViewer::drawCommonVehicle(const string& vname, 
 				     const ObjectPose& opose, 
+				     const BearingLine& bng_line, 
 				     const ColorPack& body_color,
 				     const ColorPack& vname_color,
 				     const string& vehibody, 
@@ -530,12 +533,14 @@ void MarineViewer::drawCommonVehicle(const string& vname,
   glLoadIdentity();
   glOrtho(0, w(), 0, h(), -1 ,1);
 
+#if 0
   double xpos = 0;
   double ypos = 0;
   if(opose.isLatLonSet()) {
     double dlat = opose.getLat();
     double dlon = opose.getLon();
   }
+#endif
 
   // Determine position in terms of image percentage
   double vehicle_ix = meters2img('x', opose.getX());
@@ -566,7 +571,7 @@ void MarineViewer::drawCommonVehicle(const string& vname,
   // Then when we know what kind of vehicle we're drawing, adjust the 
   // factor accordingly.
   double factor = m_back_img.get_pix_per_mtr();
-
+  
   if(vehibody == "kayak") {
     if(shape_length > 0)
       factor *= (shape_length / g_kayakLength);
@@ -641,6 +646,30 @@ void MarineViewer::drawCommonVehicle(const string& vname,
     buff[slen] = '\0';
     gl_draw(buff, slen);
     delete [] buff;
+  }
+
+  if(bng_line.isValid() && m_vehi_settings.isViewableBearingLines()) {
+    double pix_per_mtr = m_back_img.get_pix_per_mtr();
+    double bearing = bng_line.getBearing();
+    double range   = bng_line.getRange() * pix_per_mtr;
+    double lwidth  = bng_line.getVectorWidth();
+    bool absolute  = bng_line.isBearingAbsolute();
+    string bcolor  = bng_line.getVectorColor();
+    ColorPack vpack(bcolor);
+
+    double bx, by;
+    projectPoint(bearing, range, 0, 0, bx, by);
+
+    if(absolute)
+      glRotatef(opose.getTheta(),0,0,1);  
+
+    glLineWidth(lwidth);
+    glBegin(GL_LINE_STRIP);
+    glColor3f(vpack.red(), vpack.grn(), vpack.blu());
+    glVertex2f(0, 0);
+    glVertex2f(bx, by);
+    glEnd();
+    glLineWidth(1);
   }
 
   glPopMatrix();
@@ -846,12 +875,12 @@ void MarineViewer::drawOpArea()
   unsigned int asize = m_op_area.size();
 
   double line_shade  = m_op_area.getLineShade();
-  double label_shade = m_op_area.getLabelShade();
+  //double label_shade = m_op_area.getLabelShade();
 
   while(index < asize) {
     string group  = m_op_area.getGroup(index);
     double lwidth = m_op_area.getLWidth(index);
-    bool   dashed = m_op_area.getDashed(index);
+    //bool   dashed = m_op_area.getDashed(index);
     bool   looped = m_op_area.getLooped(index);
 
     ColorPack lcolor = m_op_area.getLColor(index);
@@ -1113,7 +1142,7 @@ void MarineViewer::drawPolygon(const XYPolygon& poly,
   //-------------------------------- perhaps draw poly label
   if(m_geo_settings.viewable("polygon_viewable_labels")) {
     double cx = poly.get_avg_x() * m_back_img.get_pix_per_mtr();
-    double cy = poly.get_avg_y() * m_back_img.get_pix_per_mtr();
+    //double cy = poly.get_avg_y() * m_back_img.get_pix_per_mtr();
     double my = poly.get_max_y() * m_back_img.get_pix_per_mtr();
     glTranslatef(cx, my, 0);
     
@@ -1223,7 +1252,7 @@ void MarineViewer::drawSegLists(const vector<XYSegList>& segls)
   
   double lwid = m_geo_settings.geosize("seglist_edge_width", 1);
   double vert = m_geo_settings.geosize("seglist_vertex_size", 2);
-  
+ 
   for(i=0; i<vsize; i++) {
     XYSegList segl = segls[i];
     if(segl.active()) {

@@ -26,8 +26,8 @@ TARGET_LINK_LIBRARIES(pHelmIvP
   MOOSGen
   helmivp
   behaviors-marine
-  bhvutil	
   behaviors
+  bhvutil	
   ivpbuild 
   ivpcore 
   geometry
@@ -35,4 +35,9 @@ TARGET_LINK_LIBRARIES(pHelmIvP
   logic 
   genutil
   ${SYSTEM_LIBS})
+
+# Install Targets
+INSTALL(TARGETS pHelmIvP
+  RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
 

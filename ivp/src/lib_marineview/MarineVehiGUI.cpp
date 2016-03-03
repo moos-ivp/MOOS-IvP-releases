@@ -20,6 +20,7 @@
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
+#include <iostream>
 #include "MarineVehiGUI.h"
 #include "MBUtils.h"
 
@@ -60,6 +61,9 @@ MarineVehiGUI::MarineVehiGUI(int g_w, int g_h, const char *g_l)
   mbar->add("Vehicles/Trails/trails_length = longer", ')', (Fl_Callback*)MarineVehiGUI::cb_AltTrailLength, (void*)+1, 0);
   mbar->add("Vehicles/Trails/trails_length = shorter", '(', (Fl_Callback*)MarineVehiGUI::cb_AltTrailLength, (void*)-1, 0);
 
+  mbar->add("Vehicles/BearingLines/bearing_lines_viewable = true",    0, (Fl_Callback*)MarineVehiGUI::cb_AltBearingLines, (void*)1, 0);
+  mbar->add("Vehicles/BearingLines/bearing_lines_viewable = false",   0, (Fl_Callback*)MarineVehiGUI::cb_AltBearingLines, (void*)0, 0);
+
   mbar->add("Vehicles/ActiveColor/active_vcolor=red", 0, (Fl_Callback*)MarineVehiGUI::cb_MVG_SetGeoAttr, (void*)700, 0);
   mbar->add("Vehicles/ActiveColor/active_vcolor=crimson", 0, (Fl_Callback*)MarineVehiGUI::cb_MVG_SetGeoAttr, (void*)701, 0);
   mbar->add("Vehicles/ActiveColor/active_vcolor=white", 0, (Fl_Callback*)MarineVehiGUI::cb_MVG_SetGeoAttr, (void*)702, 0);
@@ -93,6 +97,20 @@ inline void MarineVehiGUI::cb_CycleFocus_i() {
 
 void MarineVehiGUI::cb_CycleFocus(Fl_Widget* o) {
   ((MarineVehiGUI*)(o->parent()->user_data()))->cb_CycleFocus_i();
+}
+
+//----------------------------------------- AltBearingLines
+inline void MarineVehiGUI::cb_AltBearingLines_i(int v) {
+  if(v==1)
+    cmviewer->setParam("bearing_lines_viewable", "true");
+  else if(v==0)
+    cmviewer->setParam("bearing_lines_viewable", "false");
+  else
+    cmviewer->setParam("bearing_lines_viewable", "toggle");
+  cmviewer->redraw();
+}
+void MarineVehiGUI::cb_AltBearingLines(Fl_Widget* o, int v) {
+  ((MarineVehiGUI*)(o->parent()->user_data()))->cb_AltBearingLines_i(v);
 }
 
 //----------------------------------------- AltTrails
@@ -167,6 +185,7 @@ void MarineVehiGUI::cb_AltTrailSize(Fl_Widget* o, int v) {
 
 //----------------------------------------- ToggleTrailColor
 inline void MarineVehiGUI::cb_ToggleTrailColor_i() {
+  cout << "In ToggleTrailColor()" << endl;
   m_trail_color_ix = (m_trail_color_ix+1) % 3;
   if(m_trail_color_ix == 0)
     cmviewer->setParam("trails_color", "white");

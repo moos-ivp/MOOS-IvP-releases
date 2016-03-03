@@ -5,27 +5,29 @@
 
 # Set System Specific Libraries
 if (${WIN32})
-  SET(SYSTEM_LIBS
-    wsock32)
+  SET(SYSTEM_LIBS wsock32)
 else (${WIN32})
-  SET(SYSTEM_LIBS
-    m)
+  SET(SYSTEM_LIBS m)
 endif (${WIN32})
 
-SET(SRC
-   PMV_GUI.cpp
-   PMV_MOOSApp.cpp
-   PMV_Viewer.cpp
-   main_mviewer.cpp
-)
+FILE(GLOB SRC *.cpp)
 
-IF (${APPLE})
-      ADD_EXECUTABLE(pMarineViewer MACOSX_BUNDLE ${SRC})
+If (${APPLE})
+      # If you want to create an Apple BUNDLE, do it here
+      ADD_EXECUTABLE(pMarineViewer ${SRC})
+      # Install Targets
+      INSTALL(TARGETS pMarineViewer
+        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+      )
 ELSE (${APPLE})
       ADD_EXECUTABLE(pMarineViewer ${SRC})
+      # Install Targets
+      INSTALL(TARGETS pMarineViewer
+         RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+      )
 ENDIF (${APPLE})
       
-TARGET_LINK_LIBRARIES(pMarineViewer         
+Target_LINK_LIBRARIES(pMarineViewer         
    MOOS
    MOOSGen
    marineview
@@ -33,8 +35,7 @@ TARGET_LINK_LIBRARIES(pMarineViewer
    genutil
    geometry
    mbutil
-   
-   # Standard libraries used by this project's FLTK apps...
+      # Standard libraries used by this project's FLTK apps...
    fltk 
    fltk_gl 
    tiff)
@@ -42,6 +43,9 @@ TARGET_LINK_LIBRARIES(pMarineViewer
 # http://developer.apple.com/qa/qa2007/qa1567.html
 IF (${APPLE})
       SET_TARGET_PROPERTIES(pMarineViewer PROPERTIES	  
-            LINK_FLAGS "-Wl,-dylib_file,/System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGL.dylib:/System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGL.dylib"
+         LINK_FLAGS "-Wl,-dylib_file,/System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGL.dylib:/System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGL.dylib"
       )
 ENDIF (${APPLE})
+
+ADD_TEST(MyTest1 ${EXECUTABLE_OUTPUT_PATH}/pMarineViewer --version)
+

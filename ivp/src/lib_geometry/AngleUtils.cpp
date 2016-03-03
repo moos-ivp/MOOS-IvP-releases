@@ -43,27 +43,39 @@
 
 double relAng(double xa, double ya, double xb, double yb)
 { 
-  //assert((xa!=xb)||(ya!=yb));
   if((xa==xb)&&(ya==yb))
     return(0);
 
-  double w, sop;
+  double w   = 0;
+  double sop = 0;
 
-  if(xa < xb)
-    if(ya==yb)  return(90.0);
-    else        w = 90.0;
-  if(xa > xb)
-    if(ya==yb)  return(270.0);
-    else        w = 270.0;
+  if(xa < xb) {
+    if(ya==yb)  
+      return(90.0);
+    else
+      w = 90.0;
+  }
+  if(xa > xb) {
+    if(ya==yb)  
+      return(270.0);
+    else
+      w = 270.0;
+  }
   if(ya < yb) {
-    if(xa == xb) return(0.0);
-    if(xb >  xa) sop = -1.0;
-    else         sop =  1.0;
+    if(xa == xb) 
+      return(0.0);
+    if(xb > xa) 
+      sop = -1.0;
+    else 
+      sop =  1.0;
   }
   if(yb < ya) {
-    if(xa == xb) return(180);
-    if(xb >  xa) sop =  1.0;
-    else         sop = -1.0;
+    if(xa == xb) 
+      return(180);
+    if(xb >  xa) 
+      sop =  1.0;
+    else 
+      sop = -1.0;
   }
 
   double ydiff = yb-ya;

@@ -36,8 +36,9 @@ public:
   ~BHV_Loiter() {};
   
   bool         setParam(std::string, std::string);
-  void         onIdleState();
   IvPFunction* onRunState();
+  void         onIdleState();
+  void         onCompleteState();
 
 protected:
   bool         updateInfoIn();
@@ -67,8 +68,10 @@ private:  // Configuration Parameters
   std::string  m_hint_nextpt_lcolor;
   std::string  m_hint_vertex_color;
   std::string  m_hint_edge_color;
+  std::string  m_hint_poly_label;
   double       m_hint_vertex_size;
   double       m_hint_edge_size;
+
 
 private:  // State Structures
   LoiterEngine   m_loiter_engine;

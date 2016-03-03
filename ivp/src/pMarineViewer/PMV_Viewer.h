@@ -27,6 +27,7 @@
 #include <string>
 #include "MarineViewer.h"
 #include "VehicleSet.h"
+#include "VarDataPair.h"
 
 class PMV_Viewer : public MarineViewer
 {
@@ -43,10 +44,15 @@ class PMV_Viewer : public MarineViewer
   bool  updateScopeVariable(std::string varname, std::string value, 
 			    std::string vtime, std::string vsource);
   void  setActiveScope(std::string);
-  void  setLeftMouseContext(std::string s)  {m_left_click_context=s;};
-  void  setRightMouseContext(std::string s) {m_right_click_context=s;};
+  void  addMousePoke(std::string key, std::string vardata_pair);
+  void  setLeftMouseKey(std::string key)  {m_left_mouse_key = key;};
+  void  setRightMouseKey(std::string key) {m_right_mouse_key = key;};
 
   std::string getStringInfo(const std::string& info_type, int precision=0);
+
+  std::vector<VarDataPair> getLeftMousePairs(bool=true);
+  std::vector<VarDataPair> getRightMousePairs(bool=true);
+
 
  private:
   void   drawVehicle(std::string, bool, std::string);
@@ -57,18 +63,20 @@ class PMV_Viewer : public MarineViewer
   void   setWeightedCenterView();
 
  private:
-  VehicleSet       m_vehiset;
+  VehicleSet  m_vehiset;
 
   std::string m_reference_point;
   std::string m_reference_bearing;
+  double      m_stale_report_thresh;
 
   // Member variables for holding scoped info
+  bool                     m_scoping;
   std::vector<std::string> m_var_names;
   std::vector<std::string> m_var_vals;
   std::vector<std::string> m_var_source;
   std::vector<std::string> m_var_time;
-  int                      m_var_index;
-  int                      m_var_index_prev;
+  unsigned int             m_var_index;
+  unsigned int             m_var_index_prev;
 
   // Member variables for holding/conveying mouse/button click info
   double   m_mouse_x;
@@ -76,13 +84,15 @@ class PMV_Viewer : public MarineViewer
   double   m_mouse_lat;
   double   m_mouse_lon;
 
-  std::string m_left_click;
-  std::string m_right_click;
   std::string m_button_one;
   std::string m_button_two;
-  std::string m_left_click_context;
-  std::string m_right_click_context;
 
+  std::string m_left_mouse_key;
+  std::string m_right_mouse_key;
+  std::vector<VarDataPair> m_var_data_pairs_all;
+  std::vector<VarDataPair> m_var_data_pairs_lft;
+  std::vector<VarDataPair> m_var_data_pairs_rgt;
+  
   std::string m_centric_view; // average, active, or reference
   bool        m_centric_view_sticky;
 };

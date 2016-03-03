@@ -64,6 +64,8 @@ class PMV_MOOSApp : public CMOOSApp
   void receiveVehicleState(CMOOSMsg &Msg);
   bool receivePK_SOL(std::string sval);
   void registerVariables();
+  
+  std::string getContextKey(std::string);
 
  protected:
   PMV_GUI* m_gui;
@@ -73,9 +75,6 @@ class PMV_MOOSApp : public CMOOSApp
   double m_lastredraw_time;
   bool   m_verbose;
   int    m_counter;
-
-  std::string  m_left_click_str;
-  std::string  m_right_click_str;
 
   std::vector<std::string> m_node_report_vars;
   std::vector<std::string> m_scope_vars;

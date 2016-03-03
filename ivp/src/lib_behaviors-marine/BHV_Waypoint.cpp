@@ -27,6 +27,7 @@
 
 #include <math.h> 
 #include <stdlib.h>
+#include <iostream>
 #include "BHV_Waypoint.h"
 #include "OF_Reflector.h"
 #include "MBUtils.h"
@@ -38,6 +39,7 @@
 #include "ZAIC_PEAK.h"
 #include "OF_Coupler.h"
 #include "XYFormatUtilsPoly.h"
+#include "XYFormatUtilsPoint.h"
 #include "XYFormatUtilsSegl.h"
 #include "ColorParse.h"
 
@@ -86,16 +88,17 @@ BHV_Waypoint::BHV_Waypoint(IvPDomain gdomain) :
 //-----------------------------------------------------------
 // Procedure: onSetParamComplete()
 
-string BHV_Waypoint::onSetParamComplete()
+void BHV_Waypoint::onSetParamComplete()
 {
-  m_trackpt.set_source(m_us_name + tolower(getDescriptor()));
+  m_trackpt.set_source(m_us_name + "_" + tolower(getDescriptor()));
   m_trackpt.set_label(m_us_name + "'s track-point");
+  //m_trackpt.set_label(m_us_name + "_track-point");
   m_trackpt.set_type("track_point");
 
-  m_nextpt.set_source(m_us_name + tolower(getDescriptor()));
+  m_nextpt.set_source(m_us_name + "_" + tolower(getDescriptor()));
   m_nextpt.set_label(m_us_name + "'s next waypoint");
+  //m_nextpt.set_label(m_us_name + "_waypoint");
   m_nextpt.set_type("waypoint");
-  return("");
 }
 
 //-----------------------------------------------------------
@@ -105,15 +108,25 @@ string BHV_Waypoint::onSetParamComplete()
 //            The "radius" parameter indicates what it means to have
 //            arrived at the waypoint.
 
-bool BHV_Waypoint::setParam(string param, string val) 
+bool BHV_Waypoint::setParam(string param, string param_val) 
 {
-  double dval = atof(val.c_str());
+  double dval = atof(param_val.c_str());
   if((param == "polygon") || (param == "points")) {
-    XYSegList new_seglist = string2SegList(val);
+    XYSegList new_seglist = string2SegList(param_val);
     if(new_seglist.size() == 0) {
-      XYPolygon new_poly = string2Poly(val);
+      XYPolygon new_poly = string2Poly(param_val);
       new_seglist = new_poly.exportSegList(0,0);
     }
+    if(new_seglist.size() == 0)
+      return(false);
+    m_waypoint_engine.setSegList(new_seglist);
+    m_markpt.set_active(false);
+    return(true);
+  }
+  else if(param == "point") {
+    XYPoint point = string2Point(param_val);
+    XYSegList new_seglist;
+    new_seglist.add_vertex(point);
     if(new_seglist.size() == 0)
       return(false);
     m_waypoint_engine.setSegList(new_seglist);
@@ -125,40 +138,40 @@ bool BHV_Waypoint::setParam(string param, string val)
     return(true);
   }
   else if((param == "wpt_status") || (param == "wpt_status_var")) {
-    if(strContainsWhite(val) || (val == ""))
+    if(strContainsWhite(param_val) || (param_val == ""))
       return(false);
-    m_var_report = val;
+    m_var_report = param_val;
     if(tolower(m_var_report)=="silent")
       m_var_report = "silent";
     return(true);
   }
   else if((param == "wpt_index") || (param == "wpt_index_var")) {
-    if(strContainsWhite(val) || (val == ""))
+    if(strContainsWhite(param_val) || (param_val == ""))
       return(false);
-    m_var_index = val;
+    m_var_index = param_val;
     if(tolower(m_var_index)=="silent")
       m_var_index = "silent";
     return(true);
   }
-  else if(param == "cycle_index_var") {
-    if(strContainsWhite(val) || (val == ""))
+  else if(param == "cycle_index_var") {   // Depricated
+    if(strContainsWhite(param_val) || (param_val == ""))
       return(false);
-    m_var_cyindex = val;
+    m_var_cyindex = param_val;
     if(tolower(m_var_cyindex)=="silent")
       m_var_index = "silent";
     return(true);
   }
   else if(param == "post_suffix") {
-    if(strContainsWhite(val))
+    if(strContainsWhite(param_val))
       return(false);
-    if((val.length() > 0) && (val.at(0) != '_'))
-      val = '_' + val;
-    m_var_suffix = val;
+    if((param_val.length() > 0) && (param_val.at(0) != '_'))
+      param_val = '_' + param_val;
+    m_var_suffix = param_val;
     return(true);
   }
   else if(param == "cycleflag") {
-    string variable = stripBlankEnds(biteString(val, '='));
-    string value    = stripBlankEnds(val);
+    string variable = stripBlankEnds(biteString(param_val, '='));
+    string value    = stripBlankEnds(param_val);
     if((variable=="") || (value==""))
       return(false);
     VarDataPair pair(variable, value, "auto");
@@ -166,9 +179,10 @@ bool BHV_Waypoint::setParam(string param, string val)
     return(true);
   }
   else if(param == "ipf-type") {
-    val = tolower(val);
-    if((val=="zaic") || (val=="roc") || (val=="rate_of_closure"))
-      m_ipf_type = val;
+    param_val = tolower(param_val);
+    if((param_val=="zaic") || (param_val=="roc") || 
+       (param_val=="rate_of_closure"))
+      m_ipf_type = param_val;
     return(true);
   }
   else if((param == "lead") && (dval > 0)) {
@@ -176,31 +190,32 @@ bool BHV_Waypoint::setParam(string param, string val)
     return(true);
   }
   else if(param == "lead_to_start")
-    return(setBooleanOnString(m_lead_to_start, val));
+    return(setBooleanOnString(m_lead_to_start, param_val));
   else if((param == "lead_damper") && (dval > 0)) {
     m_lead_damper = dval;
     return(true);
   }
   else if(param == "order") {
-    if((val!="reverse") && (val!="reversed") && (val!="normal"))
+    if((param_val!="reverse") && (param_val!="reversed") && 
+       (param_val!="normal"))
       return(false);
-    bool reverse = ((val == "reverse") || (val == "reversed"));
+    bool reverse = ((param_val == "reverse") || (param_val == "reversed"));
     m_waypoint_engine.setReverse(reverse);
     return(true);
   }
-  else if((param == "repeat") && (tolower(val) == "forever")) {
+  else if((param == "repeat") && (tolower(param_val) == "forever")) {
     IvPBehavior::setParam("perpetual", "true");
     m_waypoint_engine.setRepeatsEndless(true);
     return(true);
   }
   else if(param == "repeat") {
-    int ival = atoi(val.c_str());
-    if((ival < 0) || (!isNumber(val)))
+    int ival = atoi(param_val.c_str());
+    if((ival < 0) || (!isNumber(param_val)))
       return(false);
     if(ival > 0)
       IvPBehavior::setParam("perpetual", "true");
-    else
-      IvPBehavior::setParam("perpetual", "false");
+    //    else
+    //      IvPBehavior::setParam("perpetual", "false");
     m_waypoint_engine.setRepeat(ival);
     m_waypoint_engine.setRepeatsEndless(false);
     return(true);
@@ -211,12 +226,14 @@ bool BHV_Waypoint::setParam(string param, string val)
     m_waypoint_engine.setCaptureRadius(dval);
     return(true);
   }
-  else if((param == "nm_radius") && (dval > 0)) {
+  else if((param=="nm_radius") || (param=="slip_radius")) {
+    if(dval < 0)
+      return(false);
     m_waypoint_engine.setNonmonotonicRadius(dval);
     return(true);
   }
   else if(param == "visual_hints")  {
-    vector<string> svector = parseStringQ(val, ',');
+    vector<string> svector = parseStringQ(param_val, ',');
     unsigned int i, vsize = svector.size();
     for(i=0; i<vsize; i++) 
       handleVisualHint(svector[i]);
@@ -232,11 +249,8 @@ bool BHV_Waypoint::setParam(string param, string val)
 //            first transitions from the Running to Idle state.
 
 void BHV_Waypoint::onRunToIdleState() 
-//void BHV_Waypoint::onIdleState() 
 {
-  postMessage("VIEW_POINT", m_trackpt.get_spec("active=false"));
-  postMessage("VIEW_POINT", m_nextpt.get_spec("active=false"));
-  postErasableSegList();
+  postErasables();
   m_waypoint_engine.resetCPA();
 }
 
@@ -473,21 +487,22 @@ IvPFunction *BHV_Waypoint::buildOF(string method)
 void BHV_Waypoint::postStatusReport()
 {
   int    current_waypt = m_waypoint_engine.getCurrIndex();
-  int    waypt_cycles  = m_waypoint_engine.getCycleCount();
-  int    total_hits    = m_waypoint_engine.getTotalHits();
-  int    capture_hits  = m_waypoint_engine.getCaptureHits();
+  unsigned int waypt_cycles = m_waypoint_engine.getCycleCount();
+  unsigned int total_hits   = m_waypoint_engine.getTotalHits();
+  unsigned int capture_hits = m_waypoint_engine.getCaptureHits();
+
   double dist_meters   = hypot((m_osx - m_nextpt.x()), 
 			       (m_osy - m_nextpt.y()));
   double eta_seconds   = dist_meters / m_osv;
   
-  string hits_str = intToString(capture_hits);
-  hits_str += "/" + intToString(total_hits);
+  string hits_str = uintToString(capture_hits);
+  hits_str += "/" + uintToString(total_hits);
 
   string stat = "vname=" + m_us_name + ",";
   stat += "behavior-name=" + m_descriptor + ",";
   stat += "index="  + intToString(current_waypt)   + ",";
   stat += "hits="   + hits_str + ",";
-  stat += "cycles=" + intToString(waypt_cycles)   + ",";
+  stat += "cycles=" + uintToString(waypt_cycles)   + ",";
   stat += "dist="   + doubleToString(dist_meters, 0)  + ",";
   stat += "eta="    + doubleToString(eta_seconds, 0);
 
@@ -520,15 +535,17 @@ void BHV_Waypoint::postViewableSegList()
   postMessage("VIEW_SEGLIST", segmsg);
 }
 
-
 //-----------------------------------------------------------
-// Procedure: postErasableSegList()
+// Procedure: postErasables
 //      Note: Recall that for a seglist to be drawn and erased, 
 //            it must match in the label. For a seglist to be 
 //            "ignored" it must set active=false.
 
-void BHV_Waypoint::postErasableSegList()
+void BHV_Waypoint::postErasables()
 {
+  postMessage("VIEW_POINT", m_trackpt.get_spec("active=false"));
+  postMessage("VIEW_POINT", m_nextpt.get_spec("active=false"));
+
   XYSegList seglist = m_waypoint_engine.getSegList();
   seglist.set_label(m_us_name + "_" + m_descriptor);
   seglist.set_active(false);

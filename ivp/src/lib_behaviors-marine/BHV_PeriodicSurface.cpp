@@ -79,7 +79,8 @@ BHV_PeriodicSurface::BHV_PeriodicSurface(IvPDomain gdomain) :
   m_ascending_flag = "PERIODIC_ASCEND";
 
   // Declare information needed by this behavior
-  addInfoVars("NAV_DEPTH, NAV_SPEED, GPS_UPDATE_RECEIVED");
+  addInfoVars("NAV_DEPTH, NAV_SPEED");
+  addInfoVars(m_mark_variable, "no_warning");
 }
 
 //-----------------------------------------------------------
@@ -102,14 +103,12 @@ bool BHV_PeriodicSurface::setParam(string g_param, string g_val)
     if(g_val == "")
       return(false);
     m_mark_variable = g_val;
+    addInfoVars(m_mark_variable, "no_warning");
   }
   else if(g_param == "acomms_mark_variable") {
     string variable = stripBlankEnds(biteString(g_val, ','));
     string interval = stripBlankEnds(biteString(g_val, ','));
     string max_time = stripBlankEnds(g_val);
-    cout << "variable:[" << variable << "]" << endl;
-    cout << "interval:[" << interval << "]" << endl;
-    cout << "max_time:[" << max_time << "]" << endl;
     if((variable == "") || strContainsWhite(variable))
       return(false);
     if((interval == "") || !isNumber(interval))
@@ -178,13 +177,8 @@ bool BHV_PeriodicSurface::setParam(string g_param, string g_val)
       return(false);
     m_ascent_grade = g_val;
   }
-else  
-  return(false);
-
-  addInfoVars(m_mark_variable);
-  //  string buf = "Timestamp="+doubleToString(m_curr_time)+",START";
-  //  postMessage(m_mark_variable,buf);  
-  //  m_mark_time  = getBufferCurrTime();
+  else  
+    return(false);
 
   return(true);
 }
@@ -278,8 +272,7 @@ IvPFunction *BHV_PeriodicSurface::onRunState()
       m_state = "waiting";
       // here we should post GPS_UPDATE_RECEIVED
       string buf = "Timestamp="+doubleToString(m_curr_time,2);
-      buf += ",ATSURFACE_WAIT_TIMEOUT";
-      postMessage(m_mark_variable, buf);  
+      postMessage("PSF_AT_SURFACE_TIMEOUT", buf);  
       return(0);
     }
   }

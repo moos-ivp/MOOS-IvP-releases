@@ -48,7 +48,7 @@ public: // virtual functions
   void   applyBuffer();
   double rangeToObstacle(unsigned int);
   
-  std::string getObstacleSpec(int, bool=false);
+  std::string getObstacleSpec(unsigned int, bool, bool);
 
  protected:
   void   bufferBackOff(double osx, double osy);
@@ -77,7 +77,7 @@ private:
   std::vector<XYPolygon> m_obstacles_buff;
   std::vector<bool>      m_obstacles_pert;
 
-  std::vector<double>    cache_distance;
+  std::vector<double>    m_cache_distance;
 };
 
 #endif

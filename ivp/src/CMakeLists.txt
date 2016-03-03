@@ -4,6 +4,11 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 PROJECT(IVP)
 
+ENABLE_TESTING()
+INCLUDE(CTest)
+
+# ADD_TEST(MyTest1 ${EXECUTABLE_OUTPUT_PATH}/pMarineViewer --version)
+
 IF (${WIN32})
   # Define Windows Compiler flags here
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -13,6 +18,14 @@ ELSE (${WIN32})
   # Note sure why: -fPIC should only be needed for shared objects, and
   # AFAIK, CMake gets that right when building shared objects. -CJC
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -g")
+  IF( ${APPLE} )
+    # FLTK is not supported in 64-bit for Mac OS X. Until it is supported
+    # we will force all applications to build in 32-bit. Libtiff must also
+    # be compiled in 32-bit. 
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
+  ENDIF( ${APPLE} )
+
 ENDIF (${WIN32})
 
 #===============================================================================
@@ -71,7 +84,7 @@ INCLUDE_DIRECTORIES(${MOOS_INCLUDE_DIRS})
 #-------------------------------------------------------------------------------
 # This was added by Andrew Shafer...
 IF(CMAKE_COMPILER_IS_GNUCXX)
-   SET( WALL_ON OFF CACHE BOOL "tell me about all compiler warnings (-Wall) ")
+   SET( WALL_ON ON CACHE BOOL "tell me about all compiler warnings (-Wall) ")
    IF(WALL_ON)
             SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
    ENDIF( WALL_ON)
@@ -98,12 +111,22 @@ SET(IVP_BUILD_GUI_CODE ON CACHE BOOL "Build IvP's GUI-related libraries and apps
 FILE(GLOB IVP_LIBRARY_DIRS lib_*)
 INCLUDE_DIRECTORIES(${IVP_LIBRARY_DIRS})
 
-# If Mac users installed libtiff.a using 'fink', it will likely appear under
-# '/sw', which current versions of CMake don't include in their default
-# search paths.
 IF (${APPLE})
-   INCLUDE_DIRECTORIES(/sw/include)
-   LINK_DIRECTORIES(/sw/lib)
+
+   # If Mac users installed libtiff using 'MacPorts', it will likely appear
+   # under the '/opt/local' directory, which is not in the CMake search path.
+   IF( EXISTS /opt/local/include AND EXISTS /opt/local/lib )
+      INCLUDE_DIRECTORIES(/opt/local/include)
+      LINK_DIRECTORIES(/opt/local/lib)
+   ENDIF( EXISTS /opt/local/include AND EXISTS /opt/local/lib )
+
+   # If Mac users installed libtiff using 'fink', it will likely appear
+   # under the '/sw' directory, which is not in the CMake search path.
+   IF( EXISTS /sw/include AND EXISTS /sw/lib )
+      INCLUDE_DIRECTORIES(/sw/include)
+      LINK_DIRECTORIES(/sw/lib)
+   ENDIF( EXISTS /sw/include AND EXISTS /sw/lib )
+
 ENDIF(${APPLE})
 
 #---------------------------------------------------------------------
@@ -141,7 +164,7 @@ IF (${WIN32})
    SET(IVP_GUI_LIBS
       lib_ipfview
       lib_marineview
-      lib_fltk-1.1.7
+      lib_fltk-1.1.10
       lib_tiff
       )
 ELSE (${WIN32})
@@ -149,7 +172,7 @@ ELSE (${WIN32})
    SET(IVP_GUI_LIBS
       lib_ipfview
       lib_marineview
-      lib_fltk-1.1.7
+      lib_fltk-1.1.10
       )
 ENDIF (${WIN32})
 
@@ -174,7 +197,7 @@ ENDIF("${IVP_LIB_DIRECTORY}" STREQUAL "")
 
 FOREACH(L ${IVP_LIBS_TO_BUILD} )
 # message("D: ${L} : IVP_LIB_DIRECTORY = ${IVP_LIB_DIRECTORY}")
-  # We're actually fighting the lib_fltk-1.1.7 CMake files for control over this
+  # We're actually fighting the lib_fltk-1.1.10 CMake files for control over this
   # detail, so we have to reset it after adding the FLTK subdirectory.
   
   SET( LIBRARY_OUTPUT_PATH "${IVP_LIB_DIRECTORY}" CACHE PATH "" FORCE )  # For CMake 2.4
@@ -199,13 +222,16 @@ SET(IVP_NON_GUI_APPS
   app_aloggrep
   app_alogrm
   app_alogclip
+  app_aloghelm
   app_nsplug
   app_domquery
   iMarineSim
   pEchoVar
   pXRelay
+  pXBlaster
   pHelmIvP
   pMarinePID
+  pBasicContactMgr
   pNodeReporter
   uTimerScript
   uHelmScope
@@ -216,8 +242,13 @@ SET(IVP_NON_GUI_APPS
   )
 
 SET(IVP_GUI_APPS
-  app_logview
+  app_ffview
+  app_geoview
+  app_alogview
+  app_vzaicview
   pMarineViewer
+  uFunctionVis
+  app_cpaview
   )
   
 SET(IVP_APPS_TO_BUILD ${IVP_NON_GUI_APPS})

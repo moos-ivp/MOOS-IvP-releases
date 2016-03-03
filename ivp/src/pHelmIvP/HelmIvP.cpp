@@ -37,17 +37,8 @@
 #include "IvPProblem.h"
 #include "HelmReport.h"
 #include "stringutil.h"
-
-#if 1
-  #define USE_NEW_POPULATOR
-#endif
-
-#ifdef USE_NEW_POPULATOR
-   #include "Populator_BehaviorSet2.h"
-#else
-   #include "Populator_BehaviorSet.h"
-#endif
-
+#include "Populator_BehaviorSet.h"
+#include "LifeEvent.h"
 
 using namespace std;
 
@@ -56,9 +47,7 @@ using namespace std;
 
 HelmIvP::HelmIvP()
 {
-  m_has_control    = false;
-  m_allow_overide  = true;
-  m_allstop_posted = false;
+  m_allstop_msg    = "clear";
   m_bhv_set        = 0;
   m_hengine        = 0;
   m_hengine_beta   = 0;
@@ -69,9 +58,17 @@ HelmIvP::HelmIvP()
   m_skews_matter   = true;
   m_warning_count  = 0;
   m_last_heartbeat = 0;
-  m_logger_present = false;
+  m_curr_time      = 0;
+  m_start_time     = 0;
 
-  m_use_beta_engine = false;
+  // The m_has_control correlates to helm ENGAGEMENT mode
+  m_has_control    = false;
+
+  m_allow_override = true;
+  m_disengage_on_allstop = false;
+
+  m_curr_time_updated = false;
+  m_use_beta_engine   = true;
 
   // The refresh vars handle the occasional clearing of the m_outgoing
   // maps. These maps will be cleared when MOOS mail is received for the
@@ -112,6 +109,7 @@ void HelmIvP::cleanup()
 {
   delete(m_info_buffer);
   m_info_buffer = 0;
+  m_curr_time_updated = false;
 
   delete(m_bhv_set);
   m_bhv_set = 0;
@@ -137,6 +135,7 @@ bool HelmIvP::OnNewMail(MOOSMSG_LIST &NewMail)
   // un-initialized timestamp on startup, and in case there is no Mail 
   m_curr_time = MOOSTime();
   m_info_buffer->setCurrTime(m_curr_time);
+  m_curr_time_updated = true;
 
   MOOSMSG_LIST::iterator p;
   
@@ -148,18 +147,16 @@ bool HelmIvP::OnNewMail(MOOSMSG_LIST &NewMail)
     
     if(!m_skews_matter || (fabs(dfT) < m_ok_skew)) {
       if((msg.m_sKey == "MOOS_MANUAL_OVERIDE") || 
-	 (msg.m_sKey == "MOOS_MANUAL_OVERRIDE")) {
+	 (msg.m_sKey == "MOOS_MANUAL_OVERRIDE") ||
+	 ((msg.m_sKey == m_additional_override) && (msg.m_sKey != ""))) {
 	if(MOOSStrCmp(msg.m_sVal, "FALSE")) {
 	  m_has_control = true;
-	  MOOSTrace("\n");
-	  MOOSDebugWrite("pHelmIvP Control Is On");
-	  m_info_buffer->setCurrTime(m_curr_time);
+	  postAllStop("clear");
 	}
 	else if(MOOSStrCmp(msg.m_sVal, "TRUE")) {
-	  if(m_allow_overide) {
+	  if(m_allow_override) {
 	    m_has_control = false;
-	    MOOSTrace("\n");
-	    MOOSDebugWrite("pHelmIvP Control Is Off");
+	    postAllStop("ManualOverride");
 	  }
 	}
       }
@@ -176,8 +173,6 @@ bool HelmIvP::OnNewMail(MOOSMSG_LIST &NewMail)
 	MOOSTrace("\n");
 	MOOSDebugWrite("pHelmIvP Has Been Re-Started");
       }
-      else if(msg.m_sKey == "DB_CLIENTS") 
-	m_logger_present = strContains(msg.m_sVal, "pLogger");
       else if(vectorContains(m_node_report_vars, msg.m_sKey)) {
 	bool ok = processNodeReport(msg.m_sVal);
 	if(!ok) {
@@ -211,23 +206,25 @@ bool HelmIvP::Iterate()
   postEngagedStatus();
   postCharStatus();
   
-  if(!m_logger_present) {
-    m_outgoing_strings.clear();
-    m_outgoing_doubles.clear();
+  // If the curr_time is not set in the OnNewMail function (possibly 
+  // because there was no mail in the queue), set the current time now.
+  if(!m_curr_time_updated) {
+    m_curr_time = MOOSTime();
+    m_info_buffer->setCurrTime(m_curr_time);
   }
-      
+  if(m_start_time == 0)
+    m_start_time = m_curr_time;
+
+  // Now we're done addressing whether the curr_time is updated on this
+  // iteration. It was done either in this function or in onNewMail().
+  // Now set m_curr_time_updated=false to reflect the ingoing state for
+  // the next iteration.
+  m_curr_time_updated = false;
+
   if(!m_has_control) {
-    postAllStop();
+    postAllStop("ManualOverride");
     return(false);
   }
-
-  // The curr_time is set in *both* the OnNewMail and Iterate functions.
-  // In the OnNewMail function so the most up-to-date time is available
-  // when processing mail.
-  // In the Iterate method to ensure behaviors are not iterated with an
-  // un-initialized timestamp on startup, and in case there is no Mail 
-  m_curr_time = MOOSTime();
-  m_info_buffer->setCurrTime(m_curr_time);
 
   HelmReport helm_report;
   if(m_use_beta_engine)
@@ -245,7 +242,7 @@ bool HelmIvP::Iterate()
     for(unsigned int i=0; i<svector.size(); i++)
       MOOSTrace("%s\n", svector[i].c_str());
   }
-  
+ 
   // Check if refresh conditions are met - perhaps clear outgoing maps.
   // This will result in all behavior postings being posted to the MOOSDB
   // on the current iteration.
@@ -258,6 +255,7 @@ bool HelmIvP::Iterate()
 
   registerNewVariables();
   postBehaviorMessages();
+  postLifeEvents();
   postModeMessages();
   postDefaultVariables();
 
@@ -272,45 +270,43 @@ bool HelmIvP::Iterate()
     MOOSTrace("(End) Iteration: %d", m_iteration);
     MOOSTrace("  ******************************************\n");
   }
-
-  if(helm_report.getHalted()) {
-    m_has_control = false;
-    bool ok;
-    string bhv_error_str = m_info_buffer->sQuery("BHV_ERROR", ok);
-    if(!ok)
-      bhv_error_str = " - unknown - ";
-    MOOSDebugWrite("BHV_ERROR: " + bhv_error_str);
-    MOOSDebugWrite("pHelmIvP Control Is Off: All Dec-Vars set to ZERO");
-  }
   
-  int dsize = m_ivp_domain.size();
+  string allstop_msg = "clear";
 
+  if(helm_report.getHalted())
+    allstop_msg = "BehaviorError";
+  else if(helm_report.getOFNUM() == 0)
+    allstop_msg = "NoIvPFunctions";
+  
   // First make sure the HelmEngine has made a decision for all 
   // non-optional variables - otherwise declare an incomplete decision.
-  // If a complete decision is not generated, this does not mean the 
-  // helm relinquishes control, only that an all-stop is posted on 
-  // this iteration.
-  bool complete_decision = false;
-  if(m_has_control && helm_report.getOFNUM() > 0) {
-    complete_decision = true;
-    for(int i=0; i<dsize; i++) {
+  if(allstop_msg == "clear") {
+    bool   complete_decision = true;
+    string missing_dec_vars;
+    unsigned int i, dsize = m_ivp_domain.size();
+    for(i=0; i<dsize; i++) {
       string domain_var = m_ivp_domain.getVarName(i);
-      if(!helm_report.hasDecision(domain_var))
+      if(!helm_report.hasDecision(domain_var)) {
 	if(m_optional_var[domain_var] == false) {
 	  complete_decision = false;
-	  string s1 = "ERROR! No decision for mandatory var - " + domain_var;
-	  string s2 = "pHelmIvP Control is Off: All Dec-Vars set to ZERO";
-	  MOOSDebugWrite(s1);
-	  MOOSDebugWrite(s2);
+	  if(missing_dec_vars != "")
+	    missing_dec_vars += ",";
+	  missing_dec_vars += domain_var;
 	}
+      }
+    }
+    if(!complete_decision) {
+      allstop_msg = "MissingDecVars:" + missing_dec_vars;
+      m_Comms.Notify("BHV_ERROR", allstop_msg); 
     }
   }
-  
-  if(!m_has_control || !complete_decision)
-    postAllStop();
+
+  if(allstop_msg != "clear")
+    postAllStop(allstop_msg);
   else {  // Post all the Decision Variable Results
-    m_allstop_posted = false;
-    for(int j=0; j<dsize; j++) {
+    postAllStop("clear");
+    unsigned int j, dsize = m_ivp_domain.size();
+    for(j=0; j<dsize; j++) {
       string domain_var = m_ivp_domain.getVarName(j);
       string post_alias = "DESIRED_"+ toupper(domain_var);
       if(post_alias == "DESIRED_COURSE")
@@ -320,14 +316,12 @@ bool HelmIvP::Iterate()
     }
   }
   
-  double create_cpu  = helm_report.getCreateTime();
-  m_Comms.Notify("CREATE_CPU", create_cpu);
+  m_Comms.Notify("CREATE_CPU", helm_report.getCreateTime());
+  m_Comms.Notify("LOOP_CPU", helm_report.getLoopTime());
 
-  double loop_cpu  = helm_report.getLoopTime();
-  m_Comms.Notify("LOOP_CPU", loop_cpu);
-
-  if(!m_allow_overide)
-    m_has_control = true;
+  if(allstop_msg != "clear")
+    if(m_allow_override && m_disengage_on_allstop)
+      m_has_control = false;
 
   // Clear the delta vectors now that all behavior have had the 
   // chance to consume delta info.
@@ -350,21 +344,25 @@ bool HelmIvP::Iterate()
 
 void HelmIvP::postBehaviorMessages()
 {
-  if(!m_bhv_set) return;
+  if(!m_bhv_set) 
+    return;
   
   if(m_verbose == "verbose") {
     MOOSTrace("Behavior Report ---------------------------------\n");
   }
 
   unsigned int i, bhv_cnt = m_bhv_set->size();
+  m_Comms.Notify("BCOUNT", bhv_cnt);
+  m_Comms.Notify("TBCOUNT", m_bhv_set->getTCount());
+  m_Comms.Notify("HITER", m_iteration);
   for(i=0; i < bhv_cnt; i++) {
     string bhv_descriptor = m_bhv_set->getDescriptor(i);
     vector<VarDataPair> mvector = m_bhv_set->getMessages(i);
-    int msize = mvector.size();
+    unsigned int j, msize = mvector.size();
 
     string bhv_postings_summary;
   
-    for(int j=0; j<msize; j++) {
+    for(j=0; j<msize; j++) {
       VarDataPair msg = mvector[j];
 
       string var   = msg.get_var();
@@ -379,11 +377,11 @@ void HelmIvP::postBehaviorMessages()
 	key_change = detectChangeOnKey(mkey, ddata);
       else
 	key_change = detectChangeOnKey(mkey, sdata);
-      
+ 
       // Keep track of warnings count for inclusion in IVPHELM_SUMMARY
       if(var == "BHV_WARNING")
 	m_warning_count++;
-     
+
       // Possibly augment the postings_summary
       if(key_change) {
 	// If first var-data tuple then tack header info on front
@@ -400,9 +398,8 @@ void HelmIvP::postBehaviorMessages()
 	}
       }
 
-
       // If posting an IvP Function, mux first and post the parts.
-      if(var == "BHV_IPF") {
+      if(var == "BHV_IPF") { // mikerb
 	string id = bhv_descriptor + intToString(m_iteration);
 	vector<string> svector = IvPFunctionToVector(sdata, id, 2000);
 	for(unsigned int k=0; k<svector.size(); k++)
@@ -428,11 +425,9 @@ void HelmIvP::postBehaviorMessages()
 	}
       }
     }
-
     if(bhv_postings_summary != "")
       m_Comms.Notify("IVPHELM_POSTINGS", bhv_postings_summary, bhv_descriptor);
   }
-
   // Determine if the list of state-space related variables for
   // the behavior-set has changed and post the new set if so.
 
@@ -441,7 +436,34 @@ void HelmIvP::postBehaviorMessages()
     string state_vars = m_bhv_set->getStateSpaceVars();
     m_Comms.Notify("IVPHELM_STATEVARS", state_vars);
   }
+  m_bhv_set->removeCompletedBehaviors();
 }
+
+//------------------------------------------------------------
+// Procedure: postLifeEvents()
+//      Note: Run once after every iteration of control loop.
+
+void HelmIvP::postLifeEvents()
+{
+  if(!m_bhv_set) 
+    return;
+  
+  vector<LifeEvent> events = m_bhv_set->getLifeEvents();
+  unsigned int i, vsize = events.size();
+  for(i=0; i<vsize; i++) {
+    double htime = m_curr_time - m_start_time;
+    string str = "time=" + doubleToString(htime, 2);
+    str += ", iter="  + intToString(m_iteration);
+    str += ", bname=" + events[i].getBehaviorName();
+    str += ", btype=" + events[i].getBehaviorType();
+    str += ", event=" + events[i].getEventType();
+    str += ", seed="  + events[i].getSpawnString();
+    m_Comms.Notify("IVPHELM_LIFE_EVENT", str);
+  }
+  if(vsize > 0)
+    m_bhv_set->clearLifeEvents();
+}
+
 
 //------------------------------------------------------------
 // Procedure: postModeMessages()
@@ -458,8 +480,6 @@ void HelmIvP::postModeMessages()
   for(int j=0; j<msize; j++) {
     VarDataPair msg = mvector[j];
     
-    string str = msg.getPrintable();
-
     string var   = msg.get_var();
     string sdata = msg.get_sdata();
     double ddata = msg.get_ddata();
@@ -640,13 +660,16 @@ void HelmIvP::registerVariables()
   m_Comms.Register("MOOS_MANUAL_OVERRIDE", 0);
   m_Comms.Register("RESTART_HELM", 0);
   m_Comms.Register("HELM_VERBOSE", 0);
-
+  
   m_Comms.Register("NAV_YAW", 0);
   m_Comms.Register("NAV_SPEED", 0);
   m_Comms.Register("NAV_HEADING", 0);
   m_Comms.Register("NAV_PITCH", 0);
   m_Comms.Register("NAV_DEPTH", 0);
   m_Comms.Register(m_refresh_var, 0);
+
+  if(m_additional_override != "")
+    m_Comms.Register(m_additional_override, 0);
 
   // Register for node report variables, e.g., AIS_REPORT, NODE_REPORT
   unsigned int i, vsize = m_node_report_vars.size();
@@ -655,10 +678,18 @@ void HelmIvP::registerVariables()
   
   if(m_bhv_set) {
     vector<string> info_vars = m_bhv_set->getInfoVars();
-    for(unsigned int j=0; j<info_vars.size(); j++) {
+    unsigned int j, jsize = info_vars.size();
+    for(j=0; j<jsize; j++) {
       if(m_verbose == "verbose")
 	MOOSTrace("Registering for: %s\n", info_vars[j].c_str());
       m_Comms.Register(info_vars[j], 0.0);
+    }
+    vector<string> update_vars = m_bhv_set->getSpecUpdateVars();
+    unsigned int i, isize = update_vars.size();
+    for(i=0; i<isize; i++) {
+      if(m_verbose == "verbose")
+	MOOSTrace("Registering for: %s\n", update_vars[i].c_str());
+      m_Comms.Register(update_vars[i], 0.0);
     }
   }
 }
@@ -753,12 +784,12 @@ bool HelmIvP::OnStartUp()
     }
     else if(param == "BETA_ENGINE")
       setBooleanOnString(m_use_beta_engine, value);
-    else if((param == "ACTIVE_START") || (param == "START_ENGAGED")) {
-      if(tolower(value) == "true") {
-	m_has_control = true;
-	m_allow_overide = false;
-      }
-    }
+    else if((param == "ACTIVE_START") || (param == "START_ENGAGED"))
+      setBooleanOnString(m_has_control, value);
+    else if(param == "ALLOW_DISENGAGE") 
+      setBooleanOnString(m_allow_override, value);
+    else if(param == "DISENGAGE_ON_ALLSTOP")
+      setBooleanOnString(m_disengage_on_allstop, value);
     else if(param == "DOMAIN") {
       bool ok = handleDomainEntry(value);
       if(!ok) {
@@ -766,21 +797,33 @@ bool HelmIvP::OnStartUp()
 	return(false);
       }
     }
+
+    else if(param == "OTHER_OVERRIDE_VAR") {
+      if(!strContainsWhite(value))
+	m_additional_override = value;
+    }
   }
     
   m_hengine = new HelmEngine(m_ivp_domain);
   m_hengine_beta = new HelmEngineBeta(m_ivp_domain, m_info_buffer);
 
-#ifdef USE_NEW_POPULATOR
-  Populator_BehaviorSet2 p_bset(m_ivp_domain, m_info_buffer);
-  p_bset.loadEnvVarDirectories("IVP_BEHAVIOR_DIRS", true);
-
-#else
+#if 0
   Populator_BehaviorSet p_bset(m_ivp_domain, m_info_buffer);
-#endif
-
+  p_bset.loadEnvVarDirectories("IVP_BEHAVIOR_DIRS", true);
   m_bhv_set = p_bset.populate(m_bhv_files);
-  
+#endif  
+
+#if 1
+  Populator_BehaviorSet *p_bset;
+  p_bset = new Populator_BehaviorSet(m_ivp_domain, m_info_buffer);
+  p_bset->loadEnvVarDirectories("IVP_BEHAVIOR_DIRS", true);
+  m_bhv_set = p_bset->populate(m_bhv_files);
+#endif  
+  //cout << "=====================================================" << endl;
+  //p_bset->printBehaviorSpecs();
+  //cout << "=====================================================" << endl;
+
+
   if(m_bhv_set == 0) {
     MOOSTrace("NULL Behavior Set \n");
     return(false);
@@ -953,9 +996,38 @@ bool HelmIvP::detectChangeOnKey(const string& key, double value)
 // Procedure: postAllStop
 //   Purpose: Post zero-values to all decision variables. 
 
-void HelmIvP::postAllStop()
+//   CLEAR
+//   ALLSTOP_MESSAGE
+//       MANUAL_OVERRIDE
+//       Some other allstop message triggered from a helm report
+//       Ditto
+
+void HelmIvP::postAllStop(string msg)
 {
-  if(m_allstop_posted)
+  if(msg == "")
+    msg = "ManualOverride";
+
+  // If nothing has changed, no need to do anything.
+  if(msg == m_allstop_msg)
+    return;
+
+  // If the incoming message is not "ManualOverride" make this the
+  // current allstop message no matter what.
+  if(msg != "ManualOverride")
+    m_allstop_msg = msg;
+  // If it is indeed a manual override message, we only overwrite 
+  // the current message if the current message was the "clear" message.
+  else {
+    if(tolower(m_allstop_msg == "clear"))
+      m_allstop_msg = msg;
+    else
+      return;
+  }
+
+  MOOSDebugWrite("pHelmIvP AllStop: " + m_allstop_msg);
+  m_Comms.Notify("IVPHELM_ALLSTOP", m_allstop_msg);
+
+  if(tolower(m_allstop_msg) == "clear")
     return;
 
   // Post all the Decision Variable Results
@@ -967,8 +1039,6 @@ void HelmIvP::postAllStop()
       post_alias = "DESIRED_HEADING";    
     m_Comms.Notify(post_alias, 0.0);
   }
-
-  m_allstop_posted = true;
 }
 
 //--------------------------------------------------------------------

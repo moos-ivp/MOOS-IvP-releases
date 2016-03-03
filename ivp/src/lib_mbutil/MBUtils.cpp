@@ -20,6 +20,7 @@
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
+#include <cmath>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -440,7 +441,7 @@ string truncString(const string& str, std::string::size_type sz, string style)
 }
 
 //----------------------------------------------------------------
-// Procedure: xxxToString(int)
+// Procedure: xxxToString(value)
 
 string boolToString(bool val)
 {
@@ -458,28 +459,40 @@ string intToString(int val)
   return(str);
 }
 
+string uintToString(unsigned int val)
+{
+  char buff[500];
+  sprintf(buff, "%u", val);
+  string str = buff;
+  return(str);
+}
+
 string floatToString(float val, int digits)
 {
-  char buffAUX[10] = "%.5f\0";
-  if((digits>=0)&&(digits<9))
-    buffAUX[2] = digits+48;
+  char format[10] = "%.5f\0";
+  if((digits>=0)&&(digits<=9))
+    format[2] = digits+48;
+  
+  if(val > (float)(pow((float)(2),(float)(64))))
+    format[3] = 'e';
 
-  char buff[100];
-  sprintf(buff, buffAUX, val);
-
+  char buff[1000];
+  sprintf(buff, format, val);
   string str = buff;
   return(str);
 }
 
 string doubleToString(double val, int digits)
 {
-  char buffAUX[10] = "%.5f\0";
+  char format[10] = "%.5f\0";
   if((digits>=0)&&(digits<=9))
-    buffAUX[2] = digits+48;
+    format[2] = digits+48;
+  
+  if(val > (double)(pow((double)(2),(double)(128))))
+    format[3] = 'e';
 
-  char buff[100];
-  sprintf(buff, buffAUX, val);
-
+  char buff[1000];
+  sprintf(buff, format, val);
   string str = buff;
   return(str);
 }
@@ -491,14 +504,31 @@ string intToCommaString(int ival)
 {
   string str = intToString(ival);
   string new_str;
-  int len = str.length();
 
-  for(int i=0; i<len; i++) {
+  unsigned int i, len = str.length();
+  for(i=0; i<len; i++) {
     new_str += str.at(i);
     if((((len-(i+1))%3)==0) && (i!=len-1))
       new_str += ',';
   }
+  return(new_str);
+}
 
+
+//----------------------------------------------------------------
+// Procedure: uintToCommaString
+
+string uintToCommaString(unsigned int ival)
+{
+  string str = uintToString(ival);
+  string new_str;
+
+  unsigned int i, len = str.length();
+  for(i=0; i<len; i++) {
+    new_str += str.at(i);
+    if((((len-(i+1))%3)==0) && (i!=len-1))
+      new_str += ',';
+  }
   return(new_str);
 }
 
@@ -598,7 +628,8 @@ string findReplace(const string& str, char fchar, char rchar)
 //            length given by target_size. If front is true, pad on
 //            to the front of the string. To the end otherwise. 
 
-string padString(const string& str, std::string::size_type target_size, bool front)
+string padString(const string& str, 
+		 std::string::size_type target_size, bool front)
 {
   string rstr  = str;
   string::size_type str_size = str.size();
@@ -620,7 +651,8 @@ string padString(const string& str, std::string::size_type target_size, bool fro
 //      Note: Added Jun1405
 //            Replace all occurances of fstr with rstr in str
 
-string findReplace(const string& str, const string& fstr, const string& rstr)
+string findReplace(const string& str, const string& fstr, 
+		   const string& rstr)
 {
   string::size_type posn = 0;
 
@@ -810,7 +842,7 @@ string tokStringParse(const string& str, const string& left,
       return("");
     svector2[0] = stripBlankEnds(svector2[0]);
     if(svector2[0] == left)
-      return(svector2[1]);
+      return(stripBlankEnds(svector2[1]));
   }
   return("");
 }
@@ -882,9 +914,15 @@ bool isNumber(const string& str, bool blanks_allowed)
   if(blanks_allowed)
     newstr = stripBlankEnds(str);
 
+  if(newstr.length() == 0)
+    return(false);
+
+  if((newstr.length() > 1) && (newstr.at(0) == '+'))
+    newstr = newstr.substr(1, newstr.length()-1);
+
   const char *buff = newstr.c_str();
 
-  string::size_type  len      = newstr.length();
+  string::size_type  len = newstr.length();
   int  digi_cnt = 0;
   int  deci_cnt = 0;
   bool ok       = true;
@@ -1277,10 +1315,10 @@ string modeShorten(string mode_str, bool really_short)
 
 vector<string> getReleaseInfo(const string& app)
 {
-  string pad = padString("", (16-app.length()));
+  string pad = padString("", (23-app.length()));
   vector<string> v;
   v.push_back("************************************************************************");
-  v.push_back("* " + app + "  - MOOS-IvP Release Bundle - VERSION 4.0.1" + pad + "       *");
+  v.push_back("* " + app + " - MOOS-IvP Release Bundle - VERSION 4.1" + pad +  "      *");
   v.push_back("* M.Benjamin (NUWC/MIT), P.Newman (Oxford), Schmidt and Leonard (MIT)  *");
   v.push_back("* Copyright (C) 2008 Free Software Foundation, Inc.                    *");
   v.push_back("* This is free software; see the source for copying conditions.        *");

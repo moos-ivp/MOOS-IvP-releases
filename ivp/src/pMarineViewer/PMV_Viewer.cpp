@@ -20,28 +20,40 @@
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
-#include <iostream>
 #include <math.h>
 #include "PMV_Viewer.h"
 #include "MBUtils.h"
 #include "AngleUtils.h"
 #include "ColorParse.h"
+#include "BearingLine.h"
+#include <cstdlib>
 
 using namespace std;
 
 PMV_Viewer::PMV_Viewer(int x, int y, int w, int h, const char *l)
   : MarineViewer(x,y,w,h,l)
 {
-  m_var_index = -1;
-  m_var_index_prev = -1;
-  m_centric_view = "";
+  m_scoping        = false;
+  m_var_index      = 0;
+  m_var_index_prev = 0;
+
+  m_centric_view   = "";
   m_centric_view_sticky = true;
-  m_reference_point   = "datum";
-  m_reference_bearing = "relative";
+  m_reference_point     = "datum";
+  m_reference_bearing   = "relative";
+  m_stale_report_thresh = 5;
   m_mouse_x   = 0;
   m_mouse_y   = 0;
   m_mouse_lat = 0;
   m_mouse_lon = 0;
+  
+  string str = "x=$(XPOS),y=$(YPOS),lat=$(LAT),lon=$(LON),vname=$(VNAME)";
+  VarDataPair lft_pair("MVIEWER_LCLICK", str); 
+  VarDataPair rgt_pair("MVIEWER_RCLICK", str);
+  lft_pair.set_key("any_left");
+  rgt_pair.set_key("any_right");
+  m_var_data_pairs_all.push_back(lft_pair);
+  m_var_data_pairs_all.push_back(rgt_pair);
 }
 
 //-------------------------------------------------------------
@@ -94,9 +106,6 @@ void PMV_Viewer::draw()
 	double trails_length = m_vehi_settings.getTrailsLength();
 	drawTrailPoints(point_list, trails_length);
       }
-      else
-	cout << "NOT drawing trails" << endl;
-
       // Next draw the vehicle shapes. If the vehicle index is the 
       // one "active", draw it in a different color.
       drawVehicle(vehiname, isactive, vehibody);
@@ -174,6 +183,11 @@ bool PMV_Viewer::setParam(string param, string value)
   else if(param == "new_report_variable") {
     handled = m_vehiset.setParam(param, value);
   }
+  else if(param == "stale_report_thresh") {
+    double dval = atof(value.c_str());
+    if(isNumber(value) && (dval > 0))
+      m_stale_report_thresh = dval;
+  }
   else if(param == "view_marker") {
     handled = m_vmarkers.addVMarker(value, m_geodesy);
   }
@@ -222,6 +236,8 @@ void PMV_Viewer::drawVehicle(string vname, bool active, string vehibody)
   if(!opose.isValid())
     return;
 
+  BearingLine bng_line = m_vehiset.getBearingLine(vname);
+
   // If there has been no explicit mapping of color to the given vehicle
   // name then the "inactive_vehicle_color" will be returned below.
   ColorPack vehi_color;
@@ -243,30 +259,36 @@ void PMV_Viewer::drawVehicle(string vname, bool active, string vehibody)
     vname_draw = false;
   else if(vnames_mode == "names+mode") {
     string helm_mode = m_vehiset.getStringInfo(vname, "helm_mode");
+    string helm_amode = m_vehiset.getStringInfo(vname, "helm_allstop_mode");
     if((helm_mode != "none") && (helm_mode != "unknown-mode"))
       vname_aug += " (" + helm_mode + ")";
+    if(helm_amode != "clear") 
+      vname_aug += " (" + helm_amode + ")";
   }
   else if(vnames_mode == "names+shortmode") {
-    string helm_mode = m_vehiset.getStringInfo(vname, "helm_mode");
+    string helm_mode  = m_vehiset.getStringInfo(vname, "helm_mode");
+    string helm_amode = m_vehiset.getStringInfo(vname, "helm_allstop_mode");
     if((helm_mode != "none") && (helm_mode != "unknown-mode")) {
       helm_mode = modeShorten(helm_mode);
       vname_aug += " (" + helm_mode + ")";
     }
+    if(helm_amode != "clear") 
+      vname_aug += " (" + helm_amode + ")";
   }
   else if(vnames_mode == "names+depth") {
     string str_depth = dstringCompact(doubleToString(opose.getDepth(),1));
     vname_aug += " (depth=" + str_depth + ")";
   }
 
-  // If the NODE_REPORT is old, disregard the vname_mode and indicated
-  // staleness
-  if(age_report > 3) {
+  // If the NODE_REPORT is old, disregard the vname_mode and instead 
+  // indicate the staleness
+  if(age_report > m_stale_report_thresh) {
     string age_str = doubleToString(age_report,0);
-    vname_aug = vname + "(Stale Report - " + age_str + ")";
+    vname_aug = vname + "(Stale Report: " + age_str + ")";
   } 
 
-  drawCommonVehicle(vname_aug, opose, vehi_color, vname_color, vehibody, 
-		    shape_length, vname_draw, 1);
+  drawCommonVehicle(vname_aug, opose, bng_line, vehi_color, vname_color, 
+		    vehibody, shape_length, vname_draw, 1);
 }
 
 //-------------------------------------------------------------
@@ -329,6 +351,8 @@ void PMV_Viewer::handleLeftMouse(int vx, int vy)
   string slat = doubleToString(dlat, 8);
   string slon = doubleToString(dlon, 8);
 
+  // If the mouse is clicked while holding down either the SHIFT or
+  // CONTROL keys, this is interpreted as a request for a drop-point.
   if((Fl::event_state(FL_SHIFT)) || (Fl::event_state(FL_CTRL))) {
     XYPoint dpt(mx, my);
     string latlon, localg, native;
@@ -341,13 +365,49 @@ void PMV_Viewer::handleLeftMouse(int vx, int vy)
     dpt.set_label(native);
     m_drop_points.addPoint(dpt, latlon, localg, native);
   }
+  // Otherwise (no SHIFT/CONTROL key), the left click will be 
+  // interpreted as a "mouse-poke". 
   else {
-    m_left_click =  "x=" + doubleToString(sx,1) + ",";
-    m_left_click += "y=" + doubleToString(sy,1);
-    m_left_click += ",lat=" + dstringCompact(doubleToString(dlat, 8));
-    m_left_click += ",lon=" + dstringCompact(doubleToString(dlon, 8));
-    if(m_left_click_context != "")
-      m_left_click += (",context=" + m_left_click_context);
+    // The aim is to build a vector of VarDataPairs from the "raw" set
+    // residing in m_var_data_pairs_all, by replacing all $(KEY) 
+    // occurances with the values found under the mouse location. 
+    m_var_data_pairs_lft.clear();
+    unsigned int i, vsize = m_var_data_pairs_all.size();
+    for(i=0; i<vsize; i++) {
+      string ikey = m_var_data_pairs_all[i].get_key();
+      if((ikey == "any_left") || (ikey == m_left_mouse_key)) {
+	VarDataPair pair = m_var_data_pairs_all[i];
+	if(pair.is_string()) {
+	  string str = m_var_data_pairs_all[i].get_sdata();
+	  if(strContains(str, "$(XPOS)")) 
+	    str = findReplace(str, "$(XPOS)", doubleToString(sx,1));
+	  if(strContains(str, "$(X)")) 
+	    str = findReplace(str, "$(X)", doubleToString(sx,0));
+	  if(strContains(str, "$(X:1)")) 
+	    str = findReplace(str, "$(X)", doubleToString(sx,1));
+	  if(strContains(str, "$(X:2)")) 
+	    str = findReplace(str, "$(X)", doubleToString(sx,2));
+	  if(strContains(str, "$(YPOS)")) 
+	    str = findReplace(str, "$(YPOS)", doubleToString(sy,1));
+	  if(strContains(str, "$(Y)")) 
+	    str = findReplace(str, "$(Y)", doubleToString(sy,0));
+	  if(strContains(str, "$(Y)")) 
+	    str = findReplace(str, "$(Y:1)", doubleToString(sy,1));
+	  if(strContains(str, "$(Y)")) 
+	    str = findReplace(str, "$(Y:2)", doubleToString(sy,2));
+	  if(strContains(str, "$(LAT)")) 
+	    str = findReplace(str, "$(LAT)", doubleToString(dlat,8));
+	  if(strContains(str, "$(LON)")) 
+	    str = findReplace(str, "$(LON)", doubleToString(dlon,8));
+	  if(strContains(str, "$(VNAME)")) {
+	    string vname = getStringInfo("active_vehicle_name");
+	    str = findReplace(str, "$(VNAME)", vname);
+	  }
+	  pair.set_sdata(str);
+	}
+	m_var_data_pairs_lft.push_back(pair);
+      }
+    }
   }
 }
 
@@ -363,18 +423,33 @@ void PMV_Viewer::handleRightMouse(int vx, int vy)
   double sx = snapToStep(mx, 1.0);
   double sy = snapToStep(my, 1.0);
   
-  m_right_click =  "x=" + doubleToString(sx,1) + ",";
-  m_right_click += "y=" + doubleToString(sy,1);
-
   double dlat, dlon;
   m_geodesy.LocalGrid2LatLong(sx, sy, dlat, dlon);
-  m_right_click += ",lat=" + dstringCompact(doubleToString(dlat, 8));
-  m_right_click += ",lon=" + dstringCompact(doubleToString(dlon, 8));
 
-  if(m_right_click_context != "")
-    m_right_click += (",context=" + m_right_click_context);
-
-  //cout << "Right Mouse click at [" << m_right_click << "] meters." << endl;
+  // The aim is to build a vector of VarDataPairs from the "raw" set
+  // residing in m_var_data_pairs_all, by replacing all $(KEY) 
+  // occurances with the values found under the mouse location. 
+  m_var_data_pairs_rgt.clear();
+  unsigned int i, vsize = m_var_data_pairs_all.size();
+  for(i=0; i<vsize; i++) {
+    string ikey = m_var_data_pairs_all[i].get_key();
+    if((ikey == "any_right") || (ikey == m_right_mouse_key)) {
+      VarDataPair pair = m_var_data_pairs_all[i];
+      if(pair.is_string()) {
+	string str = m_var_data_pairs_all[i].get_sdata();
+	if(strContains(str, "$(XPOS)")) 
+	  str = findReplace(str, "$(XPOS)", doubleToString(sx,1));
+	if(strContains(str, "$(YPOS)")) 
+	  str = findReplace(str, "$(YPOS)", doubleToString(sy,1));
+	if(strContains(str, "$(LAT)")) 
+	  str = findReplace(str, "$(LAT)", doubleToString(dlat,8));
+	if(strContains(str, "$(LON)")) 
+	  str = findReplace(str, "$(LON)", doubleToString(dlon,8));
+	pair.set_sdata(str);
+      }
+      m_var_data_pairs_rgt.push_back(pair);
+    }
+  }
 }
 
 //-------------------------------------------------------------
@@ -442,10 +517,8 @@ bool PMV_Viewer::addScopeVariable(string varname)
   m_var_vals.push_back("");
   m_var_source.push_back("");
   m_var_time.push_back("");
-  if(m_var_index == -1) {
-    m_var_index = 0;
-    m_var_index_prev = 0;
-  }
+
+  m_scoping = true;
   return(true);    
 }
 
@@ -457,6 +530,9 @@ bool PMV_Viewer::addScopeVariable(string varname)
 bool PMV_Viewer::updateScopeVariable(string varname, string value, 
 				     string vtime, string vsource)
 {
+  if(!m_scoping)
+    return(false);
+
   unsigned int i, vsize = m_var_names.size();
   for(i=0; i<vsize; i++) {
     if(m_var_names[i] == varname) {
@@ -475,8 +551,11 @@ bool PMV_Viewer::updateScopeVariable(string varname, string value,
 
 void PMV_Viewer::setActiveScope(string varname)
 {
+  if(m_var_names.size() <= 1)
+    return;
+  
   if(varname == "_previous_scope_var_") {
-    int tmp = m_var_index;
+    unsigned int tmp = m_var_index;
     m_var_index = m_var_index_prev;
     m_var_index_prev = tmp;
     return;
@@ -502,6 +581,20 @@ void PMV_Viewer::setActiveScope(string varname)
   }
 }
 
+//-------------------------------------------------------------
+// Procedure: addMousePoke
+//      Note: 
+
+void PMV_Viewer::addMousePoke(string key, string vardata_pair)
+{
+  string var  = stripBlankEnds(biteString(vardata_pair, '='));
+  string data = stripBlankEnds(vardata_pair);
+  VarDataPair new_pair(var, data, "auto");
+  new_pair.set_key(key);
+  
+  m_var_data_pairs_all.push_back(new_pair);
+}
+
 
 // ----------------------------------------------------------
 // Procedure: getStringInfo
@@ -511,33 +604,29 @@ string PMV_Viewer::getStringInfo(const string& info_type, int precision)
   string result = "error";
 
   if(info_type == "scope_var") {
-    if(m_var_index != -1)
+    if(m_scoping)
       return(m_var_names[m_var_index]);
     else
       return("n/a");
   }
   else if(info_type == "scope_val") {
-    if(m_var_index != -1)
+    if(m_scoping)
       return(m_var_vals[m_var_index]);
     else
       return("To add Scope Variables: SCOPE=VARNAME in the MOOS config block");
   }
   else if(info_type == "scope_time") {
-    if(m_var_index != -1)
+    if(m_scoping)
       return(m_var_time[m_var_index]);
     else
       return("n/a");
   }
   else if(info_type == "scope_source") {
-    if(m_var_index != -1)
+    if(m_scoping)
       return(m_var_source[m_var_index]);
     else
       return("n/a");
   }
-  else if(info_type == "left_click_info")
-    result = m_left_click;
-  else if(info_type == "right_click_info")
-    result = m_right_click;
   else if(info_type == "range") {
     double xpos, ypos;
     bool   dhandled1 = m_vehiset.getDoubleInfo("active", "xpos", xpos);
@@ -601,8 +690,27 @@ string PMV_Viewer::getStringInfo(const string& info_type, int precision)
     }
   }
   
-  //cout << "GSI type:" << info_type << " result:[" << result << "]" << endl;
   return(result);
 }
   
+
+// ----------------------------------------------------------
+// Procedure: getLeftMousePairs
+// Procedure: getRightMousePairs
+
+vector<VarDataPair> PMV_Viewer::getLeftMousePairs(bool clear)
+{
+  vector<VarDataPair> rvector = m_var_data_pairs_lft;
+  if(clear)
+    m_var_data_pairs_lft.clear();
+  return(rvector);
+}
+
+vector<VarDataPair> PMV_Viewer::getRightMousePairs(bool clear)
+{
+  vector<VarDataPair> rvector = m_var_data_pairs_rgt;
+  if(clear)
+    m_var_data_pairs_rgt.clear();
+  return(rvector);
+}
 

@@ -27,6 +27,12 @@ TARGET_LINK_LIBRARIES(uHelmScope
   MOOS
   MOOSGen
   genutil
+  behaviors
   mbutil 
   ${SYSTEM_LIBS})
+
+# Install Targets
+INSTALL(TARGETS uHelmScope
+  RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
 

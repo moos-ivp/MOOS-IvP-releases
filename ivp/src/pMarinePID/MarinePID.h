@@ -55,6 +55,11 @@ protected:
   double   m_current_depth;
   double   m_current_pitch;
 
+  double   m_rudder_bias_duration;
+  double   m_rudder_bias_limit;
+  double   m_rudder_bias_side;
+  double   m_rudder_bias_timestamp;
+
   double   m_desired_heading;
   double   m_desired_speed;
   double   m_desired_depth;
@@ -75,15 +80,8 @@ protected:
 
   double  m_time_of_last_helm_msg;
   double  m_time_of_last_nav_msg;
+
+  double  m_tardy_helm_thresh;
+  double  m_tardy_nav_thresh;
 };
-
 #endif 
-
-
-
-
-
-
-
-
-

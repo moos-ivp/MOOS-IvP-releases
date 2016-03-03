@@ -52,6 +52,7 @@ protected:
   void postEngagedStatus();
   void postCharStatus();
   void postBehaviorMessages();
+  void postLifeEvents();
   void postModeMessages();
   void postInitialVariables();
   void postDefaultVariables();
@@ -65,14 +66,15 @@ protected:
 			 double dval);
   bool detectRepeatOnKey(const std::string& key);
 
-  void postAllStop();  
+  void postAllStop(std::string msg="");  
   bool processNodeReport(const std::string &);
 
 protected:
   InfoBuffer*   m_info_buffer;
   bool          m_has_control;
-  bool          m_allow_overide;
-  bool          m_allstop_posted;
+  bool          m_allow_override;
+  bool          m_disengage_on_allstop;
+  std::string   m_allstop_msg;
   IvPDomain     m_ivp_domain;
   BehaviorSet*  m_bhv_set;
   std::string   m_verbose;
@@ -95,12 +97,17 @@ protected:
   bool          m_skews_matter;
   int           m_warning_count;
   double        m_curr_time;
+  double        m_start_time;
 
   bool          m_use_beta_engine;
   HelmEngine*   m_hengine;
   HelmEngineBeta* m_hengine_beta;
   std::string   m_ownship;
   std::vector<std::string> m_node_report_vars;
+
+  // An additional MOOS variable other than MOOS_MANUAL_OVERRIDE 
+  // that may be used for overriding the helm.
+  std::string   m_additional_override;
 
   // For each decision variable in decision space, note if it is 
   // optional. Optional means a decision need not be rendered on it.
@@ -120,10 +127,9 @@ protected:
   std::map<std::string, double>      m_outgoing_timestamp;
   std::map<std::string, double>      m_outgoing_repinterval;
   
-  // Keep track of whether a logger is present. If not then duplicates
-  // filters are cleared on each iteration.
-  bool m_logger_present;
-
+  // A flag maintained on each iteration indicating whether curr_time
+  // has yet to be updated.
+  bool m_curr_time_updated;
 };
 
 #endif 

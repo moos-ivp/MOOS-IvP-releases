@@ -233,9 +233,13 @@ XYSegList stringLawnmower2SegList(string str)
 
   string xpos, ypos, vertex_color, edge_color, label, label_color;
   string start, source, type, rows="ew";
-  double height, width, degs, rads, swath;
-  double startx=0;
-  double starty=0;
+  double height = 0;
+  double width  = 0;
+  double degs   = 0;
+  double rads   = 0;
+  double swath  = 0;
+  double startx = 0;
+  double starty = 0;
   double snapval = 0.00001;
 
   vector<string> mvector = parseStringQ(str, ',');
@@ -286,6 +290,8 @@ XYSegList stringLawnmower2SegList(string str)
     }
     else if((param == "snap") && isNumber(value) && (dval >= 0))
       snapval = dval;
+    else if(param == "active") 
+      setBooleanOnString(active, value);
     else if(param == "rows")
       rows = tolower(value);
     else if(param == "label")
@@ -342,5 +348,6 @@ XYSegList stringLawnmower2SegList(string str)
 
   if(snapval > 0)
     new_seglist.apply_snap(snapval);
+  new_seglist.set_active(active);
   return(new_seglist);
 }

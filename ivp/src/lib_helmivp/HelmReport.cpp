@@ -153,7 +153,7 @@ void HelmReport::addActiveBHV(const string& descriptor,
 string HelmReport::getRunningBehaviors()
 {
   string result = "#";
-  result += intToString(m_iteration);
+  result += uintToString(m_iteration);
   result += ":";
   result += m_running_bhvs;
 
@@ -166,7 +166,7 @@ string HelmReport::getRunningBehaviors()
 string HelmReport::getActiveBehaviors()
 {
   string result = "#";
-  result += intToString(m_iteration);
+  result += uintToString(m_iteration);
   result += ":";
   result += m_active_bhvs;
   
@@ -178,12 +178,11 @@ string HelmReport::getActiveBehaviors()
 
 string HelmReport::getReportAsString()
 {
-  int i, j, vsize;
   string report;
 
-  report += ("iter=" + intToString(m_iteration));
-  report += (",ofnum=" + intToString(m_ofnum));
-  report += (",warnings=" + intToString(m_warning_count));
+  report += ("iter=" + uintToString(m_iteration));
+  report += (",ofnum=" + uintToString(m_ofnum));
+  report += (",warnings=" + uintToString(m_warning_count));
   report += (",utc_time=" + doubleToString(m_time_utc, 2));
   report += (",solve_time=" + doubleToString(m_solve_time, 2));
   report += (",create_time=" + doubleToString(m_create_time, 2));
@@ -199,7 +198,7 @@ string HelmReport::getReportAsString()
 
   // Now check to see if the helm did not produce a decision for one
   // of the variables in the originally declared domain for the helm
-  int dsize = m_domain.size();
+  unsigned int i, dsize = m_domain.size();
   for(i=0; i<dsize; i++) {
     string varname = m_domain.getVarName(i);
     if(!hasDecision(varname))

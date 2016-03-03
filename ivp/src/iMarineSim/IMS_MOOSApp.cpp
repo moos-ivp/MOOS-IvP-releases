@@ -31,7 +31,7 @@ using namespace std;
 
 IMS_MOOSApp::IMS_MOOSApp() 
 {
-  m_sim_prefix  = "MARINESIM";
+  m_sim_prefix  = "IMS";
   m_model       = 0;
   m_reset_count = 0;
 }
@@ -44,37 +44,42 @@ bool IMS_MOOSApp::OnNewMail(MOOSMSG_LIST &NewMail)
 {
   CMOOSMsg Msg;
   
-  double curr_moos_time = MOOSTime();
-
   MOOSMSG_LIST::iterator p;
-  for(p = NewMail.begin(); p != NewMail.end(); p++) {
+  for(p=NewMail.begin(); p!=NewMail.end(); p++) {
     CMOOSMsg &Msg = *p;
-
-    double dfTimeDiff = curr_moos_time - Msg.m_dfTime;
+    string key = Msg.m_sKey;
+    double dval = Msg.m_dfVal;
+    string sval = Msg.m_sVal;
 
     if(m_model) {
-      if((Msg.m_sKey == "DESIRED_THRUST") && (dfTimeDiff <= 1.0)) {
-	//cout << "Desired_thrust: " << Msg.m_dfVal << endl;
-	m_model->setThrust(Msg.m_dfVal);
-      }
-      else if((Msg.m_sKey == "DESIRED_RUDDER")  && (dfTimeDiff <= 1.0))
-	m_model->setRudder(Msg.m_dfVal);
-      else if((Msg.m_sKey == "DESIRED_ELEVATOR")  && (dfTimeDiff <= 1.0))
-	m_model->setElevator(Msg.m_dfVal);
-      else if(Msg.m_sKey == "SIM_PAUSED")
-	m_model->setPaused(toupper(Msg.m_sVal) == "TRUE");
-      else if(Msg.m_sKey == "MARINESIM_FLOAT_RATE")
-	m_model->setFloatRate(Msg.m_dfVal);
-      else if(Msg.m_sKey == "MARINESIM_FORCE_THETA")
-	m_model->setPushTheta(Msg.m_dfVal);
-      else if(Msg.m_sKey == "MARINESIM_FORCE_X")
-	m_model->setPushX(Msg.m_dfVal);
-      else if(Msg.m_sKey == "MARINESIM_FORCE_Y")
-	m_model->setPushY(Msg.m_dfVal);
-      else if(Msg.m_sKey == "MARINESIM_RESET") {
+      if(key == "DESIRED_THRUST")
+	m_model->setThrust(dval);
+      else if(key == "DESIRED_RUDDER")
+	m_model->setRudder(dval);
+      else if(key == "DESIRED_ELEVATOR")
+	m_model->setElevator(dval);
+      else if((key == "SIM_PAUSED") || (key == "IMS_SIM_PAUSED"))
+	m_model->setPaused(toupper(sval) == "TRUE");
+      else if(key == "IMS_DECELERATION")
+	m_model->setDeceleration(dval);
+      else if((key == "MARINESIM_FLOAT_RATE") || 
+	      (key == "IMS_FLOAT_RATE"))
+	m_model->setFloatRate(dval);
+      else if((key == "MARINESIM_FORCE_THETA") || 
+	      (key == "IMS_FORCE_THETA"))
+	m_model->setTorqueTheta(dval);
+      else if((key == "MARINESIM_FORCE_X") || (key == "IMS_FORCE_X"))
+	m_model->setForceX(dval);
+      else if((key == "MARINESIM_FORCE_Y") || (key == "IMS_FORCE_Y"))
+	m_model->setForceY(dval);
+      else if(key == "IMS_FORCE_VECTOR")
+	m_model->setForceVector(sval, false);
+      else if(key == "IMS_FORCE_VECTOR_ADD")
+	m_model->setForceVector(sval, true);
+      else if((key == "MARINESIM_RESET") || (key == "IMS_RESET")) {
 	m_reset_count++;
-	m_Comms.Notify("MARINESIM_RESET_COUNT", m_reset_count);
-	string str = stripBlankEnds(Msg.m_sVal);
+	m_Comms.Notify("IMS_RESET_COUNT", m_reset_count);
+	string str = stripBlankEnds(sval);
 	vector<string> svector = parseString(str, ',');
 	int vsize = svector.size();
 	for(int i=0; i<vsize; i++) {
@@ -97,7 +102,7 @@ bool IMS_MOOSApp::OnNewMail(MOOSMSG_LIST &NewMail)
 	}
       }
       else
-      MOOSTrace("Unrecognized command: [%s]\n",Msg.m_sKey.c_str());
+      MOOSTrace("Unrecognized command: [%s]\n",key.c_str());
     }
   }
 
@@ -150,50 +155,46 @@ bool IMS_MOOSApp::OnStartUp()
       m_model->setDepth(dVal);
     else if(sVarName == "FLOAT_RATE")
       m_model->setFloatRate(dVal);
+    else if(sVarName == "DECELERATION")
+      m_model->setDeceleration(dVal);
     else if(sVarName == "PREFIX")
       m_sim_prefix = sVal;
     else if(sVarName == "FORCE_THETA")
-      m_model->setPushTheta(dVal);
+      m_model->setTorqueTheta(dVal);
+    else if(sVarName == "FORCE_VECTOR")
+      m_model->setForceVector(sVal);
     else if(sVarName == "FORCE_X")
-      m_model->setPushX(dVal);
+      m_model->setForceX(dVal);
     else if(sVarName == "FORCE_Y")
-      m_model->setPushY(dVal);
+      m_model->setForceY(dVal);
     else if(sVarName == "THRUST_FACTOR")
       m_model->setThrustFactor(dVal);
     else if(sVarName == "SIM_PAUSE")
       m_model->setPaused(toupper(sVal) == "TRUE");
-
     else if(sVarName == "START_POS")
       m_model->setPosition(sVal);
-
-
   }
 
-  
   // tes 12-2-07
   // look for latitude, longitude global variables
   double latOrigin, longOrigin;
-  if (!m_MissionReader.GetValue("LatOrigin", latOrigin))
-    {
-      MOOSTrace("iMarineSim: LatOrigin not set in *.moos file.\n");
+  if(!m_MissionReader.GetValue("LatOrigin", latOrigin)) {
+    MOOSTrace("iMarineSim: LatOrigin not set in *.moos file.\n");
+    m_geo_ok = false;
+  } 
+  else if(!m_MissionReader.GetValue("LongOrigin", longOrigin)) {
+    MOOSTrace("iMarineSim: LongOrigin not set in *.moos file\n");
+    m_geo_ok = false;      
+  }
+  else {
+    m_geo_ok = true;
+    // initialize m_geodesy
+    if(!m_geodesy.Initialise(latOrigin, longOrigin)) {
+      MOOSTrace("iMarineSim: Geodesy init failed.\n");
       m_geo_ok = false;
-    } 
-  else if (!m_MissionReader.GetValue("LongOrigin", longOrigin))
-    {
-      MOOSTrace("iMarineSim: LongOrigin not set in *.moos file\n");
-      m_geo_ok = false;      
     }
-  else
-    {
-      m_geo_ok = true;
-      // initialize m_geodesy
-      if (!m_geodesy.Initialise(latOrigin, longOrigin))
-	{
-	MOOSTrace("iMarineSim: Geodesy init failed.\n");
-	m_geo_ok = false;
-	}
-    }
-
+  }
+  
   registerVariables();
   MOOSTrace("Sim started \n");
   return(true);
@@ -221,12 +222,26 @@ void IMS_MOOSApp::registerVariables()
   m_Comms.Register("DESIRED_THRUST", 0);
   m_Comms.Register("DESIRED_ELEVATOR", 0);
 
+  // The MARINESIM_ prefix is deprecated
   m_Comms.Register("MARINESIM_FLOAT_RATE", 0);
   m_Comms.Register("MARINESIM_FORCE_X", 0);
   m_Comms.Register("MARINESIM_FORCE_Y", 0);
+  m_Comms.Register("MARINESIM_FORCE_VECTOR", 0);
+  m_Comms.Register("MARINESIM_FORCE_VECTOR_ADD", 0);
   m_Comms.Register("MARINESIM_FORCE_THETA", 0);
   m_Comms.Register("MARINESIM_PAUSE", 0);
   m_Comms.Register("MARINESIM_RESET", 0);
+
+  // The IMS_ prefix is the desired (newer) prefix supported
+  m_Comms.Register("IMS_FLOAT_RATE", 0);
+  m_Comms.Register("IMS_FORCE_X", 0);
+  m_Comms.Register("IMS_FORCE_Y", 0);
+  m_Comms.Register("IMS_FORCE_VECTOR", 0);
+  m_Comms.Register("IMS_FORCE_VECTOR_ADD", 0);
+  m_Comms.Register("IMS_FORCE_THETA", 0);
+  m_Comms.Register("IMS_PAUSE", 0);
+  m_Comms.Register("IMS_RESET", 0);
+
 }
 
 //------------------------------------------------------------------------
@@ -259,13 +274,13 @@ bool IMS_MOOSApp::Iterate()
   m_Comms.Notify(m_sim_prefix+"_Y", nav_y, ctime);
 
   // tes 12-2-07 try to give a simulated lat / long
-  if(m_geo_ok)
-    {
-      double lat, lon;
-      m_geodesy.LocalGrid2LatLong(nav_x, nav_y, lat, lon);
-      m_Comms.Notify(m_sim_prefix+"_LAT", lat, ctime);
-      m_Comms.Notify(m_sim_prefix+"_LONG", lon, ctime);
-    }
+  if(m_geo_ok) {
+    double lat, lon;
+    //    m_geodesy.LocalGrid2LatLong(nav_x, nav_y, lat, lon);
+    m_geodesy.UTM2LatLong(nav_x, nav_y, lat, lon);
+    m_Comms.Notify(m_sim_prefix+"_LAT", lat, ctime);
+    m_Comms.Notify(m_sim_prefix+"_LONG", lon, ctime);
+  }
 
   double new_speed = m_model->getSpeed();
   new_speed = snapToStep(new_speed, 0.01);
@@ -275,6 +290,17 @@ bool IMS_MOOSApp::Iterate()
   m_Comms.Notify(m_sim_prefix+"_DEPTH", m_model->getDepth(), ctime);
   m_Comms.Notify(m_sim_prefix+"_YAW", m_model->getYaw(), ctime);
   m_Comms.Notify(m_sim_prefix+"_STATE", "off",ctime);
+
+  string val = "ang=";
+  val += dstringCompact(doubleToString(m_model->getForceAngle()));
+  val += ", mag=";
+  val += dstringCompact(doubleToString(m_model->getForceMagnitude()));
+  val += ", xmag=";
+  val += dstringCompact(doubleToString(m_model->getForceX()));
+  val += ", ymag=";
+  val += dstringCompact(doubleToString(m_model->getForceY()));
+  m_Comms.Notify("IMS_FSUMMARY", val);
+
   return(true);
 }
 
@@ -289,13 +315,6 @@ void IMS_MOOSApp::handleSimReset(const string& str)
 {
   if(!m_model)
     return;
-  
-  //bool xset = false;
-  //bool yset = false;
-  //bool spdset = false;
-  //bool hdgset = false;
-  
-  //double new_x, new_y, new_speed, new_heading;
   
   vector<string> svector = parseString(str, ',');
   int vsize = svector.size();

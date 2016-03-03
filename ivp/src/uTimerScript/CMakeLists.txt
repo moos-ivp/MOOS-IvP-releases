@@ -13,7 +13,12 @@ else (${WIN32})
     pthread)
 endif (${WIN32})
 
-FILE(GLOB SRC *.cpp)
+SET(SRC 
+   TS_MOOSApp.cpp 
+   EnumVariable.cpp
+   RandomVariable.cpp
+   RandomVariableSet.cpp 
+   main.cpp)
 
 ADD_EXECUTABLE(uTimerScript ${SRC})
 
@@ -21,5 +26,11 @@ TARGET_LINK_LIBRARIES(uTimerScript
    MOOS
    MOOSGen
    mbutil
+   logic
    ${SYSTEM_LIBS})
+
+# Install Targets
+INSTALL(TARGETS uTimerScript
+  RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
 

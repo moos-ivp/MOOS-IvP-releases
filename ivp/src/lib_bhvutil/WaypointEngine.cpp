@@ -66,6 +66,15 @@ void WaypointEngine::setSegList(const XYSegList& g_seglist)
   m_curr_ix  = 0;
   m_complete = false;
 
+  // Reset the "current" cpa distance, s.t. a non-mono hit is 
+  // impossible on the first iteration with a new seglist.
+  m_current_cpa = -1;
+
+  // The cycle count should also be set to zero since counting
+  // cycles pertains to a given pattern, and once the pattern 
+  // changes, the previous cycle count is irrelevant.
+  m_cycle_count = 0;
+
   // Also ensure that a call to currPtChanged() will be true.
   m_prev_ix  = -1;
 
@@ -161,7 +170,7 @@ void WaypointEngine::setCenter(double g_x, double g_y)
 //-----------------------------------------------------------
 // Procedure: getPointX
 
-double WaypointEngine::getPointX(unsigned int i)
+double WaypointEngine::getPointX(unsigned int i) const
 {
   if((i >= 0) && (i < m_seglist.size()))
     return(m_seglist.get_vx(i));
@@ -185,7 +194,7 @@ bool WaypointEngine::currPtChanged()
 //-----------------------------------------------------------
 // Procedure: getPointY
 
-double WaypointEngine::getPointY(unsigned int i)
+double WaypointEngine::getPointY(unsigned int i) const
 {
   if((i >= 0) && (i < m_seglist.size()))
     return(m_seglist.get_vy(i));
@@ -203,6 +212,18 @@ void WaypointEngine::resetForNewTraversal()
   m_curr_ix       = 0;
   m_prev_ix       = -1;
   m_complete      = false;
+}
+
+//-----------------------------------------------------------
+// Procedure: resetsRemaining()
+//   Returns: 
+
+unsigned int WaypointEngine::resetsRemaining() const
+{
+  if(m_repeats_sofar > m_repeats_allowed)
+    return(0);
+  else
+    return(m_repeats_allowed - m_repeats_sofar);
 }
 
 //-----------------------------------------------------------

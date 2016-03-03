@@ -193,6 +193,18 @@ bool BHV_Attractor::setParam(string g_param, string g_val)
 }
 
 //-----------------------------------------------------------
+// Procedure: onSetParamComplete
+
+void BHV_Attractor::onSetParamComplete() 
+{
+  m_trail_point.set_label(m_us_name + "_attractor");
+  m_trail_point.set_type("attractor");
+  m_trail_point.set_active("false");
+  string bhv_tag = tolower(getDescriptor());
+  m_trail_point.set_source(m_us_name + "_" + bhv_tag);
+}
+
+//-----------------------------------------------------------
 // Procedure: onIdleState
 
 void BHV_Attractor::onIdleState()
@@ -202,6 +214,14 @@ void BHV_Attractor::onIdleState()
 
   // postMessage("ATTRACTOR_ACTIVE", 0);
   // postMessage("ATTRACTED", 0);
+}
+
+//-----------------------------------------------------------
+// Procedure: onRunToIdleState
+
+void BHV_Attractor::onRunToIdleState()
+{
+  postErasableTrailPoint();
 }
 
 
@@ -240,6 +260,9 @@ IvPFunction *BHV_Attractor::onRunState()
   // Below handled now with active/inactive flags - mikerb, Aug10,08
   //postMessage("ATTRACTED", 1);
 
+  m_trail_point.set_vertex(m_cnx, m_cny);
+  postViewableTrailPoint();
+
   double dist = hypot((m_osx - m_cnx), (m_osy - m_cny));
 
   IvPFunction *ipf = 0;
@@ -250,7 +273,8 @@ IvPFunction *BHV_Attractor::onRunState()
   double vx = cos(angle);
   double vy = sin(angle);
 
-  double cos_ang = vx * (m_cnx - m_osx) + vx * (m_cny - m_osy);
+  double cos_ang = vx * (m_cnx - m_osx) + vy * (m_cny - m_osy);
+  double current_relevance = relevance;
 
   if ( cos_ang < 0 )
     {
@@ -277,6 +301,8 @@ IvPFunction *BHV_Attractor::onRunState()
       
       OF_Coupler coupler;
       ipf = coupler.couple(hdg_ipf, spd_ipf);
+
+      current_relevance = 2*relevance;
     }
   else if (dist > m_min_priority_range)
     {  AOF_AttractorCPA aof(m_domain);
@@ -331,7 +357,7 @@ IvPFunction *BHV_Attractor::onRunState()
   // Check for properly created IvPFunction before operating on it.
   if(ipf) {
     ipf->getPDMap()->normalize(0.0, 100.0);
-    ipf->setPWT(relevance * m_priority_wt);
+    ipf->setPWT(current_relevance * m_priority_wt);
   }
 
   return(ipf);
@@ -467,6 +493,28 @@ void BHV_Attractor::updateContactList()
   addInfoVars(m_contact_name+"_NAV_UTC");
 
 }
+
+//-----------------------------------------------------------
+// Procedure: postViewableTrailPoint
+
+void BHV_Attractor::postViewableTrailPoint()
+{
+  m_trail_point.set_active(true);
+  string spec = m_trail_point.get_spec();
+  postMessage("VIEW_POINT", spec);
+}
+
+
+//-----------------------------------------------------------
+// Procedure: postErasableTrailPoint
+
+void BHV_Attractor::postErasableTrailPoint()
+{
+  m_trail_point.set_active(false);
+  string spec = m_trail_point.get_spec();
+  postMessage("VIEW_POINT", spec);
+}
+
 
 
 

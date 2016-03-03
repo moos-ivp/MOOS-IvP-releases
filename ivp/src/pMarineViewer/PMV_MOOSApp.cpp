@@ -1,5 +1,5 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
+/*    NAME: M.Benjamin, H.Schmidt, J.Leonard                     */
 /*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
 /*    FILE: PMV_MOOSApp.cpp                                      */
 /*    DATE:                                                      */
@@ -31,11 +31,8 @@ using namespace std;
 
 PMV_MOOSApp::PMV_MOOSApp() 
 {
-  m_left_click_str  = "null"; 
-  m_right_click_str = "null"; 
-
   m_pending_moos_events = 0;
-  m_verbose         = false;
+  m_verbose         = true;
   m_gui             = 0; 
   m_start_time      = 0;
   m_lastredraw_time = 0;
@@ -60,7 +57,7 @@ bool PMV_MOOSApp::OnNewMail(MOOSMSG_LIST &NewMail)
   e.moos_time = MOOSTime();
 
   MOOSMSG_LIST::iterator p;
-  for(p = NewMail.begin();p!=NewMail.end();p++) {
+  for(p=NewMail.begin(); p!=NewMail.end(); p++) {
     CMOOSMsg &Msg = *p;
     e.mail.push_back(MOOS_event::Mail_message(Msg));
   }
@@ -122,6 +119,13 @@ bool PMV_MOOSApp::OnStartUp()
   if(m_gui && !m_gui->mviewer->initGeodesy(lat_origin, lon_origin))
     return(MOOSFail("Geodesy Init in pMarineViewer failed - FAIL\n"));
 
+  double time_warp;
+  bool okw = m_MissionReader.GetValue("MOOSTimeWarp", time_warp);
+  if(okw && (time_warp > 0)) {
+    if((m_dfFreq * time_warp) > 20) 
+      SetAppFreq((20/time_warp));
+  }
+
   if((!m_gui) || (!m_pending_moos_events))
     return(true);
   
@@ -169,14 +173,15 @@ bool PMV_MOOSApp::receivePK_SOL(string sval)
 void PMV_MOOSApp::registerVariables()
 {
   m_Comms.Register("PK_SOL", 0);
-  m_Comms.Register("GRID_CONFIG",      0);
-  m_Comms.Register("GRID_DELTA",       0);
-  m_Comms.Register("VIEW_POLYGON",     0);
-  m_Comms.Register("VIEW_POINT",       0);
-  m_Comms.Register("VIEW_CIRCLE",      0);
-  m_Comms.Register("VIEW_SEGLIST",     0);
-  m_Comms.Register("TRAIL_RESET",      0);
-  m_Comms.Register("VIEW_MARKER",      0);
+  m_Comms.Register("GRID_CONFIG",  0);
+  m_Comms.Register("GRID_DELTA",   0);
+  m_Comms.Register("VIEW_POLYGON", 0);
+  m_Comms.Register("VIEW_POINT",   0);
+  m_Comms.Register("VIEW_CIRCLE",  0);
+  m_Comms.Register("VIEW_SEGLIST", 0);
+  m_Comms.Register("TRAIL_RESET",  0);
+  m_Comms.Register("VIEW_MARKER",  0);
+  m_Comms.Register("BEARING_LINE", 0);
 
   unsigned int i, vsize = m_scope_vars.size();
   for(i=0; i<vsize; i++)
@@ -215,7 +220,6 @@ void PMV_MOOSApp::handlePendingGUI()
 	dval = atof(val.c_str());
       }
       
-      //cout << "Notifying - var: " << var << "  val:" << val << endl;
       if(val_type == "string")
 	m_Comms.Notify(var, val);
       else
@@ -252,7 +256,7 @@ void PMV_MOOSApp::handleNewMail(const MOOS_event & e)
 	m_gui->mviewer->updateScopeVariable(key, sval, mtime, source);
 	scope_handled = true;
       }
-	}
+    }
 
     bool handled = m_gui->mviewer->setParam(key, sval);
     if(!handled && (key == "PK_SOL")) {
@@ -266,16 +270,16 @@ void PMV_MOOSApp::handleNewMail(const MOOS_event & e)
       MOOSTrace("?");
     }
     
-    if(key == "VIEW_POLYGON")           MOOSTrace("P");
-    else if(key == "VIEW_SEGLIST")      MOOSTrace("S");
-    else if(key == "VIEW_POINT")        MOOSTrace(".");
-    else if(key == "GRID_CONFIG")       MOOSTrace("X");
-    else if(key == "NODE_REPORT")       MOOSTrace("*");
-    else if(key == "NODE_REPORT_LOCAL") MOOSTrace("*");
-    else if(key == "GRID_CONFIG")       MOOSTrace("X");
-    else if(key == "GRID_DELTA")        MOOSTrace("G");
-    else if(key == "VIEW_MARKER")       MOOSTrace("M");
-
+    if(key == "VIEW_POLYGON")           cout << "P";
+    else if(key == "VIEW_SEGLIST")      cout << "S";
+    else if(key == "VIEW_POINT")        cout << ".";
+    else if(key == "GRID_CONFIG")       cout << "X";
+    else if(key == "NODE_REPORT")       cout << "*";
+    else if(key == "NODE_REPORT_LOCAL") cout << "*";
+    else if(key == "GRID_CONFIG")       cout << "X";
+    else if(key == "GRID_DELTA")        cout << "G";
+    else if(key == "VIEW_MARKER")       cout << "M";
+    cout << flush;
     if(handled)
       handled_msgs++;
   }
@@ -302,32 +306,31 @@ void PMV_MOOSApp::handleIterate(const MOOS_event & e) {
   m_gui->mviewer->setParam("curr_time", e.moos_time);
   m_gui->setCurrTime(curr_time);
 
-  string left_click_str = m_gui->mviewer->getStringInfo("left_click_info");
-  if(left_click_str != m_left_click_str) {
-    m_left_click_str = left_click_str;
-    
-    if(m_left_click_str != "") {
-      string vname   = m_gui->mviewer->getStringInfo("active_vehicle_name");
-      string postval = left_click_str;
-      if(vname != "")
-        postval += (",vname=" + vname);
-      m_Comms.Notify("MVIEWER_LCLICK", postval);
-    }
+  string vname = m_gui->mviewer->getStringInfo("active_vehicle_name");
+
+  vector<VarDataPair> left_pairs = m_gui->mviewer->getLeftMousePairs();
+  unsigned int i, vsize = left_pairs.size();
+  
+  for(i=0; i<vsize; i++) {
+    VarDataPair pair = left_pairs[i];
+    string var = pair.get_var();
+    if(!pair.is_string())
+      m_Comms.Notify(var, pair.get_ddata());
+    else
+      m_Comms.Notify(var, pair.get_sdata());
   }
 
-  string right_click_str = m_gui->mviewer->getStringInfo("right_click_info");
-  if(m_right_click_str != m_right_click_str) {
-    m_right_click_str = right_click_str;
-    
-    if(m_right_click_str != "") {
-      string vname   = m_gui->mviewer->getStringInfo("active_vehicle_name");
-      string postval = right_click_str;
-      if(vname != "")
-        postval += (",vname=" + vname);
-      m_Comms.Notify("MVIEWER_RCLICK", postval);
-    }
+  vector<VarDataPair> right_pairs = m_gui->mviewer->getRightMousePairs();
+  vsize = right_pairs.size();
+  for(i=0; i<vsize; i++) {
+    VarDataPair pair = right_pairs[i];
+    string var = pair.get_var();
+    if(!pair.is_string())
+      m_Comms.Notify(var, pair.get_ddata());
+    else
+      m_Comms.Notify(var, pair.get_sdata());
   }
-
+  
   handlePendingGUI();
 }
 
@@ -366,10 +369,16 @@ void PMV_MOOSApp::handleStartUp(const MOOS_event & e) {
       m_gui->addAction(value, true);
     else if((param == "center_vehicle") || (param == "reference_vehicle"))
       m_gui->addReferenceVehicle(value);
-    else if(param == "left_context")
-      m_gui->addContext("left", value);
-    else if(param == "right_context")
-      m_gui->addContext("right", value);
+    else if(strBegins(param, "left_context", false)) {
+      string key = getContextKey(param);
+      if(key != "error")
+	m_gui->addMousePoke("left", key, value);
+    }
+    else if(strBegins(param, "right_context", false)) {
+      string key = getContextKey(param);
+      if(key != "error")
+	m_gui->addMousePoke("right", key, value);
+    }
     else if(param == "tiff_file") {
       if(!tiff_a_set)
 	tiff_a_set = m_gui->mviewer->setParam(param, value);
@@ -413,4 +422,40 @@ void PMV_MOOSApp::handleStartUp(const MOOS_event & e) {
   m_gui->mviewer->redraw();
   
   registerVariables();
+}
+
+
+//----------------------------------------------------------------------
+// Procedure: getContextKey
+//   Purpose: To determine the "key" in strings of the following form:
+//            "left_context[mode]" or "right_context[mode]". 
+
+string PMV_MOOSApp::getContextKey(string str)
+{
+  string remainder;
+  string null_key = "any_left";
+  if(strBegins(str, "left_context", false)) // false means case insens.
+    remainder = str.c_str()+12;
+  else if(strBegins(str, "right_context", false)) {
+    remainder = str.c_str()+13;
+    null_key = "any_right";
+  }
+  else
+    return("error");
+
+  unsigned int rsize = remainder.size();
+  if(rsize == 0)
+    return(null_key);
+
+  if(rsize == 1)
+    return("error");
+  
+  if((remainder.at(0) != '[') || (remainder.at(rsize-1) != ']'))
+    return("error");
+
+  string key = remainder.substr(1, rsize-2);
+  if(key == "")
+    return(null_key);
+  else
+    return(key);
 }

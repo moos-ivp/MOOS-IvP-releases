@@ -181,14 +181,14 @@ bool BHV_StationKeep::setParam(string param, string val)
 
 
 //-----------------------------------------------------------
-// Procedure: onIdleState
+// Procedure: onRunToIdleState
 //      Note: If m_center_pending is true, each time the behavior
 //            goes inactive (and thus this function is called), 
 //            a pending new center is declared, and set to the 
 //            special value of present_position, which will be 
 //            determined when the activation occurs.
 
-void BHV_StationKeep::onIdleState()
+void BHV_StationKeep::onRunToIdleState()
 {
   m_distance_history.clear();
   m_distance_thistory.clear();
@@ -364,21 +364,37 @@ void BHV_StationKeep::postStationMessage(bool post)
 
   string poly_str = "radial:: x=" + str_x;
   poly_str += ",y=" + str_y;
-  poly_str += ",label="  + m_us_name + ":station-keep";
   poly_str += ",source=" + m_us_name+ ":" + m_descriptor;
-  poly_str += ",radius=" + doubleToString(m_outer_radius,1);
-  poly_str += ",pts=24";
+  poly_str += ",pts=16";
   if(m_hint_edge_size >= 0)
     poly_str += ",edge_size=" + doubleToString(m_hint_edge_size);
   if(m_hint_vertex_size >= 0)
     poly_str += ",vertex_size=" + doubleToString(m_hint_vertex_size);
   if(m_hint_edge_color != "")
     poly_str += ",edge_color=" + m_hint_edge_color;
+  if(m_hint_vertex_color != "")
+    poly_str += ",vertex_color=" + m_hint_vertex_color;
 
-  if(post==false)
-    poly_str += ",active=false";
+  string poly_str_outer = poly_str;
+  string poly_str_inner  = poly_str;
+  poly_str_outer += ",label="  + m_us_name + ":station-keep-out";
+  poly_str_outer += ",radius=" + doubleToString(m_outer_radius,1);
+  poly_str_inner += ",label="  + m_us_name + ":station-keep-in";
+  poly_str_inner += ",radius=" + doubleToString(m_inner_radius,1);
 
-  postMessage("VIEW_POLYGON", poly_str);
+
+  if(post==false) {
+    poly_str_outer += ",active=false";
+    poly_str_inner += ",active=false";
+  }
+
+  postMessage("VIEW_POLYGON", poly_str_outer, "outer");
+
+  // No need to post both circles if the radii are collapsed, but if
+  // we're trying to erase a circle, post anyway just ensure no 
+  // dangling artifacts from the radii being altered dynaically.
+  if((m_inner_radius < m_outer_radius) || (post==false))
+    postMessage("VIEW_POLYGON", poly_str_inner, "inner");
 }
 
 
@@ -388,8 +404,7 @@ void BHV_StationKeep::postStationMessage(bool post)
 void BHV_StationKeep::updateHibernationState()
 {
   if(m_pskeep_state == "disabled")
-    return;
-  
+    return;  
   
   if(m_transit_state == "pending_progress_start") {
     if(historyShowsProgressStart())

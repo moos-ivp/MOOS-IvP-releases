@@ -8,7 +8,6 @@ SET(SRC
   BHV_Attractor.cpp
 #  BHV_HAttractor.cpp
   BHV_AvoidCollision.cpp
-  BHV_AvoidCollisionDepth.cpp
   BHV_AvoidObstacles.cpp
   BHV_ConstantDepth.cpp
   BHV_ConstantHeading.cpp
@@ -35,6 +34,58 @@ SET(SRC
   BHV_HSLine.cpp
   BHV_HeadingChange.cpp
   BHV_HeadingBias.cpp
+  BHV_BearingLine.cpp
 )
 
+SET(HEADERS 
+  BHV_AbortToPoint.h
+  BHV_Attractor.h
+  BHV_AvoidCollision.h
+  BHV_AvoidObstacles.h
+  BHV_ConstantDepth.h
+  BHV_ConstantHeading.h
+  BHV_ConstantSpeed.h
+  BHV_CutRange.h
+  BHV_GoToDepth.h
+#  BHV_HAttractor.h
+  BHV_HeadingBias.h
+  BHV_HeadingChange.h
+  BHV_HeadingHysteresis.h
+  BHV_HSLine.h
+  BHV_Hysteresis.h
+  BHV_Loiter.h
+  BHV_MaintainHeading.h
+  BHV_MemoryTurnLimit.h
+  BHV_OpRegion.h
+  BHV_PeriodicSpeed.h
+#  BHV_PeriodicSurface.h
+  BHV_RStationKeep.h
+  BHV_RubberBand.h
+  BHV_Shadow.h
+  BHV_StationKeep.h
+  BHV_TimeOut.h
+  BHV_Timer.h
+  BHV_Trail.h
+  BHV_Waypoint.h
+  BHV_BearingLine.h
+) 
+
 ADD_LIBRARY(behaviors-marine ${SRC})
+
+TARGET_LINK_LIBRARIES(behaviors-marine
+   mbutil
+   behaviors
+   geometry
+   )
+
+# Install Headers
+INSTALL( FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/lib_behaviors-marine )
+
+# Install Libararies
+INSTALL( TARGETS behaviors-marine
+   RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+   LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+   ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+)
+
+
