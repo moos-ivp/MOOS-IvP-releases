@@ -37,7 +37,7 @@ void showSynopsis()
   blk("------------------------------------                            ");
   blk("  Automatically detect the vehicle's host information including ");
   blk("  the IP addresses, port being used by the MOOSDB, the port     ");
-  blk("  being used by local pMOOSBridge for UDP listening, and the    ");
+  blk("  being used by local pShare for UDP listening, and the         ");
   blk("  community name for the local MOOSDB. Post these to facilitate ");
   blk("  automatic intervehicle communications in especially in multi- ");
   blk("  vehicle scenarios where the local IP address changes w/ DHCP. ");
@@ -129,7 +129,7 @@ void showInterfaceAndExit()
   blk("                                                                ");
   blk("SUBSCRIPTIONS:                                                  ");
   blk("------------------------------------                            ");
-  blk("  pShare_INPUT_SUMMARY = localhost:9000:udp,                    ");
+  blk("  PSHARE_INPUT_SUMMARY = localhost:9000:udp,                    ");
   blk("                         1.2.3.4:2000:multicast_23              ");
   blk("  HOST_INFO_REQUEST    = true                                   ");
   exit(0);
@@ -143,5 +143,4 @@ void showReleaseInfoAndExit()
   showReleaseInfo("pHostInfo", "gpl");
   exit(0);
 }
-
 

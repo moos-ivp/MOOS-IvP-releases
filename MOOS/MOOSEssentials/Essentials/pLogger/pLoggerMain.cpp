@@ -42,7 +42,6 @@ void CatchMeBeforeDeath(int sig)
 #endif
 {
   
-	std::cerr<<"closing\n";
 	gLogger.ShutDown();
     exit(0);
 

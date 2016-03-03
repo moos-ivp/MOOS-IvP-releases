@@ -54,6 +54,10 @@ BasicContactMgr::BasicContactMgr()
   m_default_alert_rng_cpa       = 1000;
   m_default_alert_rng_color     = "gray65";
   m_default_alert_rng_cpa_color = "gray35";
+
+  m_use_geodesy = false;
+
+  m_contact_local_coords = "verbatim"; // Or lazy_lat_lon, or force_lat_lon
 }
 
 //---------------------------------------------------------
@@ -135,10 +139,10 @@ bool BasicContactMgr::OnStartUp()
     return(false);
   }
   
+  // Part 1: Set the basic configuration parameters.
   STRING_LIST sParams;
-  if(!m_MissionReader.GetConfiguration(GetAppName(), sParams)) 
-    reportConfigWarning("No config block found for " + GetAppName());
-
+  m_MissionReader.GetConfiguration(GetAppName(), sParams);
+  
   STRING_LIST::reverse_iterator p;
   for(p=sParams.rbegin(); p!=sParams.rend(); p++) {
     string orig  = *p;
@@ -154,6 +158,13 @@ bool BasicContactMgr::OnStartUp()
     }
     else if(param == "display_radii")
       setBooleanOnString(m_display_radii, value);
+    else if(param == "contact_local_coords") {
+      string lval = tolower(value);
+      if((lval== "verbatim") || (lval=="lazy_lat_lon") || (lval=="force_lat_lon"))
+	m_contact_local_coords = lval;
+      else
+	reportConfigWarning("Illegal contact_local_coords configuration");
+    }
     else if((param == "alert_range") || (param == "default_alert_range")) {
       if(dval > 0)
 	m_default_alert_rng = dval;
@@ -196,6 +207,29 @@ bool BasicContactMgr::OnStartUp()
     else 
       reportUnhandledConfigWarning(orig);
   }
+
+  // Part 2: If we may possibly want to set our incoming X/Y report values based
+  // on Lat/Lon values, then we must check for and initialized the MOOSGeodesy.
+  if(m_contact_local_coords != "verbatim") {
+    // look for latitude, longitude global variables
+    double lat_origin, lon_origin;
+    if(!m_MissionReader.GetValue("LatOrigin", lat_origin)) {
+      reportConfigWarning("No LatOrigin in *.moos file");
+      reportConfigWarning("Will not derive x/y from lat/lon in node reports.");
+    }
+    else if (!m_MissionReader.GetValue("LongOrigin", lon_origin)) {
+      reportConfigWarning("No LongOrigin set in *.moos file");
+      reportConfigWarning("Will not derive x/y from lat/lon in node reports.");
+    }
+    else if(!m_geodesy.Initialise(lat_origin, lon_origin)) {
+      reportConfigWarning("Lat/Lon Origin found but Geodesy init failed.");
+      reportConfigWarning("Will not derive x/y from lat/lon in node reports.");
+    }
+    else {
+      m_use_geodesy = true;
+      reportEvent("Geodesy init ok: will derive x/y from lat/lon in node reports.");
+    }
+  }
   
   registerVariables();
   return(true);
@@ -226,7 +260,38 @@ void BasicContactMgr::registerVariables()
 
 void BasicContactMgr::handleMailNodeReport(const string& report)
 {
-  NodeRecord new_node_record = string2NodeRecord(report);
+  NodeRecord new_node_record = string2NodeRecord(report, true);
+
+  // Part 1: Decide if we want to override X/Y with Lat/Lon based on 
+  // user configuration and state of the node record.
+  bool override_xy_with_latlon = true;
+  if(m_contact_local_coords == "verbatim")
+    override_xy_with_latlon = false;
+  if(!m_use_geodesy)
+    override_xy_with_latlon = false;
+  if(m_contact_local_coords == "lazy_lat_lon") {
+    if(new_node_record.isSetX() && new_node_record.isSetY())
+      override_xy_with_latlon = false;
+  }
+  if(!new_node_record.isSetLatitude() || !new_node_record.isSetLongitude())
+    override_xy_with_latlon = false;
+ 
+  // Part 2: If we can override xy with latlon and configured to do so
+  // then find the X/Y from MOOSGeodesy and Lat/Lon and replace.
+  if(override_xy_with_latlon) {
+    double nav_x, nav_y;
+    double lat = new_node_record.getLat();
+    double lon = new_node_record.getLon();
+    
+#ifdef USE_UTM
+    m_geodesy.LatLong2LocalUTM(lat, lon, nav_y, nav_x);
+#else
+    m_geodesy.LatLong2LocalGrid(lat, lon, nav_y, nav_x);
+#endif      
+    new_node_record.setX(nav_x);
+    new_node_record.setY(nav_y);
+  }
+
   string vname = new_node_record.getName();
 
   // If incoming node name matches ownship, just ignore the node report
@@ -235,7 +300,7 @@ void BasicContactMgr::handleMailNodeReport(const string& report)
     return;
   
   if(!new_node_record.valid()) {
-    m_Comms.Notify("CONTACT_MGR_WARNING", "Bad Node Report Received");
+    Notify("CONTACT_MGR_WARNING", "Bad Node Report Received");
     reportRunWarning("Bad Node Report Received");
     return;
   }
@@ -279,7 +344,7 @@ void BasicContactMgr::handleMailResolved(const string& str)
   // Error Check #1 - Make sure we know about the vehicle
   if(!m_par.containsVehicle(vehicle)) {
     string msg = "Resolution failed. Nothing known about vehicle: " + vehicle;
-    m_Comms.Notify("CONTACT_MGR_WARNING", msg);
+    Notify("CONTACT_MGR_WARNING", msg);
     reportRunWarning(msg);
     return;
   }
@@ -287,7 +352,7 @@ void BasicContactMgr::handleMailResolved(const string& str)
   // Error Check #2 - Make sure we know about the alert id
   if((alertid != "all_alerts") && !m_par.containsAlertID(alertid)) {
     string msg = "Resolution failed. Nothing known about alertid: " + alertid;
-    m_Comms.Notify("CONTACT_MGR_WARNING", msg);
+    Notify("CONTACT_MGR_WARNING", msg);
     reportRunWarning(msg);
     return;
   }
@@ -400,29 +465,29 @@ void BasicContactMgr::postSummaries()
   }
 
   if(m_prev_contacts_list != contacts_list) {
-    m_Comms.Notify("CONTACTS_LIST", contacts_list);
+    Notify("CONTACTS_LIST", contacts_list);
     m_prev_contacts_list = contacts_list;
   }
 
   contacts_alerted = m_par.getAlertedGroup(true);
   if(m_prev_contacts_alerted != contacts_alerted) {
-    m_Comms.Notify("CONTACTS_ALERTED", contacts_alerted);
+    Notify("CONTACTS_ALERTED", contacts_alerted);
     m_prev_contacts_alerted = contacts_alerted;
   }
 
   contacts_unalerted = m_par.getAlertedGroup(false);
   if(m_prev_contacts_unalerted != contacts_unalerted) {
-    m_Comms.Notify("CONTACTS_UNALERTED", contacts_unalerted);
+    Notify("CONTACTS_UNALERTED", contacts_unalerted);
     m_prev_contacts_unalerted = contacts_unalerted;
   }
 
   if(m_prev_contacts_retired != contacts_retired) {
-    m_Comms.Notify("CONTACTS_RETIRED", contacts_retired);
+    Notify("CONTACTS_RETIRED", contacts_retired);
     m_prev_contacts_retired = contacts_retired;
   }
 
   if(m_prev_contacts_recap != contacts_recap) {
-    m_Comms.Notify("CONTACTS_RECAP", contacts_recap);
+    Notify("CONTACTS_RECAP", contacts_recap);
     m_prev_contacts_recap = contacts_recap;
   }
   
@@ -491,7 +556,7 @@ bool BasicContactMgr::postAlerts()
 	  msg = findReplace(msg, "%[VNAME]", tolower(name_str));
 	  msg = findReplace(msg, "%[VTYPE]", tolower(type_str));
 
-	  m_Comms.Notify(var, msg);
+	  Notify(var, msg);
 	  m_par.setValue(contact_name, alert_id, true);
 	  reportEvent(var + "=" + msg);
 
@@ -563,7 +628,7 @@ void BasicContactMgr::postRadii(bool active)
     circle.set_edge_size(1);
     circle.set_active(true);
     string s1 = circle.get_spec();
-    m_Comms.Notify("VIEW_CIRCLE", s1);
+    Notify("VIEW_CIRCLE", s1);
 
     double alert_range_cpa = getAlertRangeCPA(alert_id);
     if(alert_range_cpa > alert_range) {
@@ -577,7 +642,7 @@ void BasicContactMgr::postRadii(bool active)
       circ.set_active(true);
       string s2 = circ.get_spec();
 
-      m_Comms.Notify("VIEW_CIRCLE", s2);
+      Notify("VIEW_CIRCLE", s2);
     }
   }
 }
@@ -587,7 +652,7 @@ void BasicContactMgr::postRadii(bool active)
 //      Note: A virtual function of the AppCastingMOOSApp superclass, 
 //            conditionally invoked if either a terminal or appcast 
 //            report is needed.
-
+//
 // Alert Configurations (2):
 // ---------------------
 // Alert ID = avd
@@ -631,8 +696,9 @@ void BasicContactMgr::postRadii(bool active)
 bool BasicContactMgr::buildReport()
 {
   string alert_count = uintToString(m_map_alert_varname.size());
-  m_msgs << "DisplayRadii: " << m_display_radii << endl << endl;;
-  m_msgs << "Alert Configurations (" << alert_count << "):" << endl;
+  m_msgs << "DisplayRadii:              " << m_display_radii << endl;
+  m_msgs << "Deriving X/Y from Lat/Lon: " << m_use_geodesy   << endl << endl;
+  m_msgs << "Alert Configurations (" << alert_count << "):"  << endl;
   m_msgs << "---------------------";
   map<string,string>::iterator p;
   for(p=m_map_alert_varname.begin(); p!=m_map_alert_varname.end(); p++) {
@@ -651,8 +717,8 @@ bool BasicContactMgr::buildReport()
     m_msgs << "  CPA_RANGE = " << alert_rng_cpa << ", " << alert_rng_cpa_color << endl;
   }
   m_msgs << endl;
-  m_msgs << "Alert Status Summary: ";
-  m_msgs << "----------------------";
+  m_msgs << "Alert Status Summary: " << endl;
+  m_msgs << "----------------------" << endl;
   m_msgs << "       List: " << m_prev_contacts_list         << endl;
   m_msgs << "    Alerted: " << m_prev_contacts_alerted      << endl;
   m_msgs << "  UnAlerted: " << m_prev_contacts_unalerted    << endl;
@@ -740,4 +806,3 @@ string BasicContactMgr::getAlertRangeCPAColor(const string& alert_id) const
   else
     return(p->second);
 }
-

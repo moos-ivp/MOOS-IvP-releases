@@ -116,6 +116,7 @@ SET(IVP_NON_GUI_LIBS
    lib_ufield
    lib_ufld_hazards
    lib_logutils
+   lib_manifest
    lib_mbutil
    )
 
@@ -200,6 +201,7 @@ SET(IVP_NON_GUI_APPS
   app_aloghelm
   app_alogcheck
   app_nsplug
+  app_mandler
   app_gen_hazards
   pEchoVar
   pXRelay
@@ -236,7 +238,7 @@ SET(IVP_NON_GUI_APPS
 SET(IVP_GUI_APPS
  app_ivpcheck
   app_ffview
-#  app_geoview
+  app_geoview
   app_currview
   app_alogview
   app_vzaicview

@@ -48,9 +48,10 @@ PMV_MOOSApp::PMV_MOOSApp()
   m_appcast_last_req_time    = 0;
   m_appcast_request_interval = 1.0;  // seconds
 
-
   m_node_reports_received = 0;
   m_node_report_index     = 0;
+
+  m_log_the_image = false;
 }
 
 //----------------------------------------------------------------
@@ -138,9 +139,9 @@ void PMV_MOOSApp::postConnectionPairs()
     VarDataPair pair = m_connection_pairs[i];
     string var = pair.get_var();
     if(pair.is_string())
-      m_Comms.Notify(var, pair.get_sdata());
+      Notify(var, pair.get_sdata());
     else
-      m_Comms.Notify(var, pair.get_ddata());
+      Notify(var, pair.get_ddata());
   }
 }
 
@@ -207,7 +208,6 @@ void PMV_MOOSApp::registerVariables()
   m_Comms.Register("TRAIL_RESET",  0);
   m_Comms.Register("VIEW_MARKER",  0);
   m_Comms.Register("VIEW_COMMS_PULSE", 0);
-  m_Comms.Register("BEARING_LINE", 0);
   m_Comms.Register("GRID_CONFIG",  0);
   m_Comms.Register("GRID_DELTA",   0);
   m_Comms.Register("VIEW_GRID", 0);
@@ -251,9 +251,9 @@ void PMV_MOOSApp::handlePendingGUI()
       }
       
       if(val_type == "string")
-	m_Comms.Notify(var, val);
+	Notify(var, val);
       else
-	m_Comms.Notify(var, dval);
+	Notify(var, dval);
     }
   }
 
@@ -383,9 +383,9 @@ void PMV_MOOSApp::handleIterate(const MOOS_event & e)
     VarDataPair pair = left_pairs[i];
     string var = pair.get_var();
     if(!pair.is_string())
-      m_Comms.Notify(var, pair.get_ddata());
+      Notify(var, pair.get_ddata());
     else
-      m_Comms.Notify(var, pair.get_sdata());
+      Notify(var, pair.get_sdata());
   }
 
   vector<VarDataPair> right_pairs = m_gui->mviewer->getRightMousePairs();
@@ -394,9 +394,9 @@ void PMV_MOOSApp::handleIterate(const MOOS_event & e)
     VarDataPair pair = right_pairs[i];
     string var = pair.get_var();
     if(!pair.is_string())
-      m_Comms.Notify(var, pair.get_ddata());
+      Notify(var, pair.get_ddata());
     else
-      m_Comms.Notify(var, pair.get_sdata());
+      Notify(var, pair.get_sdata());
   }
 
   vector<VarDataPair> non_mouse_pairs = m_gui->mviewer->getNonMousePairs();
@@ -405,9 +405,9 @@ void PMV_MOOSApp::handleIterate(const MOOS_event & e)
     VarDataPair pair = non_mouse_pairs[i];
     string var = pair.get_var();
     if(!pair.is_string())
-      m_Comms.Notify(var, pair.get_ddata());
+      Notify(var, pair.get_ddata());
     else
-      m_Comms.Notify(var, pair.get_sdata());
+      Notify(var, pair.get_sdata());
   }
   
   handlePendingGUI();
@@ -505,8 +505,11 @@ void PMV_MOOSApp::handleStartUp(const MOOS_event & e) {
       handled = m_gui->setRadioCastAttrib(param, value);
     else if(param == "appcast_height") 
       handled = m_gui->setRadioCastAttrib(param, value);
-        else if(param == "appcast_width") 
+    else if(param == "appcast_width") 
       handled = m_gui->setRadioCastAttrib(param, value);
+
+    else if(param == "log_the_image") 
+      handled = setBooleanOnString(m_log_the_image, value);
     
     else if(strBegins(param, "left_context", false)) {
       string key = getContextKey(param);
@@ -517,8 +520,9 @@ void PMV_MOOSApp::handleStartUp(const MOOS_event & e) {
       handled = m_gui->addMousePoke("right", key, value);
     }
     else if(param == "tiff_file") {
-      if(!tiff_a_set)
+      if(!tiff_a_set) {
 	tiff_a_set = m_gui->mviewer->setParam(param, value);
+      }
       handled = true;
     }
     else if(param == "tiff_file_b") {
@@ -565,6 +569,28 @@ void PMV_MOOSApp::handleStartUp(const MOOS_event & e) {
     if(!handled)
       reportUnhandledConfigWarning(orig);
   }
+
+  if(tiff_a_set && m_log_the_image) {
+    string command = "COPY_FILE_REQUEST=";
+    string tiff_file = m_gui->mviewer->getTiffFileA();
+    string info_file = m_gui->mviewer->getInfoFileA();
+    if((tiff_file != "") && (info_file != "")) {
+      Notify("PLOGGER_CMD", command + tiff_file);
+      Notify("PLOGGER_CMD", command + info_file);
+    }
+  }
+
+  if(tiff_b_set && m_log_the_image) {
+    string command = "COPY_FILE_REQUEST=";
+    string tiff_file = m_gui->mviewer->getTiffFileB();
+    string info_file = m_gui->mviewer->getInfoFileB();
+    if((tiff_file != "") && (info_file != "")) {
+      Notify("PLOGGER_CMD", command + tiff_file);
+      Notify("PLOGGER_CMD", command + info_file);
+    }
+  }
+
+
   
   // If no images were specified, use the default images.
   if(!tiff_a_set && !tiff_b_set) {
@@ -646,8 +672,8 @@ void PMV_MOOSApp::postAppCastRequest(string channel_node,
   str += ",key=" + key;
   str += ",thresh=" + threshold;
 
-  m_Comms.Notify("APPCAST_REQ", str);
-  m_Comms.Notify("APPCAST_REQ_"+toupper(channel_node), str);
+  Notify("APPCAST_REQ", str);
+  Notify("APPCAST_REQ_"+toupper(channel_node), str);
 }
 
 //------------------------------------------------------------

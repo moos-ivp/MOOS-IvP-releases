@@ -1,3 +1,32 @@
+/**
+///////////////////////////////////////////////////////////////////////////
+//
+//   This file is part of the MOOS project
+//
+//   MOOS : Mission Oriented Operating Suite A suit of 
+//   Applications and Libraries for Mobile Robotics Research 
+//   Copyright (C) Paul Newman
+//    
+//   This software was written by Paul Newman at MIT 2001-2002 and 
+//   the University of Oxford 2003-2013 
+//   
+//   email: pnewman@robots.ox.ac.uk. 
+//              
+//   This source code and the accompanying materials
+//   are made available under the terms of the GNU Lesser Public License v2.1
+//   which accompanies this distribution, and is available at
+//   http://www.gnu.org/licenses/lgpl.txt
+//          
+//   This program is distributed in the hope that it will be useful, 
+//   but WITHOUT ANY WARRANTY; without even the implied warranty of 
+//   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+//
+////////////////////////////////////////////////////////////////////////////
+**/
+
+
+
+
 /*
  * ThreadedCommServer.cpp
  *
@@ -12,6 +41,7 @@
 #include "MOOS/libMOOS/Utils/ConsoleColours.h"
 #include "MOOS/libMOOS/Utils/ThreadPrint.h"
 #include "MOOS/libMOOS/Comms/ServerAudit.h"
+#include "MOOS/libMOOS/Utils/ThreadPriority.h"
 #include <iomanip>
 #include <iterator>
 #include <algorithm>
@@ -26,18 +56,16 @@
 #define INVALID_SOCKET_SELECT EBADF
 #endif
 
-#define TOLERABLE_SILENCE 5.0
 
 namespace MOOS
 {
 
-ThreadPrint gPrinter(std::cerr);
+ThreadPrint gPrinter(std::cout);
 
 
 ThreadedCommServer::ThreadedCommServer()
 {
     // TODO Auto-generated constructor stub
-
 }
 
 ThreadedCommServer::~ThreadedCommServer()
@@ -124,7 +152,9 @@ bool ThreadedCommServer::AddAndStartClientThread(XPCTcpSocket & NewClientSocket,
     		NewClientSocket,
     		m_SharedDataListFromClient,
     		bAsync,
-    		dfConsolidationTime);
+    		dfConsolidationTime,
+    		m_dfClientTimeout,
+    		m_bBoostIOThreads);
 
     //add to map
     m_ClientThreads[sName] = pNewClientThread;
@@ -142,9 +172,17 @@ bool ThreadedCommServer::AddAndStartClientThread(XPCTcpSocket & NewClientSocket,
  */
 bool ThreadedCommServer::ServerLoop()
 {
+
+
 	MOOS::ServerAudit Auditor;
 	Auditor.Run();
-    //eternally look at our incoming work list....
+
+    if(m_bBoostIOThreads)
+    {
+    	MOOS::BoostThisThread();
+    }
+
+	//eternally look at our incoming work list....
 	while(!m_ServerThread.IsQuitRequested())
     {
         ClientThreadSharedData SDFromClient;
@@ -443,12 +481,14 @@ ThreadedCommServer::ClientThread::~ClientThread()
 }
 
 
-ThreadedCommServer::ClientThread::ClientThread(const std::string & sName, XPCTcpSocket & ClientSocket,SHARED_PKT_LIST & SharedDataIncoming, bool bAsync, double dfConsolidationPeriodMS ):
+ThreadedCommServer::ClientThread::ClientThread(const std::string & sName, XPCTcpSocket & ClientSocket,SHARED_PKT_LIST & SharedDataIncoming, bool bAsync, double dfConsolidationPeriodMS,double dfClientTimeout, bool bBoost ):
             _sClientName(sName),
             _ClientSocket(ClientSocket),
             _SharedDataIncoming(SharedDataIncoming),
 			_bAsynchronous(bAsync),
-			_dfConsolidationPeriod(dfConsolidationPeriodMS/1000.0)
+			_dfConsolidationPeriod(dfConsolidationPeriodMS/1000.0),
+			_dfClientTimeout(dfClientTimeout),
+			_bBoostThread(bBoost)
 {
     _Worker.Initialise(RunEntry,this);
 
@@ -474,6 +514,12 @@ bool ThreadedCommServer::ClientThread::Run()
     fd_set fdset;                // Set of "watched" file descriptors
 
     double dfLastGoodComms = MOOSLocalTime();
+
+    //this is an io-bound important thread...
+    if(_bBoostThread)
+    {
+    	MOOS::BoostThisThread();
+    }
 
     while(!_Worker.IsQuitRequested())
     {
@@ -517,10 +563,10 @@ bool ThreadedCommServer::ClientThread::Run()
 
         case 0:
             //timeout...nothing to read - spin
-        	if(MOOSLocalTime()-dfLastGoodComms>TOLERABLE_SILENCE)
+        	if(MOOSLocalTime()-dfLastGoodComms>_dfClientTimeout)
         	{
         		std::cout<<MOOS::ConsoleColours::Red();
-        		std::cout<<"Disconnecting \""<<_sClientName<<"\" after "<<TOLERABLE_SILENCE<<" seconds of silence\n";
+        		std::cout<<"Disconnecting \""<<_sClientName<<"\" after "<<_dfClientTimeout<<" seconds of silence\n";
         		std::cout<<MOOS::ConsoleColours::reset();
         		OnClientDisconnect();
         		return true;
@@ -625,6 +671,12 @@ bool ThreadedCommServer::ClientThread::AsynchronousWriteLoop()
 
     try
     {
+        if(_bBoostThread)
+        {
+        	MOOS::BoostThisThread();
+        }
+
+
 		while(!_Writer.IsQuitRequested())
 		{
 			ClientThreadSharedData SDDownChain;
@@ -671,7 +723,7 @@ bool ThreadedCommServer::ClientThread::AsynchronousWriteLoop()
 	   bResult = false;
 	}
 
-	std::cerr<<"Async writer "<<_sClientName<<" quits after thread quit requested\n";
+	std::cout<<"Async writer "<<_sClientName<<" quits after thread quit requested\n";
 
     return bResult;
 }

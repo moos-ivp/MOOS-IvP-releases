@@ -1,32 +1,29 @@
+/**
 ///////////////////////////////////////////////////////////////////////////
 //
-//   MOOS - Mission Oriented Operating Suite 
-//  
-//   A suit of Applications and Libraries for Mobile Robotics Research 
-//   Copyright (C) 2001-2005 Massachusetts Institute of Technology and 
-//   Oxford University. 
-//	
-//   This software was written by Paul Newman at MIT 2001-2002 and Oxford 
-//   University 2003-2005. email: pnewman@robots.ox.ac.uk. 
-//	  
-//   This file is part of a  MOOS Core Component. 
-//		
-//   This program is free software; you can redistribute it and/or 
-//   modify it under the terms of the GNU General Public License as 
-//   published by the Free Software Foundation; either version 2 of the 
-//   License, or (at your option) any later version. 
-//		  
-//   This program is distributed in the hope that it will be useful, 
-//   but WITHOUT ANY WARRANTY; without even the implied warranty of 
-//   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
-//   General Public License for more details. 
-//			
-//   You should have received a copy of the GNU General Public License 
-//   along with this program; if not, write to the Free Software 
-//   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
-//   02111-1307, USA. 
+//   This file is part of the MOOS project
 //
-//////////////////////////    END_GPL    //////////////////////////////////
+//   MOOS : Mission Oriented Operating Suite A suit of 
+//   Applications and Libraries for Mobile Robotics Research 
+//   Copyright (C) Paul Newman
+//    
+//   This software was written by Paul Newman at MIT 2001-2002 and 
+//   the University of Oxford 2003-2013 
+//   
+//   email: pnewman@robots.ox.ac.uk. 
+//              
+//   This source code and the accompanying materials
+//   are made available under the terms of the GNU Lesser Public License v2.1
+//   which accompanies this distribution, and is available at
+//   http://www.gnu.org/licenses/lgpl.txt distributed in the hope that it will be useful, 
+//   but WITHOUT ANY WARRANTY; without even the implied warranty of 
+//   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+//
+////////////////////////////////////////////////////////////////////////////
+**/
+
+
+
 #ifdef _WIN32
 #pragma warning(disable : 4786)
 #pragma warning(disable : 4503)
@@ -58,6 +55,7 @@
 #include "MOOS/libMOOS/Utils/MOOSException.h"
 #include "MOOS/libMOOS/Utils/MOOSScopedLock.h"
 #include "MOOS/libMOOS/Utils/ConsoleColours.h"
+#include "MOOS/libMOOS/Utils/ThreadPriority.h"
 
 #include "MOOS/libMOOS/Comms/XPCTcpSocket.h"
 #include "MOOS/libMOOS/Comms/MOOSCommClient.h"
@@ -106,6 +104,9 @@ CMOOSCommClient::CMOOSCommClient()
 	m_bFakeSource = false;
     m_bQuiet= false;
     
+    m_bPostNewestToFront = false;
+
+
     //by default this client will adjust the local time skew
     //by using time information sent by the CommServer sitting
     //at the other end of this conenection.
@@ -222,6 +223,18 @@ unsigned int CMOOSCommClient::GetNumberOfUnreadMessages()
 
 }
 
+unsigned int CMOOSCommClient::GetNumberOfUnsentMessages()
+{
+	m_InLock.Lock();
+	unsigned int n = m_OutBox.size();
+	m_InLock.UnLock();
+	return n;
+
+}
+
+
+
+
 unsigned long long int CMOOSCommClient::GetNumBytesSent()
 {
 	return m_nBytesSent;
@@ -254,6 +267,12 @@ bool CMOOSCommClient::IsRunning()
 bool CMOOSCommClient::ClientLoop()
 {
     double dfTDebug = MOOSLocalTime();
+
+    if(m_bBoostIOThreads)
+    {
+    	MOOS::BoostThisThread();
+    }
+
 	while(!m_ClientThread.IsQuitRequested())
 	{
 		m_nBytesReceived=0;
@@ -261,6 +280,17 @@ bool CMOOSCommClient::ClientLoop()
 
 		//this is the connect loop...
 		m_pSocket = new XPCTcpSocket(m_lPort);
+
+
+		try
+		{
+			m_pSocket->vSetRecieveBuf(m_nReceiveBufferSizeKB*1024);
+			m_pSocket->vSetSendBuf(m_nSendBufferSizeKB*1024);
+		}
+		catch(  XPCException & e)
+		{
+			std::cerr<<"there was trouble configuring socket buffers: "<<e.sGetException()<<"\n";
+		}
 
 		if(ConnectToServer())
 		{
@@ -311,25 +341,83 @@ bool CMOOSCommClient::ClientLoop()
 	return true;
 }
 
+bool CMOOSCommClient::RemoveMessageCallback(const std::string & sCallbackName)
+{
+	ActiveQueuesLock_.Lock();
+	std::map<std::string,std::list<MOOS::ActiveMailQueue*> >::iterator q;
+	for(q = ActiveQueues_.begin();q!=ActiveQueues_.end();q++)
+	{
+		std::list<MOOS::ActiveMailQueue*> & rQL = q->second;
+		std::list<MOOS::ActiveMailQueue*>::iterator p;
+		for(p = rQL.begin();p!=rQL.end();p++)
+		{
+			if((*p)->GetName()==sCallbackName)
+			{
+				delete *p;
+				rQL.erase(p);
+				ActiveQueuesLock_.UnLock();
+				return true;
+			}
+		}
+	}
+	ActiveQueuesLock_.UnLock();
+	return false;
+}
 
-bool CMOOSCommClient::AddMessageCallback(const std::string & sMsgName,
+bool CMOOSCommClient::AddMessageCallback(const std::string & sCallbackName, const std::string & sMsgName,
 		bool (*pfn)(CMOOSMsg &M, void * pYourParam),
 		void * pYourParam )
 {
+	ActiveQueuesLock_.Lock();
 	if(ActiveQueues_.find(sMsgName)!=ActiveQueues_.end())
 	{
-		ActiveQueues_[sMsgName]->Stop();
-		delete ActiveQueues_[sMsgName];
+		std::list<MOOS::ActiveMailQueue*>::iterator q;
+		for(q=ActiveQueues_[sMsgName].begin();q!=ActiveQueues_[sMsgName].end();q++)
+		{
+			MOOS::ActiveMailQueue* pqueue= *q;
+			if(pqueue->GetName()==sCallbackName)
+			{
+				pqueue->Stop();
+				delete pqueue;
+				ActiveQueues_[sMsgName].erase(q);
+			}
+		}
 	}
-	MOOS::ActiveMailQueue* pQ= new MOOS::ActiveMailQueue;
+	MOOS::ActiveMailQueue* pQ= new MOOS::ActiveMailQueue(sCallbackName);
 	pQ->SetCallback(pfn,pYourParam);
 	pQ->Start();
-	ActiveQueues_[sMsgName] = pQ;
+	ActiveQueues_[sMsgName].push_back(pQ);
+
+	ActiveQueuesLock_.UnLock();
 
 	return true;
 
 }
 
+
+bool CMOOSCommClient::HasMessageCallback(const std::string & sCallbackName)
+{
+	ActiveQueuesLock_.Lock();
+	std::map<std::string,std::list<MOOS::ActiveMailQueue*> >::iterator q;
+	for(q = ActiveQueues_.begin();q!=ActiveQueues_.end();q++)
+	{
+		std::list<MOOS::ActiveMailQueue*> & rQL = q->second;
+		std::list<MOOS::ActiveMailQueue*>::iterator p;
+		for(p = rQL.begin();p!=rQL.end();p++)
+		{
+			if((*p)->GetName()==sCallbackName)
+			{
+				ActiveQueuesLock_.UnLock();
+				return true;
+			}
+		}
+	}
+
+	ActiveQueuesLock_.UnLock();
+
+	return false;
+
+}
 
 bool CMOOSCommClient::DoClientWork()
 {
@@ -435,20 +523,7 @@ bool CMOOSCommClient::DoClientWork()
 
 
 			//here we dispatch to special call backs managed by threads
-			MOOSMSG_LIST::iterator t = m_InBox.begin();
-			while(t!=m_InBox.end())
-			{
-				std::map<std::string, MOOS::ActiveMailQueue* >::iterator q = ActiveQueues_.find(t->GetKey());
-				if(q!=ActiveQueues_.end())
-				{
-					q->second->Push(*t);
-					t = m_InBox.erase(t);
-				}
-				else
-				{
-					t++;
-				}
-			}
+			DispatchInBoxToActiveThreads();
             
        
 			m_bMailPresent = !m_InBox.empty();
@@ -474,6 +549,32 @@ bool CMOOSCommClient::DoClientWork()
 	return true;
 }
 
+bool CMOOSCommClient::DispatchInBoxToActiveThreads()
+{
+	//here we dispatch to special call backs managed by threads
+	MOOSMSG_LIST::iterator t = m_InBox.begin();
+	ActiveQueuesLock_.Lock();
+	while(t!=m_InBox.end())
+	{
+		std::map<std::string, std::list<MOOS::ActiveMailQueue*> >::iterator q = ActiveQueues_.find(t->GetKey());
+		if(q!=ActiveQueues_.end())
+		{
+			std::list<MOOS::ActiveMailQueue*>::iterator r;
+			for(r = q->second.begin();r!=q->second.end();r++)
+			{
+				(*r)->Push(*t);
+			}
+			t = m_InBox.erase(t);
+		}
+		else
+		{
+			t++;
+		}
+	}
+	ActiveQueuesLock_.UnLock();
+	return true;
+}
+
 
 bool CMOOSCommClient::StartThreads()
 {
@@ -495,6 +596,8 @@ bool CMOOSCommClient::ConnectToServer()
 	}
 
 	int nAttempt=0;
+
+
 
     if(!m_bQuiet)
 	    MOOSTrace("\n---------------MOOS CONNECT-----------------------\n");
@@ -608,14 +711,21 @@ bool CMOOSCommClient::Post(CMOOSMsg &Msg, bool bKeepMsgSourceName)
 	}
 
 
-	m_OutBox.push_front(Msg);
+	if(m_bPostNewestToFront)
+		m_OutBox.push_front(Msg);
+	else
+		m_OutBox.push_back(Msg);
 
 	if(m_OutBox.size()>m_nOutPendingLimit)
 	{	
 		MOOSTrace("\nThe outbox is very full. This is suspicious and dangerous.\n");
 		MOOSTrace("\nRemoving old unsent messages as new ones are added\n");
 		//remove oldest message...
-		m_OutBox.pop_back();
+
+		if(m_bPostNewestToFront)
+			m_OutBox.pop_back();
+		else
+			m_OutBox.pop_front();
 	}
 
 	m_OutLock.UnLock();
@@ -711,7 +821,7 @@ bool CMOOSCommClient::HandShake()
 		else
 		{
 			if(!m_bQuiet)
-				std::cerr<<MOOS::ConsoleColours::Green()<<"[OK]\n";
+				std::cout<<MOOS::ConsoleColours::Green()<<"[OK]\n";
 
 
 			m_sCommunityName = WelcomeMsg.GetCommunity();
@@ -721,7 +831,7 @@ bool CMOOSCommClient::HandShake()
             if(m_bDoLocalTimeCorrection)
 			    SetMOOSSkew(dfSkew);
 
-            std::cerr<<MOOS::ConsoleColours::reset();
+            std::cout<<MOOS::ConsoleColours::reset();
 
 		}
 	}
@@ -1121,13 +1231,22 @@ bool CMOOSCommClient::Close(bool  )
     
 	ClearResources();
 
-	std::map<std::string,MOOS::ActiveMailQueue*  >::iterator q;
+	ActiveQueuesLock_.Lock();
+	std::map<std::string,std::list<MOOS::ActiveMailQueue*>  >::iterator q;
 
 	for(q = ActiveQueues_.begin();q!=ActiveQueues_.end();q++)
 	{
-		delete q->second;
+		std::list<MOOS::ActiveMailQueue*> & rQL = q->second;
+		std::list<MOOS::ActiveMailQueue*>::iterator p;
+		for(p = rQL.begin();p!=rQL.end();p++)
+		{
+			MOOS::ActiveMailQueue* pQueue = *p;
+			delete pQueue;
+		}
 	}
 	ActiveQueues_.clear();
+	ActiveQueuesLock_.UnLock();
+
 
 	return true;
 }
