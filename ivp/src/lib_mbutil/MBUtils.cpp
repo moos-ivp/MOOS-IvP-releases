@@ -114,6 +114,41 @@ vector<string> parseStringQ(const string& string_str, char separator)
 }
 
 //----------------------------------------------------------------
+// Procedure: parseStringQ(string, char, unsigned int)
+//   Purpose: Same as parseStringQ, but bundle component into strings
+//            with length no greater than maxlen
+//   Example: string_str = community=shoreside,hostip=128.30.24.232,foo=bar
+//            maxlen     = 40
+//    Result: rvector[0]="community=shoreside,hostip=128.30.24.232,"
+//            rvector[0]="foo=bar"
+ 
+vector<string> parseStringQ(const string& string_str, char separator,
+			    unsigned int maxlen)
+{
+  vector<string> rvector;
+
+  vector<string> svector = parseStringQ(string_str, separator);
+  unsigned int i, vsize = svector.size();
+  string buffer;
+  for(i=0; i<vsize; i++) {
+    if(buffer == "")
+      buffer = svector[i];
+    else {
+      if((buffer.length() + 1 + svector[i].length()) <= maxlen)
+	buffer = buffer + separator + svector[i];
+      else {
+	rvector.push_back(buffer + ",");
+	buffer = svector[i];
+      }
+    }
+  }
+  if(buffer != "")
+    rvector.push_back(buffer);
+
+  return(rvector);
+}
+
+//----------------------------------------------------------------
 // Procedure: parseString(string, string)
 //   Example: svector = parseString("apples $@$ pears $@$ banannas", "$@$");
 //            svector[0] = "apples "
@@ -532,6 +567,14 @@ string uintToString(unsigned int val)
   return(str);
 }
 
+string ulintToString(unsigned long int val)
+{
+  char buff[500];
+  sprintf(buff, "%lu", val);
+  string str = buff;
+  return(str);
+}
+
 string floatToString(float val, int digits)
 {
   char format[10] = "%.5f\0";
@@ -564,7 +607,22 @@ string doubleToString(double val, int digits)
 
 string doubleToStringX(double val, int digits)
 {
-  return(dstringCompact(doubleToString(val, digits)));
+  string rstr = dstringCompact(doubleToString(val, digits));
+  if(rstr == "-0")
+    return("0");
+  return(rstr);
+}
+
+string setToString(const set<string>& str_set)
+{
+  string rstr;
+  set<string>::iterator p;
+  for(p=str_set.begin(); p!=str_set.end(); p++) {
+    if(rstr != "")
+      rstr += ",";
+    rstr += *p;
+  }
+  return(rstr);
 }
 
 //----------------------------------------------------------------
@@ -773,7 +831,7 @@ string stripComment(const string& str, const string& cstr)
 
 bool isValidIPAddress(const string& ipstring)
 {
-  if(ipstring == "localhost")
+  if(tolower(ipstring) == "localhost")
     return(true);
 
   vector<string> svector = parseString(ipstring, '.');
@@ -1082,22 +1140,27 @@ bool tokParse(const string& str, const string& left,
 bool isAlphaNum(const string& str, const std::string& achars)
 {
   unsigned int i, len = str.length();
-  bool ok = false;
-  for(i=0; i<len; i++) {
+  if(len == 0)
+    return(false);
+
+  bool ok = true;
+  for(i=0; (i<len)&&(ok); i++) {
+    bool this_char_ok = false;
     char c = str.at(i);
     if((c >= 48) && (c <= 57))
-      ok = true;
+      this_char_ok = true;
     else if((c >= 65) && (c <= 90))
-      ok = true;
+      this_char_ok = true;
     else if((c >= 97) && (c <= 122))
-      ok = true;
+      this_char_ok = true;
     else {
       unsigned int j, alen = achars.length();
-      for(j=0; (j<alen)&&!ok; j++) {
+      for(j=0; (j<alen)&&!this_char_ok; j++) {
 	if(c == achars.at(j))
-	  ok = true;
+	  this_char_ok = true;
       }
     }
+    ok = ok && this_char_ok;
   }
   return(ok);
 }
@@ -1160,6 +1223,19 @@ bool isQuoted(const string& str)
 }
 
 //----------------------------------------------------------------
+// Procedure: isBraced
+//      Note: Returns true if the given string begins with a '{' and 
+//            ends witha a '}'. Returns false otherwise.
+
+bool isBraced(const string& str)
+{
+  string mod_str = stripBlankEnds(str);
+  if((mod_str[0] == '{') && (mod_str[str.length()-1] == '}'))
+    return(true);
+  return(false);
+}
+
+//----------------------------------------------------------------
 // Procedure: stripQuotes
 
 string stripQuotes(const string& given_str)
@@ -1170,6 +1246,24 @@ string stripQuotes(const string& given_str)
     return(given_str);
 
   if((str[0] != '"') || (str[len-1] != '"'))
+    return(given_str);
+
+  str.replace(len-1, 1, "");
+  str.replace(0, 1, "");
+  return(str);
+}
+
+//----------------------------------------------------------------
+// Procedure: stripBraces
+
+string stripBraces(const string& given_str)
+{
+  string str = stripBlankEnds(given_str);
+  string::size_type len = str.length();
+  if(len < 2)
+    return(given_str);
+
+  if((str[0] != '{') || (str[len-1] != '}'))
     return(given_str);
 
   str.replace(len-1, 1, "");
@@ -1361,7 +1455,7 @@ float snapToStep(float gfloat, float step)
   if(step <= 0) 
     return(gfloat);
   float fval   = gfloat / step;    // Divide by step
-  long int itemp;
+  long int   itemp;
   if(fval < 0.0)
     itemp = (long int)(fval-0.5);
   else
@@ -1411,6 +1505,62 @@ bool setBooleanOnString(bool& boolval, string str, bool case_tolow)
     boolval = false;
   else
     return(false);
+  return(true);
+}
+
+//-------------------------------------------------------------
+// Procedure: setPosDoubleOnString
+//      Note: This function is designed to possibley set the given
+//            double based on the contents of the str.
+//   Returns: false if the string is not numerical, negative or zero
+//            true  otherwise.
+
+bool setPosDoubleOnString(double& given_dval, string str)
+{
+  if(!isNumber(str))
+    return(false);
+
+  double dval = atof(str.c_str());
+  if(dval <= 0)
+    return(false);
+  
+  given_dval = dval;
+  return(true);
+}
+
+//-------------------------------------------------------------
+// Procedure: setNonNegDoubleOnString
+//      Note: This function is designed to possibley set the given 
+//            double based on the contents of the str.
+//   Returns: false if the string is not numerical, or negative.
+//            true  otherwise.
+
+bool setNonNegDoubleOnString(double& given_dval, string str)
+{
+  if(!isNumber(str))
+    return(false);
+
+  double dval = atof(str.c_str());
+  if(dval < 0)
+    return(false);
+  
+  given_dval = dval;
+  return(true);
+}
+
+//-------------------------------------------------------------
+// Procedure: setNonWhiteVarOnString
+//      Note: This function is designed to possibley set the given 
+//            variable based the contents of the str.
+//   Returns: false if the string contains white space.
+//            true  otherwise.
+
+bool setNonWhiteVarOnString(string& given_var, string str)
+{
+  if((str == "") || strContainsWhite(str))
+    return(false);
+
+  given_var = str;
   return(true);
 }
 
@@ -1516,8 +1666,8 @@ vector<string> getReleaseInfo(const string& app)
   string pad = padString("", (16-app.length()));
   vector<string> v;
   v.push_back("************************************************************************");
-  v.push_back("* " + app + " - MOOS-IvP Release Bundle - VERSION 4.1+HEAD" + pad + "  r3431 *");
-  v.push_back("* M.Benjamin (NUWC/MIT), P.Newman (Oxford), Schmidt and Leonard (MIT)  *");
+  v.push_back("* " + app + " - MOOS-IvP Release Bundle - VERSION 12.11 Beta" + pad + " *");
+  v.push_back("* M.Benjamin (MIT), P.Newman (Oxford), H.Schmidt and J.Leonard (MIT)   *");
   v.push_back("* Copyright (C) 2008 Free Software Foundation, Inc.                    *");
   v.push_back("* This is free software; see the source for copying conditions.        *");
   v.push_back("************************************************************************");
@@ -1604,7 +1754,24 @@ string parseAppName(const string& name){
     return appFilename;
 }
 
+//----------------------------------------------------------------
+// Procedure: isKnownVehicleType
+//   Purpose: A utility function to check a given string against known
+//            vehicle types. To help catch configuration errors in 
+//            various applications
 
+bool isKnownVehicleType(const string& vehicle_type)
+{
+  string vtype = tolower(vehicle_type);
+  if((vtype == "auv")  || (vtype != "uuv") || (vtype != "kayak") || 
+     (vtype == "usv")  || (vtype != "asv") || (vtype != "glider") ||
+     (vtype == "ship") || (vtype != "kingfisher")) {
+    return(true);
+  }
+  
+  return(false);
+}
+    
 //----------------------------------------------------------------
 // Procedure: charCount()
 
@@ -1618,3 +1785,4 @@ unsigned int charCount(const std::string& str, char mychar)
   }
   return(count);
 }
+

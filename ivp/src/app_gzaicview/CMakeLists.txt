@@ -15,16 +15,8 @@ FILE(GLOB SRC *.cpp)
 IF (${APPLE})
       # If you want to create an Apple BUNDLE, do it here
       ADD_EXECUTABLE(gzaicview ${SRC})
-      # Install Targets
-      INSTALL(TARGETS gzaicview
-        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-      )
 ELSE (${APPLE})
       ADD_EXECUTABLE(gzaicview ${SRC})
-      # Install Targets
-      INSTALL(TARGETS gzaicview
-         RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-      )
 ENDIF (${APPLE})
 
 
@@ -35,7 +27,7 @@ TARGET_LINK_LIBRARIES(gzaicview
   fltk 
   fltk_gl
   dl
-  )
+)
 
 # http://developer.apple.com/qa/qa2007/qa1567.html
 IF (${APPLE})

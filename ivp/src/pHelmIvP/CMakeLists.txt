@@ -23,8 +23,7 @@ SET(SRC
 ADD_EXECUTABLE(pHelmIvP ${SRC})
    
 TARGET_LINK_LIBRARIES(pHelmIvP 
-  MOOS
-  MOOSGen
+  ${MOOS_LIBRARIES}
   helmivp
   contacts
   behaviors-marine
@@ -33,13 +32,10 @@ TARGET_LINK_LIBRARIES(pHelmIvP
   ivpbuild 
   ivpcore 
   geometry
+  apputil
   mbutil 
   logic 
   genutil
   ${SYSTEM_LIBS})
 
-# Install Targets
-INSTALL(TARGETS pHelmIvP
-  RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-)
 

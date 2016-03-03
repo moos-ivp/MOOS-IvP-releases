@@ -20,7 +20,9 @@
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
+#include <cstdlib>
 #include <iostream>
+#include <FL/Fl.H>
 #include "MBUtils.h"
 #include "Threadsafe_pipe.h"
 #include "MOOS_event.h"
@@ -43,6 +45,7 @@ int main(int argc, char *argv[])
 {
   string mission_file;
   string run_command = argv[0];
+  string size_request;
 
   for(int i=1; i<argc; i++) {
     string argi = argv[i];
@@ -56,6 +59,10 @@ int main(int argc, char *argv[])
       showInterfaceAndExit();
     else if(strEnds(argi, ".moos") || strEnds(argi, ".moos++"))
       mission_file = argv[i];
+    else if(strEnds(argi, ".moos") || strEnds(argi, ".moos++"))
+      mission_file = argv[i];
+    else if(strBegins(argi, "--size="))
+      size_request = argi.substr(7);
     else if(strBegins(argi, "--alias="))
       run_command = argi.substr(8);
     else if(i==2)
@@ -69,13 +76,20 @@ int main(int argc, char *argv[])
   cout << "pMarineViewer launching as " << run_command << endl;
   cout << termColor() << endl;
 
+  AppCastRepo appcast_repo;
+
+  int gui_wid = 0.60 * Fl::w();
+  int gui_hgt = 0.75 * Fl::h();
+  if(size_request != "") {
+    string s_wid = biteStringX(size_request, 'x');
+    string s_hgt = size_request;
+    gui_wid = vclip(atoi(s_wid.c_str()), 700, 1500);
+    gui_hgt = vclip(atoi(s_hgt.c_str()), 500, 1250);
+  }
+
   // For document screen shots:
-  //PMV_GUI* gui = new PMV_GUI(1100,640, "pMarineViewer");
-
-  // For lecture resolution:
-  //PMV_GUI* gui = new PMV_GUI(880,480, "pMarineViewer");
-
-  PMV_GUI* gui = new PMV_GUI(1100,850, "pMarineViewer");
+  // PMV_GUI* gui = new PMV_GUI(1100,640, "pMarineViewer");
+  PMV_GUI* gui = new PMV_GUI(gui_wid, gui_hgt, "pMarineViewer (MIT Version 12.10)");
   if(!gui) {
     cout << "Unable to instantiate the GUI - exiting." << endl;
     return(-1);
@@ -85,6 +99,8 @@ int main(int argc, char *argv[])
 
   thePort.setGUI(gui);
   thePort.setPendingEventsPipe(& g_pending_moos_events);
+  thePort.setAppCastRepo(&appcast_repo);
+  gui->setAppCastRepo(&appcast_repo);
   
   // start the MOOSPort in its own thread
   
@@ -107,7 +123,7 @@ int main(int argc, char *argv[])
     // latency between when we enqueue MOOS_events into
     // g_pending_moos_events, and when this thread gets a chance to
     // act on them.
-    while (! g_pending_moos_events.empty()) {
+    while (!g_pending_moos_events.empty()) {
       // This is the only thread performing dequeues, so this call
       // should never block, since we already confirmed the pipe isn't
       // empty.
@@ -129,6 +145,7 @@ int main(int argc, char *argv[])
 
   portAppRunnerThread.quit();
   delete gui;
-  return 0;
+  return(0);
 }
+
 

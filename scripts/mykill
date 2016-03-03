@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # We no longer use the "-q" option because it is not supported on
 # the mac
@@ -37,12 +37,19 @@ killall pSensorSim pArtifactMapper pNoiseSim uNafconSplitter    \
 killall pCBF pBTracker pTrackMonitor uTimerScript pDTSP         \
         pTallyomatic pNodeReporter iCommStack pMissionCtl iDSP  \
         pNotDTSP pBoundingCircle pRIDManager uLogView           \
-        uLogViewHelm uLogViewIPF                                \
+        uLogViewHelm uLogViewIPF pFooBar pFoobar                \
         pNotDTSP pBoundingCircle pRIDManager iKayakControlBoard
 
 killall pFleetControl uFldScope uFldContactRangeSensor         \
         uFldPathCheck uFldNodeComms pSearchGrid pHostInfo      \
         uFldShoreBroker uFldNodeBroker uFldBeaconRangeSensor   \
-        uFldHazardSensor uFldMessageHandler
+        uFldHazardSensor uFldMessageHandler pGenPath           \
+        pPointAssign uFldHazardMetric pHandleSensorData        \
+        uFldCTDSensor pFrontGridRender uPlotViewer uMAC        \
+        pShare uFldGenericSensor uFldHazardMgr
+
+killall pParticle uFldContactRangeSensorHP pUUVPath            \
+        pWifiCheck uFldMessageSourcer pRangeSensorHandler      \
+        pHunterPrey camera_example camera_example_server camera_example_viewer
 
 echo Done - Killed all MOOS-Related Processes.....

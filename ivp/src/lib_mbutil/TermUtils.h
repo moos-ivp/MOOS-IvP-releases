@@ -23,16 +23,9 @@
 #ifndef TERM_UTILS_HEADER
 #define TERM_UTILS_HEADER
 
-char getCharNoWait();
+#include <unistd.h>
+
+char getCharNoWait(useconds_t usecs=100000);
 
 #endif
-
-
-
-
-
-
-
-
-
 

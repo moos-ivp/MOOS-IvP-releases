@@ -15,24 +15,17 @@ FILE(GLOB SRC *.cpp)
 IF (${APPLE})
       # If you want to create an Apple BUNDLE, do it here
       ADD_EXECUTABLE(cpaview ${SRC})
-      # Install Targets
-      INSTALL(TARGETS cpaview
-        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-      )
 ELSE (${APPLE})
       ADD_EXECUTABLE(cpaview ${SRC})
       # Install Targets
-      INSTALL(TARGETS cpaview
-         RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-      )
 ENDIF (${APPLE})
 
 TARGET_LINK_LIBRARIES(cpaview 
   marineview
-  contacts
-  MOOSUtility
-  ipfview
   geometry
+  ${MOOSGeodesy_LIBRARIES}
+  contacts
+  ipfview
   ivpbuild
   mbutil
   ivpcore

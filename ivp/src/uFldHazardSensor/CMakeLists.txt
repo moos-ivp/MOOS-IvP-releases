@@ -15,7 +15,6 @@ endif (${WIN32})
 
 SET(SRC
    HazardSensor_MOOSApp.cpp
-   HazardSensor_Model.cpp
    HazardSensor_Info.cpp
    main.cpp
 )
@@ -23,16 +22,13 @@ SET(SRC
 ADD_EXECUTABLE(uFldHazardSensor ${SRC})
 
 TARGET_LINK_LIBRARIES(uFldHazardSensor
-  MOOS
-  MOOSGen
-  MOOSUtility
+  ${MOOS_LIBRARIES}
+  ufld_hazards
   mbutil
   geometry 
   contacts
+  apputil
   ${SYSTEM_LIBS}
 )
 
-# Install Targets
-INSTALL(TARGETS uFldHazardSensor
-  RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-)
+

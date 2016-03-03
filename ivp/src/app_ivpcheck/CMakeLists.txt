@@ -23,16 +23,8 @@ SET(SRC main.cpp
 IF (${APPLE})
       # If you want to create an Apple BUNDLE, do it here
       ADD_EXECUTABLE(ivpcheck ${SRC})
-      # Install Targets
-      INSTALL(TARGETS ivpcheck
-        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-      )
 ELSE (${APPLE})
       ADD_EXECUTABLE(ivpcheck ${SRC})
-      # Install Targets
-      INSTALL(TARGETS ivpcheck
-        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-      )
 ENDIF (${APPLE})
 
 
@@ -45,7 +37,6 @@ TARGET_LINK_LIBRARIES(ivpcheck
   geometry
   mbutil
   logutils
-  dl
   fltk 
   fltk_gl
   dl

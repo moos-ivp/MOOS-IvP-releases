@@ -37,15 +37,18 @@ using namespace std;
 
 Expander::Expander(string given_infile, string given_outfile)
 {
-  m_infile  = given_infile;
-  m_outfile = given_outfile;
-  m_force   = false;  
-  m_strict  = false;
+  m_infile   = given_infile;
+  m_outfile  = given_outfile;
+  m_force    = false;  
+  m_strict   = false;
+  m_terminal = false;
   
   m_max_subs_per_line = 100;
   m_initial_filenames.push_back(given_infile);
   m_path.push_back(".");
   m_pmode.push_back("top");
+
+  m_partial_expand_ok = false;
 }
 
 //--------------------------------------------------------
@@ -91,6 +94,7 @@ vector<string> Expander::expandFile(string filename,
   }
 
   for(i=0; i<vsize; i++) {
+
     string line = stripBlankEnds(findReplace(fvector[i], '\t', ' '));
     string line_orig = line;
     string left = biteStringX(line, ' ');
@@ -98,17 +102,11 @@ vector<string> Expander::expandFile(string filename,
 
     //------------------------------------------------------------
     if(left == "#ifdef") {
-      if(!skipLines()) {
-	bool ifdef = checkIfDef(rest, macros);
-	if(!ifdef)
-	  pushMode("ifdefno");
-	else
-	  pushMode("ifdefyes");
-      }
-      else {
-	string curr_mode = currMode();
-	pushMode(curr_mode);
-      }
+      bool ifdef = checkIfDef(rest, macros, i+1);
+      if(!ifdef)
+	pushMode("ifdefno");
+      else
+	pushMode("ifdefyes");
     }
     
     //------------------------------------------------------------
@@ -123,10 +121,11 @@ vector<string> Expander::expandFile(string filename,
       
       // Being in the ifdefyes mode means one of the "above" ifdef cases
       // matched and the current #elseifdef is moot.
-      if(currMode() == "ifdefyes")
+      if(currMode() == "ifdefyes") {
 	currMode("ifdefnomore");
+      }
       else if(currMode() == "ifdefno") {
-	bool ifdef = checkIfDef(rest, macros);
+	bool ifdef = checkIfDef(rest, macros, i+1);
 	if(ifdef)
 	  currMode("ifdefyes");
       }
@@ -151,17 +150,11 @@ vector<string> Expander::expandFile(string filename,
 
     //------------------------------------------------------------
     else if(left == "#ifndef") {
-      if(!skipLines()) {
-	bool ifndef = checkIfNDef(rest, macros);
-	if(!ifndef)
-	  pushMode("ifndefno");
-	else
-	  pushMode("ifndefyes");
-      }
-      else {
-	string curr_mode = currMode();
-	pushMode(curr_mode);
-      }
+      bool ifndef = checkIfNDef(rest, macros);
+      if(!ifndef)
+	pushMode("ifndefno");
+      else
+	pushMode("ifndefyes");
     }
 
     //-------------------------------------------------------------
@@ -177,7 +170,7 @@ vector<string> Expander::expandFile(string filename,
 
     //--------------------------------------------------------------
     else if(!skipLines() && (left == "#include")) {
-      applyMacrosToLine(rest, macros);
+      applyMacrosToLine(rest, macros, i+1);
       string file_str = stripBlankEnds(rest);
       if(isQuoted(file_str))
 	file_str = stripQuotes(file_str);
@@ -228,11 +221,18 @@ vector<string> Expander::expandFile(string filename,
       else {
 	if(value == "") 
 	  value = "<defined>";
+	
+	if(macros.count(macro) == 1) {
+	  cout << termColor("blue") << "Warning: \"" << macro;
+	  cout << "\" redefined from \"" << macros[macro] << "\" to \"";
+	  cout << value << "\". Line #" << i+1 << " in file: " << filename;
+	  cout << termColor() << endl;
+	}
 	macros[macro] = value;
       }
     }
     else if(!skipLines()) {
-      applyMacrosToLine(fvector[i], macros);
+      applyMacrosToLine(fvector[i], macros, i+1);
       return_vector.push_back(fvector[i]);
     }   
 
@@ -251,8 +251,6 @@ vector<string> Expander::expandFile(string filename,
       cout << termColor("green") << "ok" << termColor();
     cout << endl;
 #endif // END DEBUGGING OUTPUT BLOCK
-
-
   }   
   
 
@@ -295,6 +293,12 @@ bool Expander::verifyInfile(const string& filename)
 
 bool Expander::writeOutput()
 {
+  if(m_terminal) {
+    for(unsigned int i=0; i<m_newlines.size(); i++)
+      printf("%s\n", m_newlines[i].c_str());
+    return(true);
+  }
+  
   //  Abort condition: Output file exists but cannot
   //  be overwritten. tests:  fopen(r), !fopen(r+)
 
@@ -323,17 +327,17 @@ bool Expander::writeOutput()
       
       char answer = 'y';
       if(!m_force) {
-	cout <<  " Replace?(y/n)" << endl;
+	cout <<  " Replace? (y/N)" << endl;
 	answer = getCharNoWait();
       }
 
-      if(answer == 'n') {
+      if(answer == 'y')
+	done = true;
+      else if((answer == 'n') || ((int)(answer) == 10)) {
 	cout << "Aborted: The file " << m_outfile;
 	cout << " will not be created" << endl;
 	return(false);
       }
-      if(answer == 'y')
-	done = true;
     }
   }
 
@@ -375,7 +379,8 @@ void Expander::addPath(string str)
 // Procedure: applyMacrosToLine
 
 bool Expander::applyMacrosToLine(string& line, 
-				 map<string, string> macros)
+				 map<string, string> macros,
+				 unsigned int line_num)
 {
   map<string, string>::iterator p;
 
@@ -414,20 +419,26 @@ bool Expander::applyMacrosToLine(string& line,
   string res = containsMacro(newline);
 
   if(res != "") {
-    cout << "Warning: The following line of " << m_infile << endl;
-    cout << "  creating " << m_outfile << endl;
-    cout << "  may contain an undefined macro:" << endl;
-    cout << "> " << res << endl;
+    bool isCommented = false;
+    if(strBegins(stripBlankEnds(line), "//"))
+      isCommented = true;
+    if(!isCommented) {
+      cout << termColor("magenta");
+      cout << "Warning: The following line of " << m_infile;
+      cout << "  (creating " << m_outfile << ")" << endl;
+      cout << "  may contain an undefined macro on Line: " << line_num << endl;
+      cout << "> " << res << termColor() << endl;
+    }
 
-    if(m_strict)
+    if(!isCommented && m_strict)
       exit(EXIT_FAILURE);
     
-    return(false);
+    if(!m_partial_expand_ok)
+      return(false);
   }
-  else {
-    line = newline;
-    return(true);
-  }
+
+  line = newline;
+  return(true);
 }
 
 //--------------------------------------------------------
@@ -473,13 +484,45 @@ string Expander::findFileInPath(string filename)
 //--------------------------------------------------------
 // Procedure: checkIfDef
 
-bool Expander::checkIfDef(string entry, map<string, string> macros)
+bool Expander::checkIfDef(string entry, map<string, string> macros,
+			  unsigned int line_num)
+{
+  bool disj = strContains(entry, "||");
+  bool conj = strContains(entry, "&&");
+    
+  if(disj && conj) {
+    cout << termColor("red");
+    cout << "Warning: The following line of " << m_infile;
+    cout << "  (creating " << m_outfile << ")" << endl;
+    cout << "  contains a mixed-logic #ifdef on line: " << line_num << endl;
+    cout << "> #ifdef " << entry << endl;
+    if(m_strict) {
+      cout << "Since strict==true, exiting now..." << termColor() << endl;
+      exit(EXIT_FAILURE);
+    }
+    else {
+      cout << "Since strict==false, this line simply evaluates to false.";
+      cout << termColor() << endl;
+      return(false);
+    }
+  }
+
+  if(conj)
+    return(checkIfDefConj(entry, macros));
+
+  return(checkIfDefDisj(entry, macros));
+}
+
+//--------------------------------------------------------
+// Procedure: checkIfDefDisj
+
+bool Expander::checkIfDefDisj(string entry, map<string, string> macros)
 {
   // Assume this ifdef does not hold unless one of the ifdef 
   // macro-value pairs holds. The #ifdef construct supports the
   // disjunction of macro-value pairs.
   bool ifdef = false;
-  
+
   vector<string> kvector = parseString(entry, "||"); 
   unsigned int k, ksize = kvector.size();
   for(k=0; ((k<ksize) && !ifdef); k++) {
@@ -492,6 +535,33 @@ bool Expander::checkIfDef(string entry, map<string, string> macros)
     }
     else if(macros[macro_name] == macro_value)
       ifdef = true;
+  }
+  
+  return(ifdef);
+}
+
+//--------------------------------------------------------
+// Procedure: checkIfDefConj
+
+bool Expander::checkIfDefConj(string entry, map<string, string> macros)
+{
+  // Assume this ifdef does not hold unless all of the ifdef 
+  // macro-value pairs holds. The #ifdef construct supports the
+  // conjunction of macro-value pairs.
+  bool ifdef = true;
+
+  vector<string> kvector = parseString(entry, "&&"); 
+  unsigned int k, ksize = kvector.size();
+  for(k=0; ((k<ksize) && ifdef); k++) {
+    kvector[k] = stripBlankEnds(kvector[k]);
+    string macro_name  = biteStringX(kvector[k], ' ');
+    string macro_value = kvector[k];
+    if(macro_value == "") {
+      if(macros[macro_name] == "")
+	ifdef = false;
+    }
+    else if(macros[macro_name] != macro_value)
+      ifdef = false;
   }
   
   return(ifdef);
@@ -609,4 +679,18 @@ bool Expander::modeStackContains(string str)
   }
   return(false);
 }
+
+//--------------------------------------------------------
+// Procedure: printModeStack
+//      Note: For debugging
+
+void Expander::printModeStack()
+{
+  unsigned int i, vsize = m_pmode.size();
+  for(i=0; i<vsize; i++) {
+    cout << "[" << i << "]" << m_pmode[i] << " ";
+  }
+  cout << endl;
+}
+
 

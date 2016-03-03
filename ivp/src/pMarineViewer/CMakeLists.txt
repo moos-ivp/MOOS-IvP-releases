@@ -15,32 +15,24 @@ FILE(GLOB SRC *.cpp)
 If (${APPLE})
       # If you want to create an Apple BUNDLE, do it here
       ADD_EXECUTABLE(pMarineViewer ${SRC})
-      # Install Targets
-      INSTALL(TARGETS pMarineViewer
-        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-      )
 ELSE (${APPLE})
       ADD_EXECUTABLE(pMarineViewer ${SRC})
-      # Install Targets
-      INSTALL(TARGETS pMarineViewer
-         RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-      )
 ENDIF (${APPLE})
       
-Target_LINK_LIBRARIES(pMarineViewer         
-   MOOS
-   MOOSGen
-   marineview
-   MOOSUtility
-   genutil
-   geometry
-   contacts
-   mbutil
-      # Standard libraries used by this project's FLTK apps...
-   fltk 
-   fltk_gl 
-   dl
-   tiff)
+TARGET_LINK_LIBRARIES(pMarineViewer         
+  ${MOOS_LIBRARIES}
+  ${MOOSGeodesy_LIBRARIES}
+  marineview
+  genutil
+  geometry
+  contacts
+  apputil
+  mbutil
+  # Standard libraries used by this project's FLTK apps...
+  fltk 
+  fltk_gl 
+  dl
+  tiff)
 
 # http://developer.apple.com/qa/qa2007/qa1567.html
 IF (${APPLE})

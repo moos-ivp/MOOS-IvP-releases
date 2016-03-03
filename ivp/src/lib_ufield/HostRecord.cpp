@@ -44,15 +44,7 @@ void HostRecord::set(const string& community, const string& hostip,
 
 string HostRecord::getSpec() const
 {
-  string str = "community=" + m_community;
-  if(m_hostip != "")
-    str += ",hostip="   + m_hostip;
-  if(m_port_db != "")
-    str += ",port_db="  + m_port_db;
-  if(m_port_udp != "")
-    str += ",port_udp=" + m_port_udp;
-  if(m_keyword != "")
-    str += ",keyword=" + m_keyword;
+  string str = getSpecTerse();
   if(m_timewarp != "")
     str += ",timewarp=" + m_timewarp;
   if(m_status != "")
@@ -63,6 +55,25 @@ string HostRecord::getSpec() const
   return(str);
 }
 
+//------------------------------------------------------------
+// Procedure: getSpecTerse()
+
+string HostRecord::getSpecTerse() const
+{
+  string str = "community=" + m_community;
+  if(m_hostip != "")
+    str += ",hostip="   + m_hostip;
+  if(m_port_db != "")
+    str += ",port_db="  + m_port_db;
+  if(m_port_udp != "")
+    str += ",port_udp=" + m_port_udp;
+  if(m_pshare_iroutes != "")
+    str += ",pshare_iroutes=" + m_pshare_iroutes;
+  if(m_keyword != "")
+    str += ",keyword=" + m_keyword;
+
+  return(str);
+}
 //---------------------------------------------------------------
 // Procedure: valid
 //      Note: Determines if all the required fields have been set
@@ -79,7 +90,11 @@ bool HostRecord::valid(const string& check) const
   if((check == "port_udp") && !isNumber(m_port_udp))
     return(false);
 
+  if((check == "pshare_iroutes") && (m_pshare_iroutes==""))
+    return(false);
+
   if((check == "time_warp") && !isNumber(m_timewarp))
     return(false);
   return(true);
 }
+

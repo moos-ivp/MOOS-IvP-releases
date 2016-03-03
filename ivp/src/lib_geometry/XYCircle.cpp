@@ -37,6 +37,7 @@ XYCircle::XYCircle()
   m_x    = 0;
   m_y    = 0;
   m_rad  = 0;
+  m_duration = -1;  // unlimited
 
   m_x_set   = false;
   m_y_set   = false;
@@ -115,12 +116,41 @@ string XYCircle::get_spec(string param) const
   spec += "radius=";
   spec += doubleToStringX(m_rad, m_sdigits); 
 
+  if(m_duration >= 0) {
+    spec += ",duration=";
+    spec += doubleToStringX(m_duration,1); 
+  }
+
   string obj_spec = XYObject::get_spec(param);
   if(obj_spec != "")
     spec += ("," + obj_spec);
   
   return(spec);
 }
+
+//-------------------------------------------------------------
+// Procedure: setPointCache
+
+void XYCircle::setPointCache(unsigned int pts) 
+{
+  m_pt_cache.clear();
+  double delta = 360.0 / pts;
+  for(double deg=(delta/2); deg<360; deg+=delta) {
+    double new_x, new_y;
+    projectPoint(deg, m_rad, m_x, m_y, new_x, new_y);
+    m_pt_cache.push_back(new_x);
+    m_pt_cache.push_back(new_y);
+  }
+}
+
+//-------------------------------------------------------------
+// Procedure: getPointCache
+
+vector<double> XYCircle::getPointCache(unsigned int pts) const
+{
+  return(m_pt_cache);
+}
+
 
 //-------------------------------------------------------------
 // Procedure: containsPoint
@@ -346,6 +376,7 @@ double XYCircle::segIntersectLen(double x1, double y1,
   // Should never get here since count should be either 0,1, or 2
   return(0);
 }
+
 
 
 

@@ -44,7 +44,7 @@ using namespace std;
 NavPlotViewer::NavPlotViewer(int x, int y, int w, int h, const char *l)
   : MarineViewer(x,y,w,h,l)
 {
-  m_hash_offon     = true;
+  m_geo_settings.setParam("hash_viewable", "true");
   m_hash_shade     = 0.35;
 
   m_trails         = "to-present"; // "none, to-present, window, all"
@@ -173,7 +173,7 @@ void NavPlotViewer::draw()
   drawTrails();
   drawNavPlots();
   drawVPlugPlots();
-  if(m_hash_offon) {
+  if(m_geo_settings.viewable("hash_viewable")) {
     drawHash(m_min_xpos-2000, m_max_xpos+2000, 
 	     m_min_ypos-2000, m_max_ypos+2000);
   }
@@ -385,11 +385,11 @@ void NavPlotViewer::drawVPlugPlot(unsigned int index)
 
   vector<XYPolygon>    polys   = geo_shapes.getPolygons();
   vector<XYGrid>       grids   = geo_shapes.getGrids();
-  vector<XYPoint>      points  = geo_shapes.getPoints();
   vector<XYSegList>    segls   = geo_shapes.getSegLists();
-  vector<XYCircle>     circles = geo_shapes.getCircles();
   vector<XYRangePulse> pulses  = geo_shapes.getRangePulses();
-  vector<XYMarker>     markers = geo_shapes.getMarkers();
+  const map<string, XYPoint>&  points  = geo_shapes.getPoints();
+  const map<string, XYCircle>& circles = geo_shapes.getCircles();
+  const map<string, XYMarker>& markers = geo_shapes.getMarkers();
 
   drawPolygons(polys);
   drawGrids(grids);
@@ -426,4 +426,5 @@ void NavPlotViewer::setCenterView(string centering_style)
   m_vshift_x = -x_pixels;
   m_vshift_y = -y_pixels;
 }
+
 

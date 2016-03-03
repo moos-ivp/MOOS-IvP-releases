@@ -25,26 +25,19 @@ SET(SRC
 IF (${APPLE})
       # If you want to create an Apple BUNDLE, do it here
       ADD_EXECUTABLE(alogview ${SRC})
-      #Install Targets
-      INSTALL(TARGETS alogview
-        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-      )
 ELSE (${APPLE})
       ADD_EXECUTABLE(alogview ${SRC})
-      #Install Targets
-      INSTALL(TARGETS alogview
-         RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-      )
 ENDIF (${APPLE})
       
 TARGET_LINK_LIBRARIES(alogview
    marineview
+   geometry
+   logutils
+   ${MOOSGeodesy_LIBRARIES}
+   MOOS
    contacts
-   MOOSUtility
    navplot
    ipfview
-   logutils
-   geometry
    mbutil
    ${SYSTEM_LIBS}
    

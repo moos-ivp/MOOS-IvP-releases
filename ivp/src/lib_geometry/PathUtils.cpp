@@ -30,7 +30,7 @@ using namespace std;
 //---------------------------------------------------------------
 // Procedure: bruteShortestPath
 
-XYSegList bruteShortestPath(XYSegList segl, double sx, double sy)
+XYSegList greedyPath(XYSegList segl, double sx, double sy)
 {
   //return(segl);
   vector<unsigned int> vertex_visited;
@@ -74,3 +74,4 @@ XYSegList bruteShortestPath(XYSegList segl, double sx, double sy)
   }
   return(new_segl);
 }
+

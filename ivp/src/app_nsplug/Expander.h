@@ -41,8 +41,10 @@ class Expander
   bool verifyInfile(const std::string& filename);
   bool writeOutput();
   void addMacro(std::string, std::string, bool=false);
-  void setForce(bool v) {m_force=v;};
-  void setStrict(bool v) {m_strict=v;};
+  void setForce(bool v)      {m_force=v;};
+  void setStrict(bool v)     {m_strict=v;};
+  void setPartialsOK(bool v) {m_partial_expand_ok=v;};
+  void setTerminal(bool v)   {m_terminal=v;};
   void addPath(std::string);
 
  protected:
@@ -53,12 +55,16 @@ class Expander
 	       bool& result);
   
   bool applyMacrosToLine(std::string&, 
-			 std::map<std::string, std::string>);
+			 std::map<std::string, std::string>,
+			 unsigned int line_num);
 
   std::string containsMacro(std::string);
   std::string findFileInPath(std::string);
 
-  bool checkIfDef(std::string, std::map<std::string, std::string>);
+  bool checkIfDef(std::string, std::map<std::string, std::string>, unsigned int);
+  bool checkIfDefConj(std::string, std::map<std::string, std::string>);
+  bool checkIfDefDisj(std::string, std::map<std::string, std::string>);
+
   bool checkIfNDef(std::string, std::map<std::string, std::string>);
 
   void currMode(std::string);
@@ -69,6 +75,8 @@ class Expander
 
   bool modeStackContains(std::string);
     
+  void printModeStack();
+
  private:
   std::vector<std::string> m_path;
   std::vector<std::string> m_newlines;
@@ -82,11 +90,15 @@ class Expander
 
   // if m_strict, quit if undefined macros are found
   bool m_strict;
+  bool m_terminal;
   bool m_force;
   int  m_max_subs_per_line;
   std::vector<std::string> m_pmode;
 
+  bool m_partial_expand_ok;
+
 };
 
 #endif 
+
 

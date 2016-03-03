@@ -40,6 +40,7 @@ public:
   void         onIdleState();
   void         onIdleToRunState();
   void         onCompleteState();
+  void         postConfigStatus();
 
 protected:
   bool         updateInfoIn();
@@ -90,6 +91,7 @@ private:  // State Variables
   std::string  m_center_assign;
 };
 #endif
+
 
 
 

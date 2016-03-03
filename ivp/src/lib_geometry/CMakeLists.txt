@@ -31,9 +31,12 @@ SET(HEADERS
   XYFormatUtilsMarker.h
   XYFormatUtilsRangePulse.h
   XYFormatUtilsCommsPulse.h
+  XYFormatUtilsHazard.h
+  XYFormatUtilsHazardSet.h
   XYGrid.h
   XYConvexGrid.h
   XYHazard.h
+  XYHazardSet.h
   XYHexagon.h
   XYHexGrid.h
   XYObject.h
@@ -54,13 +57,3 @@ TARGET_LINK_LIBRARIES( geometry
    mbutil
    )
 
-
-# Install Headers
-INSTALL( FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/lib_geometry)
-
-# Install Libararies
-INSTALL( TARGETS geometry
-   RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-   LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-   ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-)

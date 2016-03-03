@@ -44,7 +44,6 @@
 #ifndef IVP_BEHAVIOR_HEADER
 #define IVP_BEHAVIOR_HEADER
 
-#include <iostream>
 #include <map>
 #include <vector>
 #include <string>
@@ -53,6 +52,8 @@
 #include "VarDataPair.h"
 #include "LogicCondition.h"
 #include "BehaviorReport.h"
+
+using namespace std;
 
 class IvPBehavior {
 friend class BehaviorSet;
@@ -63,11 +64,12 @@ public:
   virtual IvPFunction* onRunState() {return(0);};
   virtual BehaviorReport onRunState(std::string);
   virtual bool setParam(std::string, std::string);
-  virtual void onSetParamComplete() {};
+  virtual void onSetParamComplete() {postConfigStatus();};
   virtual void onIdleState() {};
   virtual void onCompleteState() {};
   virtual void onIdleToRunState() {};
   virtual void onRunToIdleState() {};
+  virtual void postConfigStatus() {};
 
   bool   setParamCommon(std::string, std::string);
   void   setInfoBuffer(const InfoBuffer*);
@@ -91,9 +93,11 @@ protected:
   bool    setBehaviorName(std::string str);
   bool    augBehaviorName(std::string str);
   void    setBehaviorType(std::string str) {m_behavior_type = str;};
+  void    setPriorityWt(double);
 
   void    addInfoVars(std::string, std::string="");
   void    setComplete();
+  void    postBadConfig(std::string);
   void    postMessage(std::string, double, std::string key="");
   void    postMessage(std::string, std::string, std::string key="");
   void    postBoolMessage(std::string, bool, std::string key="");
@@ -102,7 +106,7 @@ protected:
   void    postRepeatableMessage(std::string, std::string);
   void    postEMessage(std::string);
   void    postWMessage(std::string);
-  void    postFlags(const std::string&);
+  void    postFlags(const std::string&, bool repeat=false);
 
   void    postDurationStatus();
   bool    durationExceeded();
@@ -111,7 +115,9 @@ protected:
   bool    checkConditions();
   bool    checkForDurationReset();
   bool    checkNoStarve();
+  
 
+  double                   getPriorityWt() {return(m_priority_wt);};
   double                   getBufferCurrTime();
   double                   getBufferTimeVal(std::string);
   double                   getBufferDoubleVal(std::string, bool&);
@@ -128,6 +134,7 @@ protected:
   std::string m_contact; // Name for contact in InfoBuffer
   std::string m_behavior_type;
   std::string m_duration_status;
+  bool        m_duration_reset_pending;
   std::string m_build_info;
   std::string m_status_info;
 
@@ -182,4 +189,5 @@ private:
 };
 
 #endif
+
 

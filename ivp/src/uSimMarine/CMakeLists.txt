@@ -25,16 +25,12 @@ SET(SRC
 ADD_EXECUTABLE(uSimMarine ${SRC})
 
 TARGET_LINK_LIBRARIES(uSimMarine 
-  MOOS
-  MOOSGen
-  MOOSUtility
+  ${MOOS_LIBRARIES}
+  MOOSGeodesy
   contacts
   geometry 
+  apputil
   mbutil
   ${SYSTEM_LIBS})
 
-# Install Targets
-INSTALL(TARGETS uSimMarine
-  RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-)
 

@@ -42,7 +42,7 @@ using namespace std;
 // Procedure: Constructor
 
 BHV_Attractor::BHV_Attractor(IvPDomain gdomain) : 
-  IvPBehavior(gdomain)
+  IvPContactBehavior(gdomain)
 {
   this->setParam("descriptor", "(d)bhv_cutrange");
   this->setParam("build_info", "uniform_box =discrete@course:2,speed:3");
@@ -198,10 +198,8 @@ bool BHV_Attractor::setParam(string g_param, string g_val)
 void BHV_Attractor::onSetParamComplete() 
 {
   m_trail_point.set_label(m_us_name + "_attractor");
-  m_trail_point.set_type("attractor");
   m_trail_point.set_active("false");
   string bhv_tag = tolower(getDescriptor());
-  m_trail_point.set_source(m_us_name + "_" + bhv_tag);
 }
 
 //-----------------------------------------------------------
@@ -375,21 +373,25 @@ IvPFunction *BHV_Attractor::onRunState()
 
 bool BHV_Attractor::updateInfoIn()
 {
-  bool ok1, ok2, ok3, ok4, ok5, ok6, ok7, ok8, ok9;
+  bool ok1, ok2, ok3, ok4;
+    // , ok5, ok6, ok7, ok8, ok9;
  
   m_osx = getBufferDoubleVal("NAV_X", ok1);
   m_osy = getBufferDoubleVal("NAV_Y", ok2);
   m_osh = getBufferDoubleVal("NAV_HEADING", ok3);
   m_osv = getBufferDoubleVal("NAV_SPEED", ok4);
 
+  // the contact now coming in through the supeclass
+  /*
   m_cnx = getBufferDoubleVal(m_contact_name+"_NAV_X", ok5);
   m_cny = getBufferDoubleVal(m_contact_name+"_NAV_Y", ok6);
   m_cnh = getBufferDoubleVal(m_contact_name+"_NAV_HEADING", ok7);
   m_cnv = getBufferDoubleVal(m_contact_name+"_NAV_SPEED", ok8);
   m_cnutc = getBufferDoubleVal(m_contact_name+"_NAV_UTC", ok9);
+  */
 
-  if(!ok1 || !ok2 || !ok3 || !ok4 || !ok5 || 
-     !ok6 || !ok7 || !ok8 || !ok9)
+  if(!ok1 || !ok2 || !ok3 || !ok4) 
+     // || !ok5 || !ok6 || !ok7 || !ok8 || !ok9)
     return(false);
   
   double curr_time = getBufferCurrTime();
@@ -514,6 +516,7 @@ void BHV_Attractor::postErasableTrailPoint()
   string spec = m_trail_point.get_spec();
   postMessage("VIEW_POINT", spec);
 }
+
 
 
 

@@ -25,10 +25,12 @@
 
 #include <vector>
 #include <string>
+#include <set>
 #include <time.h>
 
 std::vector<std::string> parseString(const std::string&, char);
 std::vector<std::string> parseStringQ(const std::string&, char);
+std::vector<std::string> parseStringQ(const std::string&, char, unsigned int);
 std::vector<std::string> parseString(const std::string&, 
 				     const std::string&);
 std::vector<std::string> parseQuotedString(const std::string&, char);
@@ -52,10 +54,12 @@ std::string truncString(const std::string&, unsigned int newlen,
 			std::string="");
 std::string boolToString(bool);
 std::string uintToString(unsigned int);
+std::string ulintToString(unsigned long int);
 std::string intToString(int);
 std::string intToCommaString(int);
 std::string uintToCommaString(unsigned int);
 std::string floatToString(float, int=5);
+std::string setToString(const std::set<std::string>&);
 std::string doubleToString(double, int=5);
 std::string doubleToStringX(double, int=5);
 std::string dstringCompact(const std::string&);
@@ -66,6 +70,7 @@ std::string findReplace(const std::string&, const std::string&,
 std::string padString(const std::string&, std::string::size_type, bool=true);
 std::string stripComment(const std::string&, const std::string&);
 std::string stripQuotes(const std::string&);
+std::string stripBraces(const std::string&);
 std::string doubleToHex(double);
 
 std::string packageToString(const std::vector<std::string>&);
@@ -97,6 +102,7 @@ bool  isBoolean(const std::string&);
 bool  isNumber(const std::string&, bool=true);
 bool  isAlphaNum(const std::string&, const std::string& s="");
 bool  isQuoted(const std::string&);
+bool  isBraced(const std::string&);
 
 int   getArg(int, char**, int, const char*, const char *s=0);
 bool  scanArgs(int, char**, const char*, const char *a=0, const char *b=0);
@@ -106,6 +112,9 @@ float snapToStep(float, float v=1.0);
 float snapDownToStep(float, float v=1.0);
 
 bool  setBooleanOnString(bool& boolval, std::string str, bool=true);
+bool  setPosDoubleOnString(double& dval, std::string str);
+bool  setNonNegDoubleOnString(double& dval, std::string str);
+bool  setNonWhiteVarOnString(std::string& svar, std::string str);
 
 bool  okFileToRead(std::string);
 bool  okFileToWrite(std::string);
@@ -119,6 +128,9 @@ std::vector<std::string>  getReleaseInfo(const std::string&);
 std::vector<std::string> tokenizePath(const std::string&);
 std::string parseAppName(const std::string&);
 
+bool isKnownVehicleType(const std::string&);
+
 unsigned int charCount(const std::string&, char);
 
 #endif
+

@@ -78,9 +78,8 @@ void showHelpAndExit()
   blk("    Allow history-scoping on variable                           ");
   mag("  --interface, -i                                               ");
   blk("      Display MOOS publications and subscriptions.              ");
-  mag("  --mask","=[virgin,empty]                                      ");
-  blk("    virgin: Don't display virgin variables                      ");
-  blk("    empty:  Don't display empty strings                         ");
+  mag("  --novirgins,-g                                                ");
+  blk("    Don't display virgin variables                              ");
   mag("  --mode","=[paused,events,STREAMING]                           ");
   blk("    Determine display mode. Paused: scope updated only on user  ");
   blk("    request. Events: data updated only on change to a scoped    "); 
@@ -97,6 +96,8 @@ void showHelpAndExit()
   blk("    Scope only on vars posted by the given MOOS processes       ");
   mag("  --trunc","=value [10,1000]                                    ");
   blk("    Truncate the output in the data column.                     ");
+  mag("  --termint","=value [0,10]  (default is 0.6)                   ");
+  blk("    Minimum real-time seconds between terminal reports.         ");
   mag("  -t                                                            ");
   blk("    Short for --trunc=45                                        ");
   mag("  --version,-v                                                  ");
@@ -125,12 +126,15 @@ void showExampleConfigAndExit()
   blk("  VAR = PROC_WATCH_EVENT                                        ");
   blk("                                                                ");
   blk("  HISTORY_VAR = DB_CLIENTS                                      ");
-  blu("  DIPLAY_VIRGINS = true           // default                    ");
+  blu("  DISPLAY_VIRGINS = true          // default                    ");
   blk("  DISPLAY_EMPTY_STRINGS = true    // default                    ");
   blk("  DISPLAY_SOURCE        = false   // default                    ");
   blk("  DISPLAY_TIME          = false   // default                    ");
-  blk("  DIPLAY_COMMUNITY      = false   // default                    ");
-  blk("  DIPLAY_ALL            = false   // default                    ");
+  blk("  DISPLAY_COMMUNITY     = false   // default                    ");
+  blk("  DISPLAY_ALL           = false   // default                    ");
+  blk("  TRUNC_DATA            = false   // default                    ");
+  blk("                                                                ");
+  blk("  TERM_REPORT_INTERVAL  = 0.6     // default (seconds)          ");
   blk("                                                                ");
   blk("  COLOR_MAP    = pHelmIvP, red   // All postings by pHelmIvP red");
   blk("  COLOR_MAP    = NAV_SPEED, blue // Only var NAV_SPEED is blue  ");
@@ -175,4 +179,5 @@ void showReleaseInfoAndExit()
   showReleaseInfo("uXMS", "gpl");
   exit(0);
 }
+
 

@@ -125,9 +125,7 @@ void VPlug_GeoShapes::addPolygon(const XYPolygon& new_poly)
 
   unsigned int i, vsize = m_polygons.size();
   for(i=0; i<vsize; i++) {
-    if((m_polygons[i].get_label()  == new_label) &&
-       (m_polygons[i].get_type()   == new_poly.get_type())   &&
-       (m_polygons[i].get_source() == new_poly.get_source())) {
+    if(m_polygons[i].get_label() == new_label) {
       m_polygons[i] = new_poly;
       return;
     }
@@ -237,19 +235,9 @@ void VPlug_GeoShapes::addMarker(const XYMarker& new_marker)
 	       new_marker.get_vy(), new_marker.get_vy());
 
   string new_label = new_marker.get_label();
-  if(new_label == "") {
-    m_markers.push_back(new_marker);
-    return;
-  }
-  
-  unsigned int i, vsize = m_markers.size();
-  for(i=0; i<vsize; i++) {
-    if(m_markers[i].get_label() == new_label) {
-      m_markers[i] = new_marker;
-      return;
-    }
-  }
-  m_markers.push_back(new_marker);  
+  if(new_label == "")
+    new_label = "marker_" + uintToString(m_markers.size());
+  m_markers[new_label] = new_marker;
 }
 
 //-----------------------------------------------------------
@@ -276,6 +264,19 @@ bool VPlug_GeoShapes::updateConvexGrid(const string& delta)
     ok = ok && m_convex_grids[i].processDelta(delta);
 #endif
   return(ok);
+}
+
+//-----------------------------------------------------------
+// Procedure: sizeTotalShapes()
+
+unsigned int VPlug_GeoShapes::sizeTotalShapes() const
+{
+  return(sizePolygons()    + sizeSegLists() + 
+	 sizeCircles()     + sizeHexagons() + 
+	 sizePoints()      + sizeVectors()  + 
+	 sizeGrids()       + sizeConvexGrids() + 
+	 sizeMarkers()     + sizeRangePulses() + 
+	 sizeCommsPulses());
 }
 
 //-----------------------------------------------------------
@@ -333,12 +334,36 @@ void VPlug_GeoShapes::addConvexGrid(const XYConvexGrid& new_grid)
 //-----------------------------------------------------------
 // Procedure: addCircle
 
-void VPlug_GeoShapes::addCircle(const XYCircle& circle)
+void VPlug_GeoShapes::addCircle(const XYCircle& new_circle, 
+				unsigned int drawpts)
 {
-  updateBounds(circle.get_min_x(), circle.get_max_x(), 
-	       circle.get_min_y(), circle.get_max_y());
+  updateBounds(new_circle.get_min_x(), new_circle.get_max_x(), 
+	       new_circle.get_min_y(), new_circle.get_max_y());
 
-  m_circles.push_back(circle);
+  string new_label = new_circle.get_label();
+
+#if 1
+  if(new_label == "")
+    new_label = uintToString(m_circles.size());
+  m_circles[new_label] = new_circle;
+  m_circles[new_label].setPointCache(drawpts);
+#endif
+
+#if 0
+  if(new_label == "") {
+    m_circles.push_back(new_circle);
+    return;
+  }
+  
+  unsigned int i, vsize = m_circles.size();
+  for(i=0; i<vsize; i++) {
+    if(m_circles[i].get_label() == new_label) {
+      m_circles[i] = new_circle;
+      return;
+    }
+  }
+  m_circles.push_back(new_circle);
+#endif
 }
 
 
@@ -359,28 +384,14 @@ void VPlug_GeoShapes::addHexagon(const XYHexagon& hexagon)
 
 void VPlug_GeoShapes::addPoint(const XYPoint& new_point)
 {
-  updateBounds(new_point.x(), new_point.x(), 
-	       new_point.y(), new_point.y());
+  double px = new_point.x();
+  double py = new_point.y();
+  updateBounds(px, px, py, py);
 
   string new_label  = new_point.get_label();
-  if(new_label == "") {
-    m_points.push_back(new_point);
-    return;
-  }
-  
-  string new_type   = new_point.get_type();
-  string new_source = new_point.get_source();
-  unsigned int i, vsize = m_points.size();
-  for(i=0; i<vsize; i++) {
-    if((m_points[i].get_label()  == new_label)  &&
-       (m_points[i].get_type()   == new_type)   &&
-       (m_points[i].get_source() == new_source)) {
-      m_points[i] = new_point;
-      return;
-    }
-  }
-  
-  m_points.push_back(new_point);
+  if(new_label == "")
+    new_label = "pt_" + uintToString(m_points.size());
+  m_points[new_label] = new_point;
 }
 
 //-----------------------------------------------------------
@@ -408,10 +419,13 @@ bool VPlug_GeoShapes::addVector(const string& vect_str)
 //-----------------------------------------------------------
 // Procedure: addRangePulse
 
-bool VPlug_GeoShapes::addRangePulse(const string& pulse_str)
+bool VPlug_GeoShapes::addRangePulse(const string& pulse_str,
+				    double timestamp)
 {
   XYRangePulse new_pulse = string2RangePulse(pulse_str);
   if(new_pulse.valid()) {
+    if(new_pulse.get_time() == 0)
+      new_pulse.set_time(timestamp);       
     addRangePulse(new_pulse);
     return(true);
   }
@@ -421,10 +435,13 @@ bool VPlug_GeoShapes::addRangePulse(const string& pulse_str)
 //-----------------------------------------------------------
 // Procedure: addCommsPulse
 
-bool VPlug_GeoShapes::addCommsPulse(const string& pulse_str)
+bool VPlug_GeoShapes::addCommsPulse(const string& pulse_str,
+				    double timestamp)
 {
   XYCommsPulse new_pulse = string2CommsPulse(pulse_str);
   if(new_pulse.valid()) {
+    if(new_pulse.get_time() == 0)
+      new_pulse.set_time(timestamp);       
     addCommsPulse(new_pulse);
     return(true);
   }
@@ -464,7 +481,7 @@ bool VPlug_GeoShapes::addPoint(const string& point_str)
 {
   XYPoint new_point = string2Point(point_str);
   if(!new_point.valid())
-    return(false);
+    return(true);
   addPoint(new_point);
   return(true);
 }
@@ -472,12 +489,13 @@ bool VPlug_GeoShapes::addPoint(const string& point_str)
 //-----------------------------------------------------------
 // Procedure: addCircle
 
-bool VPlug_GeoShapes::addCircle(const string& circle_str)
+bool VPlug_GeoShapes::addCircle(const string& circle_str,
+				unsigned int drawpts)
 {
   XYCircle new_circle = string2Circle(circle_str);
   if(!new_circle.valid())
     return(false);
-  addCircle(new_circle);
+  addCircle(new_circle, drawpts);
   return(true);
 }
 
@@ -506,138 +524,6 @@ bool VPlug_GeoShapes::addConvexGrid(const string& grid_str)
   return(true);
 }
 
-
-//-------------------------------------------------------------
-// Procedure: getPolygon(int)
-
-XYPolygon VPlug_GeoShapes::getPolygon(unsigned int index) const
-{
-  if(index >= m_polygons.size()) {
-    XYPolygon null_poly;
-    return(null_poly);
-  }
-  else
-    return(m_polygons[index]);
-}
-
-//-------------------------------------------------------------
-// Procedure: getSegList(int)
-
-XYSegList VPlug_GeoShapes::getSegList(unsigned int index) const
-{
-  if(index >= m_seglists.size()) {
-    XYSegList null_segl;
-    return(null_segl);
-  }
-  else
-    return(m_seglists[index]);
-}
-
-//-------------------------------------------------------------
-// Procedure: getGrid(uint)
-
-XYGrid VPlug_GeoShapes::getGrid(unsigned int index) const
-{
-  if(index >= m_grids.size()) {
-    XYGrid null_grid;
-    return(null_grid);
-  }
-  else
-    return(m_grids[index]);
-}
-
-//-------------------------------------------------------------
-// Procedure: getConvexGrid(uint)
-
-XYConvexGrid VPlug_GeoShapes::getConvexGrid(unsigned int index) const
-{
-  if(index >= m_convex_grids.size()) {
-    XYConvexGrid null_grid;
-    return(null_grid);
-  }
-  else
-    return(m_convex_grids[index]);
-}
-
-//-------------------------------------------------------------
-// Procedure: getCircle(int)
-
-XYCircle VPlug_GeoShapes::getCircle(unsigned int index) const
-{
-  if(index >= m_circles.size()) {
-    XYCircle null_circle;
-    return(null_circle);
-  }
-  else
-    return(m_circles[index]);
-}
-
-//-------------------------------------------------------------
-// Procedure: getHexagon(int)
-
-XYHexagon VPlug_GeoShapes::getHexagon(unsigned int index) const
-{
-  if(index >= m_hexagons.size()) {
-    XYHexagon null_hexagon;
-    return(null_hexagon);
-  }
-  else
-    return(m_hexagons[index]);
-}
-
-//-------------------------------------------------------------
-// Procedure: getPoint(int)
-
-XYPoint VPlug_GeoShapes::getPoint(unsigned int index) const
-{
-  if(index >= m_points.size()) {
-    XYPoint null_point;
-    return(null_point);
-  }
-  else
-    return(m_points[index]);
-}
-
-//-------------------------------------------------------------
-// Procedure: getVector(int)
-
-XYVector VPlug_GeoShapes::getVector(unsigned int index) const
-{
-  if(index >= m_vectors.size()) {
-    XYVector null_vector;
-    return(null_vector);
-  }
-  else
-    return(m_vectors[index]);
-}
-
-//-------------------------------------------------------------
-// Procedure: getRangePulse(int)
-
-XYRangePulse VPlug_GeoShapes::getRangePulse(unsigned int index) const
-{
-  if(index >= m_range_pulses.size()) {
-    XYRangePulse null_range_pulse;
-    return(null_range_pulse);
-  }
-  else
-    return(m_range_pulses[index]);
-}
-
-//-------------------------------------------------------------
-// Procedure: getMarker(int)
-
-XYMarker VPlug_GeoShapes::getMarker(unsigned int index) const
-{
-  if(index >= m_markers.size()) {
-    XYMarker null_marker;
-    return(null_marker);
-  }
-  else
-    return(m_markers[index]);
-}
-
-
 //-----------------------------------------------------------
 // Procedure: updateBounds()
 
@@ -654,5 +540,6 @@ void VPlug_GeoShapes::updateBounds(double xl, double xh,
   if(yh > m_ymax)
     m_ymax = yh;
 }
+
 
 

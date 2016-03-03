@@ -20,13 +20,8 @@ SET(SRC
 ADD_EXECUTABLE(uProcessWatch ${SRC})
  
 TARGET_LINK_LIBRARIES(uProcessWatch 
-  MOOS
-  MOOSGen
+  ${MOOS_LIBRARIES}
+  apputil
   mbutil
   ${SYSTEM_LIBS})
-
-# Install Targets
-INSTALL(TARGETS uProcessWatch
-  RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-)
 

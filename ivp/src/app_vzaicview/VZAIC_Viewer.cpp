@@ -4,20 +4,9 @@
 /*    FILE: VZAIC_Viewer.cpp                                     */
 /*    DATE: May 5th, 2010                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
-/*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
-/*                                                               */
-/* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* This is unreleased BETA code. No permission is granted or     */
+/* implied to use, copy, modify, and distribute this software    */
+/* except by the author(s).                                      */
 /*****************************************************************/
 
 #include <string>
@@ -295,18 +284,17 @@ void VZAIC_Viewer::drawPiece(const IvPBox *piece, int mode)
   //glTranslatef(0, 0, 0);
   glTranslatef(x_offset, y_offset, 0);
 
-  double x1, x2, y1, y2, dx1, dx2, m, b;
+  double x1, x2, y1, y2, m, b;
 
-  m = piece->wt(0);
-  b = piece->wt(1);
-
-  double x_base  = m_domain.getVarLow(0);
-  double x_delta = m_domain.getVarDelta(0);
-
+  m  = piece->wt(0);
+  b  = piece->wt(1);
   x1 = piece->pt(0,0);
   x2 = piece->pt(0,1);
-  dx1 = x_base = (x1 * x_delta);
-  dx2 = x_base = (x2 * x_delta);
+
+  // double x_base  = m_domain.getVarLow(0);
+  // double x_delta = m_domain.getVarDelta(0);
+  // double dx1 = x_base = (x1 * x_delta);
+  // double dx2 = x_base = (x2 * x_delta);
   y1 = (m * (double)(x1)) + b;
   y2 = (m * (double)(x2)) + b;
 
@@ -391,4 +379,5 @@ void VZAIC_Viewer::setParam(string param, string value)
   else if(param == "draw_labels")
     setBooleanOnString(m_draw_labels, value);
 }
+
 

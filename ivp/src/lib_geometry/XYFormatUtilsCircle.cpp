@@ -55,16 +55,15 @@ XYCircle string2Circle(string str)
       new_circle.setY(dval);
     else if((left == "radius") && isNumber(right))
       new_circle.setRad(dval);
+    else if((left == "duration") && isNumber(right))
+      new_circle.setDuration(dval);
+
     else if((left == "time") && isNumber(right))
       new_circle.set_time(dval);
     else if(left == "label") 
       new_circle.set_label(right);
     else if(left == "label_color") 
       new_circle.set_color("label", right);
-    else if(left == "source") 
-      new_circle.set_source(right);
-    else if(left == "type") 
-      new_circle.set_type(right);
     else if(left == "msg") 
       new_circle.set_msg(right);
     else if(left == "vertex_color") 
@@ -88,4 +87,5 @@ XYCircle string2Circle(string str)
   else
     return(null_circle);
 }
+
 

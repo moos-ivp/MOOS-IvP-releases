@@ -30,23 +30,9 @@ SET(HEADERS
   TermUtils.h
   VarDataPair.h
   ReleaseInfo.h
+  ScopeEntry.h
 )
-
-# SET_SOURCE_FILES_PROPERTIES(
-#    MBUtils.cpp 
-#    PROPERTIES OBJECT_DEPENDS ${IVP_SRC_DIR_ABSOLUTE}/svn_revision_number.h
-#    )
-
 
 # Build Library
 ADD_LIBRARY(mbutil ${SRC})
 
-# Install Headers
-INSTALL( FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/lib_mbutil)
-
-# Install Libararies
-INSTALL( TARGETS mbutil
-   RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-   LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-   ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-)

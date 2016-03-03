@@ -8,23 +8,17 @@ SET(SRC
   HostRecordUtils.cpp
   NodeMessage.cpp
   NodeMessageUtils.cpp
+  UFieldUtils.cpp
 )
 
 SET(HEADERS
   HostRecord.h
   HostRecordUtils.h
+  NodeMessage.h
   NodeMessageUtils.h
+  UFieldUtils.h
 )
 
 # Build Library
 ADD_LIBRARY(ufield ${SRC})
 
-# Install Headers
-INSTALL( FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/lib_ufield)
-
-# Install Libararies
-INSTALL( TARGETS ufield
-   RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-   LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-   ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-)

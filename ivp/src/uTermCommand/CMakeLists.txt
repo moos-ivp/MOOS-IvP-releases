@@ -21,14 +21,8 @@ SET(SRC
 ADD_EXECUTABLE(uTermCommand ${SRC})
 
 TARGET_LINK_LIBRARIES(uTermCommand 
-  MOOS
-  MOOSGen
+  ${MOOS_LIBRARIES}
   mbutil
   genutil
   ${SYSTEM_LIBS})
-
-# Install Targets
-INSTALL(TARGETS uTermCommand
-  RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-)
 

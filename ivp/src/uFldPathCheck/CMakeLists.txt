@@ -7,9 +7,9 @@ FILE(GLOB SRC *.cpp)
 ADD_EXECUTABLE(uFldPathCheck ${SRC})
 
 TARGET_LINK_LIBRARIES(uFldPathCheck
-   MOOS
-   MOOSGen
+   ${MOOS_LIBRARIES}
    mbutil
+   apputil
    contacts
    m
    pthread)

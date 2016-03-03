@@ -20,6 +20,7 @@
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
+#include <iostream>
 #include <vector>
 #include <cstdlib>
 #include "XYFormatUtilsMarker.h"
@@ -61,7 +62,7 @@ XYMarker stringStandard2Marker(string str)
   vector<string> mvector = parseString(str, ',');
   unsigned int i, vsize = mvector.size();
 
-  string x,y,width="5";
+  string x,y,transparency,width="5";
   for(i=0; i<vsize; i++) {
     mvector[i] = stripBlankEnds(mvector[i]);
     string param = tolower(stripBlankEnds(biteString(mvector[i], '=')));
@@ -71,6 +72,8 @@ XYMarker stringStandard2Marker(string str)
       x = value;
     else if(((param == "y") || (param == "ypos")) && isNumber(value))
       y = value;
+    else if((param == "fill_transparency") && isNumber(value))
+      transparency = value;
     else if(((param == "width") || (param == "scale")) && isNumber(value))
       width = value;
     else if(param == "colors") {
@@ -95,8 +98,13 @@ XYMarker stringStandard2Marker(string str)
   new_marker.set_vx(atof(x.c_str()));
   new_marker.set_vy(atof(y.c_str()));
   new_marker.set_width(atof(width.c_str()));
-  
+  if(transparency != "") {
+    double dval = atof(transparency.c_str());
+    new_marker.set_transparency(dval);
+  }
+
   return(new_marker);
 }
+
 
 

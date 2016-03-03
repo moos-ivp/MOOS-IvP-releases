@@ -66,6 +66,8 @@ void showHelpAndExit()
   blk("      Display MOOS publications and subscriptions.              ");
   mag("  --version,-v                                                  ");
   blk("      Display the release version of pHelmIvP.                  ");
+  mag("  --verbose=<setting>                                           ");
+  blk("      May be \"VERBOSE\", \"terse\", or \"quiet\".              ");
   blk("                                                                ");
   blk("Behavior files:                                                 ");
   blk("      One or more filenames to get IvP Helm config parameters.  ");
@@ -95,10 +97,11 @@ void showExampleConfigAndExit()
   blk("  CommsTick = 4                                                 ");
   blk("                                                                ");
   blk("  // Configuring behavior file and decision domain              ");
-  blk("  behaviors   =  filename.bhv                                   ");
-  blk("  domain      =  course:0:359:360                               ");
-  blk("  domain      =  speed:0:2:21                                   ");
-  blk("  domain      =  depth:0:1000:1001                              ");
+  blk("  ivp_behavior_dir =  /Users/bob/moos-ivp-bob/lib/              ");
+  blk("  behaviors        =  filename.bhv                              ");
+  blk("  domain           =  course:0:359:360                          ");
+  blk("  domain           =  speed:0:2:21                              ");
+  blk("  domain           =  depth:0:1000:1001                         ");
   blk("                                                                ");
   blk("  // Configure Helm Engagement policies                         ");
   blk("  start_engaged        = false     // or {true}                 ");
@@ -164,7 +167,6 @@ void showInterfaceAndExit()
   blk("  TBCOUNT                                                       ");
   blk("  HITER                                                         ");
   blk("  BHV_IPF                                                       ");
-  blk("  IVPHELM_POSTINGS                                              ");
   blk("  IVPHELM_STATEVARS                                             ");
   blk("  IVPHELM_LIFE_EVENT                                            ");
   blk("  IVPHELM_ENGAGED                                               ");
@@ -184,4 +186,5 @@ void showReleaseInfoAndExit()
   showReleaseInfo("pHelmIvP", "navy");
   exit(0);
 }
+
 

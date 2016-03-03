@@ -572,3 +572,4 @@ bool VehicleSet::updateVehicleBearingLine(const string& str)
 }
 
 
+

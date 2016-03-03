@@ -69,8 +69,6 @@ bool PokeDB::ConfigureComms()
   if(!m_configure_comms_locally) 
     return(CMOOSApp::ConfigureComms());
 
-  //cout << "**Doing things locally. " << endl;
-
   //register a callback for On Connect
   m_Comms.SetOnConnectCallBack(MOOSAPP_OnConnect, this);
   
@@ -113,12 +111,10 @@ bool PokeDB::Iterate()
 	string stime = doubleToStringX(curr_time, 2);
 	varval = findReplace(varval, "@MOOSTIME", stime);
       }
-      if(m_valtype[i] == "double") {
-	double dval = atof(varval.c_str());
-	m_Comms.Notify(m_varname[i], dval, MOOSTime());
-      }
-      else
-	m_Comms.Notify(m_varname[i], varval, MOOSTime());
+      if(m_valtype[i] == "double")
+	m_Comms.Notify(m_varname[i], atof(varval.c_str()));
+      else 
+	m_Comms.Notify(m_varname[i], varval);
     }  
   }
 
@@ -246,7 +242,6 @@ void PokeDB::updateVariable(CMOOSMsg &msg)
   if(ix == -1)
     return;
 
-
   double vtime     = msg.GetTime() - m_db_start_time;
   string vtime_str = doubleToString(vtime, 2);
   vtime_str = dstringCompact(vtime_str);
@@ -254,11 +249,11 @@ void PokeDB::updateVariable(CMOOSMsg &msg)
   m_source_read[ix] = msg.GetSource();
   m_wrtime_read[ix] = vtime_str;
 
-  if(msg.IsDataType(MOOS_STRING)) {
+  if(msg.IsString()) {
     m_svalue_read[ix]  = msg.GetString();
     m_valtype_read[ix] = "string";
   }      
-  else if(msg.IsDataType(MOOS_DOUBLE)) {
+  else if(msg.IsDouble()) {
     m_dvalue_read[ix]  = doubleToString(msg.GetDouble());
     m_valtype_read[ix] = "double";
   }
@@ -298,6 +293,7 @@ void PokeDB::printReport()
     printf("\n");		
   }
 }
+
 
 
 

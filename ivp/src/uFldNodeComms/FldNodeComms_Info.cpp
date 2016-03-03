@@ -1,9 +1,24 @@
-/****************************************************************/
-/*   NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
-/*   ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
-/*   FILE: FldNodeComms_Info.cpp                                */
-/*   DATE: Dec 4th 2011                                         */
-/****************************************************************/
+/*****************************************************************/
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
+/*    FILE: FldNodeComms_Info.cpp                                */
+/*    DATE: Dec 4th 2011                                         */
+/*                                                               */
+/* This program is free software; you can redistribute it and/or */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation; either version  */
+/* 2 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* This program is distributed in the hope that it will be       */
+/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the GNU General Public License for more details. */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with this program; if not, write to the Free    */
+/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
+/* Boston, MA 02111-1307, USA.                                   */
+/*****************************************************************/
 
 #include <cstdlib>
 #include <iostream>
@@ -78,6 +93,8 @@ void showExampleConfigAndExit()
   blk("  MIN_MSG_INTERVAL = 30     // default (in seconds)             ");
   blk("  MAX_MSG_LENGTH   = 1000   // default (# of characters)        ");
   blk("                                                                ");
+  blk("  VIEW_NODE_RPT_PULSES = true // default                        ");
+  blk("                                                                ");
   blk("  VERBOSE  = true           // default                          ");
   blk("                                                                ");
   blk("  STEALTH  = vname=alpha, stealth=0.8                           ");
@@ -102,7 +119,7 @@ void showInterfaceAndExit()
   blk("                                                                ");
   blk("SUBSCRIPTIONS:                                                  ");
   blk("------------------------------------                            ");
-  blk("  NODE_MESSAGE      = src_node=henry,dest_node=ike,var_name=FOO ");
+  blk("  NODE_MESSAGE      = src_node=henry,dest_node=ike,var_name=FOO,");
   blk("                      string_val=bar                            ");
   blk("  NODE_REPORT                                                   ");
   blk("  NODE_REPORT_LOCAL = NAME=alpha,TYPE=UUV,TIME=1252348077.59,   ");
@@ -110,6 +127,10 @@ void showInterfaceAndExit()
   blk("                      LON=-70.329755,SPD=2.0,HDG=118.8,         ");
   blk("                      YAW=118.8,DEPTH=4.6,LENGTH=3.8,           ");
   blk("                      MODE=MODE@ACTIVE:LOITERING                ");
+  blk("                                                                ");
+  blk("  UNC_VIEW_NODE_RPT_PULSES = false                              ");
+  blk("  UNC_STEALTH = vname=alpha,stealth=0.4                         ");
+  blk("  UNC_EARANGE = vname=alpha,earange=0.5                         ");
   blk("                                                                ");
   blk("PUBLICATIONS:                                                   ");
   blk("------------------------------------                            ");
@@ -135,4 +156,5 @@ void showReleaseInfoAndExit()
   showReleaseInfo("uFldNodeComms", "gpl");
   exit(0);
 }
+
 

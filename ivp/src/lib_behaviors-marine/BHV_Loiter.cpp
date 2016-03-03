@@ -70,6 +70,9 @@ BHV_Loiter::BHV_Loiter(IvPDomain gdomain) :
   m_center_pending    = false;
   m_center_activate   = false;
 
+  m_hint_edge_size    = 1;
+  m_hint_vertex_size  = 1;
+
   m_waypoint_engine.setPerpetual(true);
   m_waypoint_engine.setRepeatsEndless(true);
 
@@ -95,6 +98,7 @@ bool BHV_Loiter::setParam(string param, string value)
   else if(param == "center_assign") {
     m_center_assign  = value;
     m_center_pending = true;
+    updateCenter(); // Added by mikerb 08/29/12 to ensure updates are immediate
     return(true);
   }  
   else if(param == "xcenter_assign") {
@@ -216,7 +220,7 @@ void BHV_Loiter::onIdleState()
 
 void BHV_Loiter::onIdleToRunState()
 {
-// Fix made by HS, to avoid looping back to earlier approach vertex
+  // Fix made by HS, to avoid looping back to earlier approach vertex
   updateInfoIn();
   int curr_waypt = m_loiter_engine.acquireVertex(m_osh, m_osx, m_osy); 
   m_waypoint_engine.setCurrIndex(curr_waypt);
@@ -531,8 +535,6 @@ void BHV_Loiter::postViewablePoint()
   XYPoint view_point(m_ptx, m_pty);
   //view_point.set_label(m_us_name + "'s next_waypoint");
   view_point.set_label(m_us_name + "_waypoint");
-  view_point.set_type("waypoint");
-  view_point.set_source(m_us_name + "_" + bhv_tag);
   view_point.set_color("label", m_hint_nextpt_lcolor);
   view_point.set_color("vertex", m_hint_nextpt_color);
   postMessage("VIEW_POINT", view_point.get_spec());
@@ -549,8 +551,6 @@ void BHV_Loiter::postErasablePoint()
   XYPoint view_point(m_ptx, m_pty);
   //view_point.set_label(m_us_name + "'s next waypoint");
   view_point.set_label(m_us_name + "_waypoint");
-  view_point.set_type("waypoint");
-  view_point.set_source(m_us_name + "_" + bhv_tag);
   view_point.set_active(false);
   postMessage("VIEW_POINT", view_point.get_spec());
 }
@@ -579,4 +579,25 @@ void BHV_Loiter::handleVisualHint(string hint)
   else if(param == "label")
     m_hint_poly_label = value;
 }
+
+//-----------------------------------------------------------
+// Procedure: postConfigStatus
+
+void BHV_Loiter::postConfigStatus()
+{
+  string str = "type=BHV_Loiter,name=" + m_descriptor;
+  
+  str += ",x=" + doubleToString(m_loiter_engine.getCenterX(),2);
+  str += ",y=" + doubleToString(m_loiter_engine.getCenterY(),2);
+  str += ",clockwise=" + boolToString(m_clockwise);
+  str += ",dynamic_clockwise=" + boolToString(m_dynamic_clockwise);
+  str += ",center_activate=" + boolToString(m_center_activate);
+  str += ",desired_speed=" + doubleToString(m_desired_speed,1);
+
+  string poly_str = m_loiter_engine.getPolygon().get_spec();
+  str += ",polygon=" + poly_str;
+
+  postRepeatableMessage("BHV_SETTINGS", str);
+}
+
 

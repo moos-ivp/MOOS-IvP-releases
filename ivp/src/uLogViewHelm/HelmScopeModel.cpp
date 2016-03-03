@@ -326,9 +326,9 @@ vector<string> HelmScopeModel::parseBehaviors(string raw) const
   unsigned int ltim = 4;  // "Time"
   unsigned int lupd = 3;  // "UPD"
 
-  bool empty = false;
+  //bool empty = false;
   if(raw == "none") {
-    empty = true;
+    //empty = true;
     raw = "";
   }
 
@@ -464,3 +464,4 @@ void HelmScopeModel::setTimeUTCFromIteration(unsigned int new_iter)
   m_curr_time = m_helm_plot.getTimeUTCByIndex(index);
   m_curr_iter = new_iter;
 }
+

@@ -79,10 +79,14 @@ REPLAY_GUI::REPLAY_GUI(int g_w, int g_h, const char *g_l)
 
   setWindowLayout("normal");
 
-  cmviewer     = np_viewer;
+  m_mviewer = np_viewer;
   ipf_viewer_a->setClearColor("0.6,0.7,0.5");
   ipf_viewer_b->setClearColor("0.7,0.6,0.5");
   //ipf_viewer_b->setClearColor("macbeige");
+
+  // It's only polite to center the view on the center of the 
+  // bounding box of the total vehicle trails.
+  m_mviewer->setParam("center_view", "average");
 
   // Initialize Time fields ------------------------------------------
   double time_pos = (w()/2)-250;
@@ -473,24 +477,24 @@ void REPLAY_GUI::setWindowLayout(string layout)
 
 void REPLAY_GUI::augmentMenu()
 {
-  mbar->add("File/Delete ", 0, (Fl_Callback*)REPLAY_GUI::cb_Delete, 0, 0);
+  m_menubar->add("File/Delete ", 0, (Fl_Callback*)REPLAY_GUI::cb_Delete, 0, 0);
 
-  mbar->add("Replay/Collecting Toggle",  'w', (Fl_Callback*)REPLAY_GUI::cb_CollectToggle,(void*)0, FL_MENU_DIVIDER);
-  mbar->add("Replay/Streaming Toggle",  '=', (Fl_Callback*)REPLAY_GUI::cb_StreamToggle,(void*)0, 0);
-  mbar->add("Replay/Streaming Faster", 'a', (Fl_Callback*)REPLAY_GUI::cb_StreamSpeed, (void*)1, 0);
-  mbar->add("Replay/Streaming Slower", 'z', (Fl_Callback*)REPLAY_GUI::cb_StreamSpeed, (void*)0, FL_MENU_DIVIDER);
-  mbar->add("Replay/Streaming Step 1",  0, (Fl_Callback*)REPLAY_GUI::cb_StreamStep, (void*)1, FL_MENU_RADIO|FL_MENU_VALUE);
-  mbar->add("Replay/Streaming Step 3",  0, (Fl_Callback*)REPLAY_GUI::cb_StreamStep, (void*)3, FL_MENU_RADIO);
-  mbar->add("Replay/Streaming Step 5",  0, (Fl_Callback*)REPLAY_GUI::cb_StreamStep, (void*)5, FL_MENU_RADIO);
-  mbar->add("Replay/Streaming Step 10", 0, (Fl_Callback*)REPLAY_GUI::cb_StreamStep, (void*)10, FL_MENU_RADIO|FL_MENU_DIVIDER);
+  m_menubar->add("Replay/Collecting Toggle",  'w', (Fl_Callback*)REPLAY_GUI::cb_CollectToggle,(void*)0, FL_MENU_DIVIDER);
+  m_menubar->add("Replay/Streaming Toggle",  '=', (Fl_Callback*)REPLAY_GUI::cb_StreamToggle,(void*)0, 0);
+  m_menubar->add("Replay/Streaming Faster", 'a', (Fl_Callback*)REPLAY_GUI::cb_StreamSpeed, (void*)1, 0);
+  m_menubar->add("Replay/Streaming Slower", 'z', (Fl_Callback*)REPLAY_GUI::cb_StreamSpeed, (void*)0, FL_MENU_DIVIDER);
+  m_menubar->add("Replay/Streaming Step 1",  0, (Fl_Callback*)REPLAY_GUI::cb_StreamStep, (void*)1, FL_MENU_RADIO|FL_MENU_VALUE);
+  m_menubar->add("Replay/Streaming Step 3",  0, (Fl_Callback*)REPLAY_GUI::cb_StreamStep, (void*)3, FL_MENU_RADIO);
+  m_menubar->add("Replay/Streaming Step 5",  0, (Fl_Callback*)REPLAY_GUI::cb_StreamStep, (void*)5, FL_MENU_RADIO);
+  m_menubar->add("Replay/Streaming Step 10", 0, (Fl_Callback*)REPLAY_GUI::cb_StreamStep, (void*)10, FL_MENU_RADIO|FL_MENU_DIVIDER);
 
-  mbar->add("Replay/Step by Seconds",  0, (Fl_Callback*)REPLAY_GUI::cb_StepType, (void*)0, FL_MENU_RADIO|FL_MENU_VALUE);
-  mbar->add("Replay/Step by Helm Iterations",  0, (Fl_Callback*)REPLAY_GUI::cb_StepType, (void*)1, FL_MENU_RADIO|FL_MENU_DIVIDER);
+  m_menubar->add("Replay/Step by Seconds",  0, (Fl_Callback*)REPLAY_GUI::cb_StepType, (void*)0, FL_MENU_RADIO|FL_MENU_VALUE);
+  m_menubar->add("Replay/Step by Helm Iterations",  0, (Fl_Callback*)REPLAY_GUI::cb_StepType, (void*)1, FL_MENU_RADIO|FL_MENU_DIVIDER);
 
-  mbar->add("Replay/Step Ahead 1",  ']', (Fl_Callback*)REPLAY_GUI::cb_Step, (void*)1, 0);
-  mbar->add("Replay/Step Back  1",  '[', (Fl_Callback*)REPLAY_GUI::cb_Step, (void*)-1, 0);
-  mbar->add("Replay/Step Ahead 5", '>', (Fl_Callback*)REPLAY_GUI::cb_Step, (void*)5, 0);
-  mbar->add("Replay/Step Back  5", '<', (Fl_Callback*)REPLAY_GUI::cb_Step, (void*)-5, FL_MENU_DIVIDER);
+  m_menubar->add("Replay/Step Ahead 1",  ']', (Fl_Callback*)REPLAY_GUI::cb_Step, (void*)1, 0);
+  m_menubar->add("Replay/Step Back  1",  '[', (Fl_Callback*)REPLAY_GUI::cb_Step, (void*)-1, 0);
+  m_menubar->add("Replay/Step Ahead 5", '>', (Fl_Callback*)REPLAY_GUI::cb_Step, (void*)5, 0);
+  m_menubar->add("Replay/Step Back  5", '<', (Fl_Callback*)REPLAY_GUI::cb_Step, (void*)-5, FL_MENU_DIVIDER);
 };
 
 //----------------------------------------------------------
@@ -1238,7 +1242,8 @@ void REPLAY_GUI::addLogPlot(const LogPlot& logplot)
     return;
 
   string vname = logplot.get_vehi_name();
-  int ix = lp_viewer->addLogPlot(logplot) - 1;
+  // Use special unsigned int type having same size a pointer (void*)
+  uintptr_t ix = lp_viewer->addLogPlot(logplot) - 1;
 
   string labelA, labelB;
   if(vname != "") {
@@ -1250,10 +1255,11 @@ void REPLAY_GUI::addLogPlot(const LogPlot& logplot)
     labelB = "LogPlots(R)/" + logplot.get_varname();
   }
 
-  mbar->add(labelA.c_str(), 0, 
+  m_menubar->add(labelA.c_str(), 0, 
 	    (Fl_Callback*)REPLAY_GUI::cb_LeftLogPlot,  (void*)ix);
-  mbar->add(labelB.c_str(), 0, 
+  m_menubar->add(labelB.c_str(), 0, 
 	    (Fl_Callback*)REPLAY_GUI::cb_RightLogPlot, (void*)ix);
+  m_menubar->redraw();
 }
 
 //----------------------------------------------------------
@@ -1270,16 +1276,17 @@ void REPLAY_GUI::addHelmPlot(const HelmPlot& helm_plot)
   if(vname == "") 
     vname = "uknown";
 
-  unsigned int count = np_viewer->addHelmPlot(helm_plot);
+  // Use special unsigned int type having same size a pointer (void*)
+  uintptr_t count = np_viewer->addHelmPlot(helm_plot);
   if(count < 1)
     return;
   
   string label_a = "HelmPlots/LeftPane/" + toupper(vname);
   string label_b = "HelmPlots/RightPane/" + toupper(vname);
   
-  mbar->add(label_a.c_str(), 0, 
+  m_menubar->add(label_a.c_str(), 0, 
 	    (Fl_Callback*)REPLAY_GUI::cb_LeftHelmPlot,  (void*)(count-1));
-  mbar->add(label_b.c_str(), 0, 
+  m_menubar->add(label_b.c_str(), 0, 
 	    (Fl_Callback*)REPLAY_GUI::cb_RightHelmPlot, (void*)(count-1));  
 }
 
@@ -1335,7 +1342,8 @@ void REPLAY_GUI::setVNameMenuButtonA(string vname)
 
   // First get the index in the list of known vehicle names. This index is 
   // needed to configure the callback for the menu item.
-  unsigned int i, vindex, vsize = m_vnames.size();
+  // Use special unsigned int type having same size a pointer (void*)
+  uintptr_t i, vindex, vsize = m_vnames.size();
   for(i=0; i<vsize; i++)
     if(m_vnames[i] == vname)
       vindex = i;
@@ -1377,7 +1385,8 @@ void REPLAY_GUI::updateSourceMenuButtonA()
 
     // First get the index in the list of known sources. This index is 
     // needed to configure the callback for the menu item.
-    unsigned int i, vindex, vsize = m_sources.size();
+    // Use special unsigned int type having same size a pointer (void*)
+    uintptr_t i, vindex, vsize = m_sources.size();
     for(i=0; i<vsize; i++)
       if(m_sources[i] == source)
 	vindex = i;
@@ -1398,7 +1407,8 @@ void REPLAY_GUI::setVNameMenuButtonB(string vname)
 
   // First get the index in the list of known vehicle names. This index is 
   // needed to configure the callback for the menu item.
-  unsigned int i, vindex, vsize = m_vnames.size();
+  // Use special unsigned int type having same size a pointer (void*)
+  uintptr_t i, vindex, vsize = m_vnames.size();
   for(i=0; i<vsize; i++)
     if(m_vnames[i] == vname)
       vindex = i;
@@ -1440,7 +1450,8 @@ void REPLAY_GUI::updateSourceMenuButtonB()
 
     // First get the index in the list of known sources. This index is 
     // needed to configure the callback for the menu item.
-    unsigned int i, vindex, vsize = m_sources.size();
+    // Use special unsigned int type having same size a pointer (void*)
+    uintptr_t i, vindex, vsize = m_sources.size();
     for(i=0; i<vsize; i++)
       if(m_sources[i] == source)
 	vindex = i;
@@ -1488,4 +1499,5 @@ void REPLAY_GUI::capture_to_file()
   cout << "command: " << command << endl;
   m_save_file_ix++;
 }
+
 

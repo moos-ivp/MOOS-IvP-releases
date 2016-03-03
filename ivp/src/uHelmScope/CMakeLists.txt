@@ -15,9 +15,6 @@ endif (${WIN32})
 
 SET(SRC 
   HelmScope.cpp
-  IterBlockHelm.cpp
-  IterBlockBHV.cpp
-  IterBlockPosts.cpp
   BehaviorRecord.cpp
   HelmScope_Info.cpp
   main.cpp
@@ -26,15 +23,12 @@ SET(SRC
 ADD_EXECUTABLE(uHelmScope ${SRC})
 
 TARGET_LINK_LIBRARIES(uHelmScope 
-  MOOS
-  MOOSGen
+  ${MOOS_LIBRARIES}
   genutil
+  apputil
+  helmivp
   behaviors
+  ivpbuild
+  ivpcore
   mbutil 
   ${SYSTEM_LIBS})
-
-# Install Targets
-INSTALL(TARGETS uHelmScope
-  RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-)
-

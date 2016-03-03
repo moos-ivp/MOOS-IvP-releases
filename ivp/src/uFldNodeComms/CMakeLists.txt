@@ -8,9 +8,9 @@ FILE(GLOB SRC *.cpp)
 ADD_EXECUTABLE(uFldNodeComms ${SRC})
 
 TARGET_LINK_LIBRARIES(uFldNodeComms
-   MOOS
-   MOOSGen
+   ${MOOS_LIBRARIES}
    mbutil
+   apputil
    contacts
    ufield
    geometry

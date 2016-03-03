@@ -25,6 +25,8 @@
 
 #include "XYPoint.h"
 
+double  angleFromThreePoints(double x1, double y1, double x2, double y2,
+			     double x3, double y3);
 double  relAng(double xa, double ya, double xb, double yb);
 double  relAng(const XYPoint& a, const XYPoint& b);
 double  radAngleWrap(double radians);
@@ -40,4 +42,5 @@ double  headingToRadians(double degrees);
 bool    containsAngle(double deg1, double deg2, double deg3);
 
 #endif
+
 

@@ -8,9 +8,9 @@ FILE(GLOB SRC *.cpp)
 ADD_EXECUTABLE(uFldShoreBroker ${SRC})
 
 TARGET_LINK_LIBRARIES(uFldShoreBroker
-   MOOS
-   MOOSGen
+   ${MOOS_LIBRARIES}
    mbutil
+   apputil
    ufield
    m
    pthread)

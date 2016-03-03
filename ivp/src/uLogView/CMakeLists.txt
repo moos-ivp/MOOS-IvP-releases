@@ -22,29 +22,20 @@ SET(SRC	LogPlotViewer.cpp
 If (${APPLE})
       # If you want to create an Apple BUNDLE, do it here
       ADD_EXECUTABLE(uLogView ${SRC})
-      # Install Targets
-      INSTALL(TARGETS uLogView
-        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-      )
 ELSE (${APPLE})
       ADD_EXECUTABLE(uLogView ${SRC})
-      # Install Targets
-      INSTALL(TARGETS uLogView
-         RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-      )
 ENDIF (${APPLE})
       
-Target_LINK_LIBRARIES(uLogView         
-   MOOS
-   MOOSGen
+TARGET_LINK_LIBRARIES(uLogView         
    ulogview
    marineview
-   contacts
-   MOOSUtility
-   logutils
-   genutil
    geometry
+   logutils
+   ${MOOSGeodesy_LIBRARIES}
+   ${MOOS_LIBRARIES}
+   genutil
    contacts
+   apputil
    mbutil
       # Standard libraries used by this project's FLTK apps...
    fltk 
@@ -59,5 +50,4 @@ IF (${APPLE})
       )
 ENDIF (${APPLE})
 
-ADD_TEST(MyTest1 ${EXECUTABLE_OUTPUT_PATH}/uLogView --version)
 

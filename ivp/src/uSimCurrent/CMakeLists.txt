@@ -22,15 +22,9 @@ SET(SRC
 ADD_EXECUTABLE(uSimCurrent ${SRC})
 
 TARGET_LINK_LIBRARIES(uSimCurrent
-  MOOS
-  MOOSGen
-  MOOSUtility
+  ${MOOS_LIBRARIES}
+  ${MOOSGeodesy_LIBRARIES}
   mbutil
   geometry 
   ${SYSTEM_LIBS})
-
-# Install Targets
-INSTALL(TARGETS uSimCurrent
-  RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-)
 

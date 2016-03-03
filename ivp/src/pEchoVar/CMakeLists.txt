@@ -23,13 +23,9 @@ SET(SRC
 ADD_EXECUTABLE(pEchoVar ${SRC})
 
 TARGET_LINK_LIBRARIES(pEchoVar 
-  MOOS
-  MOOSGen
+  ${MOOS_LIBRARIES}
+  geometry
   mbutil 
   logic
   ${SYSTEM_LIBS})
 
-# Install Targets
-INSTALL(TARGETS pEchoVar
-  RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-)

@@ -22,15 +22,11 @@ SET(SRC
 ADD_EXECUTABLE(pNodeReporter ${SRC})
    
 TARGET_LINK_LIBRARIES(pNodeReporter
-   MOOS
-   MOOSGen
-   MOOSUtility
+   ${MOOS_LIBRARIES}
+   ${MOOSGeodesy_LIBRARIES}
    contacts
+   apputil
    mbutil
    geometry
    ${SYSTEM_LIBS})
 
-# Install Targets
-INSTALL(TARGETS pNodeReporter
-  RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-)

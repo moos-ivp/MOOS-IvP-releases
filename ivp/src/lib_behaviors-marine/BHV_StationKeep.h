@@ -36,8 +36,10 @@ public:
   
   bool         setParam(std::string, std::string);
   IvPFunction* onRunState();
+  void         onIdleToRunState();
   void         onRunToIdleState();
   void         onCompleteState() {postStationMessage(false);};
+  void         postConfigStatus();
 
 protected:
   bool         updateInfoIn();  
@@ -75,6 +77,7 @@ private:  // Configuration Parameters
   // depth. It may need to dive to depth when it is not hibernating.
   double      m_pskeep_radius;
   std::string m_pskeep_variable;
+  std::string m_station_ctr_var;
 
 private:  // State Variables
   bool         m_center_pending;
@@ -83,8 +86,8 @@ private:  // State Variables
   double       m_osy;
   double       m_currtime;
   double       m_dist_to_station;
-  std::string  m_pskeep_state;
-  std::string  m_transit_state;
+  std::string  m_pskeep_state;     // pending_progress_start, noted_prog...
+  std::string  m_transit_state;    // seeking_station, hibernating
 
   // Time at which the behavior transitioned from idle to running.
   double       m_mark_time;
@@ -103,4 +106,5 @@ private:  // State Variables
 };
 
 #endif
+
 

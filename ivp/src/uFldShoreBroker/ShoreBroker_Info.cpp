@@ -1,9 +1,24 @@
-/****************************************************************/
-/*   NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
-/*   ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
-/*   FILE: ShoreBroker_Info.cpp                                 */
-/*   DATE: Dec 16th 2011                                        */
-/****************************************************************/
+/*****************************************************************/
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
+/*    FILE: ShoreBroker_Info.cpp                                 */
+/*    DATE: Dec 16th 2011                                        */
+/*                                                               */
+/* This program is free software; you can redistribute it and/or */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation; either version  */
+/* 2 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* This program is distributed in the hope that it will be       */
+/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the GNU General Public License for more details. */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with this program; if not, write to the Free    */
+/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
+/* Boston, MA 02111-1307, USA.                                   */
+/*****************************************************************/
 
 #include <cstdlib>
 #include <iostream>
@@ -82,7 +97,11 @@ void showExampleConfigAndExit()
   blk("  QBRIDGE = RETURN                                              ");
   blk("  QBRIDGE = NODE_REPORT, STATION_KEEP                           ");
   blk("                                                                ");
-  blk("  BRIDGE = UP_LOITER_$N, UP_LOITER                              ");
+  blk("  BRIDGE = src=UP_LOITER_$N, alias=UP_LOITER                    ");
+  blk("                                                                ");
+  blk("  // Note: [QBRIDGE = FOO]  is shorthand for                    ");
+  blk("  //       [BRIDGE = src=FOO_$V,  alias=FOO] and                ");
+  blk("  //       [BRIDGE = src=FOO_ALL, alias=FOO]                    ");
   blk("}                                                               ");
   blk("                                                                ");
   exit(0);
@@ -111,13 +130,15 @@ void showInterfaceAndExit()
   blk("                                                                ");
   blk("PUBLICATIONS:                                                   ");
   blk("------------------------------------                            ");
-  blk("  NODE_BROKER_ACK = community=shoreside,host=192.168.1.199,     ");
-  blk("                    port=9000,port_udp=9200,timewarp=8,         ");
-  blk("                    status=ok                                   ");
+  blk("  NODE_BROKER_ACK  = community=shoreside,host=192.168.1.199,    ");
+  blk("                     port=9000,port_udp=9200,timewarp=8,        ");
+  blk("                     status=ok                                  ");
   blk("                                                                ");
-  blk("  PMB_REGISTER    = src_var=DEPLOY_ALL,dest_community=henry,    ");
-  blk("                    dest_port=9200,dest_host=192.168.1.22,      ");
-  blk("                    dest_alias=DEPLOY                           ");
+  blk("  NODE_BROKER_VACK = alpha                                      ");
+  blk("                                                                ");
+  blk("  PMB_REGISTER     = src_var=DEPLOY_ALL,dest_community=henry,   ");
+  blk("                     dest_port=9200,dest_host=192.168.1.22,     ");
+  blk("                     dest_alias=DEPLOY                          ");
   blk("                                                                ");
   exit(0);
 }
@@ -130,4 +151,5 @@ void showReleaseInfoAndExit()
   showReleaseInfo("uFldShoreBroker", "gpl");
   exit(0);
 }
+
 
