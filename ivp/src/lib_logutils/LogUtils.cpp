@@ -1,12 +1,23 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and Henrik Schmidt                  */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: LogUtils.cpp                                         */
 /*    DATE: August 7th, 2008                                     */
 /*                                                               */
-/* This is unreleased BETA code. No permission is granted or     */
-/* implied to use, copy, modify, and distribute this software    */
-/* except by the author(s).                                      */
+/* This program is free software; you can redistribute it and/or */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation; either version  */
+/* 2 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* This program is distributed in the hope that it will be       */
+/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the GNU General Public License for more details. */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with this program; if not, write to the Free    */
+/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
+/* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
 #include <iostream>
@@ -209,14 +220,14 @@ void shiftTimeStamp(string& line, double logstart)
 
 double getLogStart(const string& line)
 {
-  int  len   = line.length();
   bool done  = false;
   int  state = 0;
 
   int  buffix  = 0;
   char buff[MAX_LINE_LENGTH];
 
-  for(int i=0; ((i<len) && !done); i++) {
+  unsigned int i, len = line.length();
+  for(i=0; ((i<len) && !done); i++) {
     if((line[i] == ' ') || (line[i] == '\t')) {
       if(state == 0)
 	state = 1;
@@ -256,10 +267,9 @@ void addVectorKey(vector<string>& v_keys, vector<bool>& v_pmatch,
     key.erase(len-1, 1);
   }
   
-  int  ksize = v_keys.size();
+  unsigned int i, prior_ix, ksize = v_keys.size();
   bool prior = false;
-  int  prior_ix = -1;
-  for(int i=0; i<ksize; i++) {
+  for(i=0; i<ksize; i++) {
     if(key == v_keys[i]) {
       prior = true;
       prior_ix = i;
@@ -558,3 +568,4 @@ double getEpochSecsFromDayOfYear(double d_day, double d_month,
 
   return(total_seconds);
 }
+

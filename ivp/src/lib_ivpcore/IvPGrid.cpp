@@ -1,6 +1,6 @@
 /*****************************************************************/
 /*    NAME: Michael Benjamin                                     */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: IvPGrid.cpp                                          */
 /*    DATE: Too long ago to remember (1996-1999)                 */
 /*                                                               */
@@ -38,8 +38,8 @@
 /*****************************************************************/
 
 #include <iostream>
-#include <assert.h>
-#include <math.h>
+#include <cassert>
+#include <cmath>
 #include "IvPGrid.h"
 #include "IvPDomain.h"
 
@@ -663,6 +663,7 @@ bool IvPGrid::grid_ok()
   cout << "Grid is OK!!!!" << endl;
   return(true);
 }
+
 
 
 

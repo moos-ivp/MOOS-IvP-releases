@@ -18,6 +18,8 @@ SET(SRC
   IterBlockHelm.cpp
   IterBlockBHV.cpp
   IterBlockPosts.cpp
+  BehaviorRecord.cpp
+  UHS_ExampleConfig.cpp
   main.cpp
 )
 

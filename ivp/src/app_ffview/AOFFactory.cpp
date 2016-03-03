@@ -1,8 +1,29 @@
+/*****************************************************************/
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
+/*    FILE:                                                      */
+/*    DATE:                                                      */
+/*                                                               */
+/* This program is free software; you can redistribute it and/or */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation; either version  */
+/* 2 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* This program is distributed in the hope that it will be       */
+/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the GNU General Public License for more details. */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with this program; if not, write to the Free    */
+/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
+/* Boston, MA 02111-1307, USA.                                   */
+/*****************************************************************/
 #include "AOFFactory.h"
 #include "fileutil.h"
 #include "stringutil.h"
 #include <iostream>
-#include <stdlib.h>
+#include <cstdlib>
 
 #ifdef _WIN32
    #include <windows.h>
@@ -70,7 +91,7 @@ void AOFFactory::load_directory(string dirname) {
        continue;
      }
 
-     if(! is_regular_file(fpath)) {
+     if(! isRegularFile(fpath)) {
        cerr << "Warning: File " << fname << " isn't a regular file." << endl;
        continue;
      }
@@ -160,7 +181,7 @@ void AOFFactory::loadEnvVarDirectories(std::string envVar, bool verbose) {
   for(unsigned int i=0; i<v.size(); ++i) {
     string directory = v.at(i);
 
-    if (isdir(directory)) {
+    if (isDirectory(directory)) {
       if (verbose) {
         cerr << "    Loading directory: " << directory << endl;
       }
@@ -211,3 +232,4 @@ AOF* AOFFactory::new_aof(string name, IvPDomain domain) {
 }
 
 //==============================================================================
+

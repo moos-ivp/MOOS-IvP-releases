@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: OF_Reflector.h                                       */
 /*    DATE: Aug 29th 2005 (derived from OFR_AOF built long ago)  */
 /*                                                               */
@@ -49,7 +49,7 @@ public:
   int    create(const std::string);
   int    create(int unif_amt=-1, int smart_amt=-1, double thresh=-1);
 
-  // extractOF is depricated, supported for now, use extractIvPFunction
+  // extractOF is deprecated, supported for now, use extractIvPFunction
   IvPFunction* extractOF(bool normalize=true);
   IvPFunction* extractIvPFunction(bool normalize=true)
   {return(extractOF(normalize));};
@@ -98,6 +98,7 @@ protected:
   std::string m_warnings;
 };
 #endif
+
 
 
 

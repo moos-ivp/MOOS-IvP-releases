@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: BHV_Shadow.cpp                                       */
 /*    DATE: May 10th 2005                                        */
 /*                                                               */
@@ -24,8 +24,8 @@
 #pragma warning(disable : 4503)
 #endif
 
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include "AngleUtils.h"
 #include "BHV_Shadow.h"
 #include "ZAIC_PEAK.h"
@@ -180,6 +180,7 @@ double BHV_Shadow::getRelevance()
   else
     return(0.0);
 }
+
 
 
 

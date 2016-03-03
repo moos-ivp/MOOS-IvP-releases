@@ -1,7 +1,7 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
-/*    FILE: VPlugPlot.h                                            */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
+/*    FILE: VPlugPlot.h                                          */
 /*    DATE: Aug 9th, 2009                                        */
 /*                                                               */
 /* This program is free software; you can redistribute it and/or */
@@ -47,7 +47,7 @@ public:
   void            print() const;
 
  protected:  
-  unsigned int getIndexByTime(double) const;
+  unsigned int    getIndexByTime(double) const;
 
 protected:
   std::string                  m_vehi_name;  // Name of the platform
@@ -55,11 +55,4 @@ protected:
   std::vector<VPlug_GeoShapes> m_vplugs;
 };
 #endif 
-
-
-
-
-
-
-
 

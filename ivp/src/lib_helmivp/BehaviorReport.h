@@ -1,8 +1,8 @@
 /*****************************************************************/
 /*    NAME: Michael Benjamin                                     */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: BehaviorReport.h                                     */
-/*    DATE: Apr 16th 2008                                        */
+/*    DATE: May 10th 2011                                        */
 /*****************************************************************/
 
 #ifndef BEHAVIOR_REPORT_HEADER
@@ -10,60 +10,52 @@
 
 #include <string>
 #include <vector>
-#include "VarDataPair.h"
+#include "IvPFunction.h"
 
 class BehaviorReport {
-friend class BehaviorSet;
 public:
-  BehaviorReport() {reset();};
+  BehaviorReport();
+  BehaviorReport(std::string bhv_name, unsigned int iteration=0);
   virtual ~BehaviorReport() {};
+
+  // Setting Context information relevant to each IvPFunction
+  void  setBehaviorName(std::string name)   {m_bhv_name  = name;};
+  void  setHelmIteration(unsigned int iter) {m_iteration = iter;};
+
+  // Populating the report with IvP Functions
+  void  addIPF(IvPFunction*, std::string="");
+  void  setPriority(double pwt);
+
+  // Post-processing and error checking of IvP functions
+  void  makeKeysUnique();
+  bool  checkForNans();
+  void  setIPFStrings();
   
- public:
-  void         reset();
-  std::string  getDescriptor()    {return(m_descriptor);};
-  std::string  getUpdateVar()     {return(m_update_var);};
-  int          getGoodUpdates()   {return(m_good_updates);};
-  int          getBadUpdates()    {return(m_bad_updates);};
-  double       getLastUpdateAge() {return(m_update_age);};
-  double       getDuration()      {return(m_duration);};
-  double       getDurationLeft()  {return(m_duration_left);};
-  double       getStartTime()     {return(m_start_time);};
-  std::string  getState()         {return(m_state);};
-  int          getPieces()        {return(m_pieces);};
-  double       getPriority()      {return(m_priority);};
-  double       getCreateTime()    {return(m_create_time);};
-  std::string  getUnifPiece()     {return(m_unif_piece);};
-  double       getAvgError()      {return(m_avg_error);};
-  double       getWstError()      {return(m_wst_error);};
-  int          getSamples()       {return(m_samples);};
+  // Member functions for getting information
+  unsigned int size() const    {return(m_ipf.size());};
+  bool         isEmpty() const {return(m_ipf.empty());};
 
- protected: // relevant always
-  std::string  m_descriptor;
+  IvPFunction *getIPF(std::string key) const;
+  IvPFunction *getIPF(unsigned int index) const;
+  std::string  getKey(unsigned int index) const;
+  std::string  getIPFString(unsigned int index) const;
+  bool         hasIPFString(unsigned int index) const;
+  bool         hasUniqueKey(unsigned int index) const;
+  double       getAvgPieces() const;
+  std::string  getBHVName() const   {return(m_bhv_name);};
+  unsigned int getIteration() const {return(m_iteration);};
+  double       getPriority() const  {return(m_priority);};
 
-  std::string  m_update_var;
-  int          m_good_updates;
-  int          m_bad_updates;
-  double       m_update_age;
+ protected:
+  std::vector<std::string>  m_key;
+  std::vector<IvPFunction*> m_ipf;
+  std::vector<std::string>  m_ipf_string;
+  std::vector<bool>         m_key_unique;
 
-  std::vector<VarDataPair>  m_messages;
-
-  double       m_duration;
-  double       m_start_time;
-
- protected: // unknown until runtime
-  std::string  m_state;
-
- protected: // relevant when active
-  int         m_pieces;
-  double      m_priority;
-  double      m_duration_left;
-  double      m_create_time;
-  
- protected: // relevant when active and N>1 dimensions
-  std::string m_unif_piece;
-  double      m_avg_error;
-  double      m_wst_error;
-  int         m_samples;
+  std::string               m_bhv_name;
+  unsigned int              m_iteration;
+  double                    m_priority;
 };
 
 #endif 
+

@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: IO_Utilities.h                                       */
 /*    DATE: June 2nd 2004                                        */
 /*                                                               */
@@ -25,7 +25,7 @@
 
 #include <vector>
 #include <string>
-#include <stdio.h>
+#include <cstdio>
 #include "IvPProblem.h"
 #include "IvPFunction.h"
 #include "ZAIC_PEAK.h"
@@ -42,6 +42,7 @@ PDMap*       readPDMap(FILE *f, int dim, int cnt, IvPDomain dom, int deg);
 void   printZAIC_PEAK(ZAIC_PEAK);
 
 #endif
+
 
 
 

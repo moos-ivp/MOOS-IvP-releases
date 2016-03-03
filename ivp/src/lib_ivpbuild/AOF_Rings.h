@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: AOF_Rings.h                                          */
 /*    DATE: Very old - modernized Jan 21 2006                    */
 /*                                                               */
@@ -25,7 +25,7 @@
 
 #include <vector>
 #include <string>
-#include <stdio.h>
+#include <cstdio>
 #include "AOF_Ring.h"
 #include "IvPDomain.h"
 
@@ -51,6 +51,7 @@ private:
 };
 
 #endif
+
 
 
 

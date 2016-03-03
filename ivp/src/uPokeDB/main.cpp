@@ -1,15 +1,30 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin                                     */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: main.cpp                                             */
 /*    DATE: May 9th 2008                                         */
-/*          Motivated by Matt Grund's uMOOSPoke App              */
+/*                                                               */
+/* This program is free software; you can redistribute it and/or */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation; either version  */
+/* 2 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* This program is distributed in the hope that it will be       */
+/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the GNU General Public License for more details. */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with this program; if not, write to the Free    */
+/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
+/* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
 #include <cstring>
 #include <vector>
 #include "PokeDB.h"
 #include "MBUtils.h"
+#include "ReleaseInfo.h"
 
 using namespace std;
 
@@ -29,9 +44,7 @@ int main(int argc ,char * argv[])
 {
   // Look for a request for version information
   if(scanArgs(argc, argv, "-v", "--version", "-version")) {
-    vector<string> svector = getReleaseInfo("uPokeDB");
-    for(unsigned int j=0; j<svector.size(); j++)
-      cout << svector[j] << endl;    
+    showReleaseInfo("uPokeDB", "gpl");
     return(0);
   }
 
@@ -55,6 +68,7 @@ int main(int argc ,char * argv[])
 
   for(int i=0; i<argc; i++) {
     string sarg = argv[i];
+
     if(strEnds(sarg, ".moos") || strEnds(sarg, ".moos++"))
       sMissionFile = argv[i];
     else if(strContains(sarg, ":=")) {
@@ -66,7 +80,7 @@ int main(int argc ,char * argv[])
       else {
 	varname.push_back(stripBlankEnds(svector[0]));
 	varvalue.push_back(svector[1]);
-	vartype.push_back("string");
+	vartype.push_back("string!");
       }
     }
 
@@ -140,10 +154,11 @@ int main(int argc ,char * argv[])
 
   int vsize = varname.size();
   for(int j=0; j<vsize; j++) {
-    if(vartype[j] == "string")
-      Poker.setPokeString(varname[j], varvalue[j]);
+    if((vartype[j] == "double") || 
+       ((varvalue[j] == "@MOOSTIME") && (vartype[j] != "string!")))
+      Poker.setPokeDouble(varname[j], varvalue[j]);
     else
-      Poker.setPokeDouble(varname[j], atof(varvalue[j].c_str()));
+      Poker.setPokeString(varname[j], varvalue[j]);
   }
   
 
@@ -151,3 +166,4 @@ int main(int argc ,char * argv[])
 
   return(0);
 }
+

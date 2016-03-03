@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: BHV_OpRegion.cpp                                     */
 /*    DATE: May 1st, 2005 Sunday at Joe's in Maine               */
 /*                                                               */
@@ -24,8 +24,8 @@
 #pragma warning(disable : 4503)
 #endif
 #include <iostream>
-#include <math.h> 
-#include <stdlib.h>
+#include <cmath> 
+#include <cstdlib>
 #include "BHV_OpRegion.h"
 #include "MBUtils.h"
 #include "XYFormatUtilsPoly.h"
@@ -492,9 +492,9 @@ void BHV_OpRegion::postViewablePolygon()
     return;
   XYPolygon poly_duplicate = m_polygon;
   if(m_hint_vertex_color != "")
-    poly_duplicate.set_vertex_color(m_hint_vertex_color);
+    poly_duplicate.set_color("vertex", m_hint_vertex_color);
   if(m_hint_edge_color != "")
-    poly_duplicate.set_edge_color(m_hint_edge_color);
+    poly_duplicate.set_color("edge", m_hint_edge_color);
   if(m_hint_edge_size >= 0)
     poly_duplicate.set_edge_size(m_hint_edge_size);
   if(m_hint_vertex_size >= 0)
@@ -537,3 +537,4 @@ void BHV_OpRegion::handleVisualHint(string hint)
   else if((param == "vertex_size") && isNumber(value) && (dval >= 0))
     m_hint_vertex_size = dval;
 }
+

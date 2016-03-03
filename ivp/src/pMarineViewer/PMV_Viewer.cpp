@@ -1,6 +1,6 @@
-/****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*****************************************************************/
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: PMV_Viewer.cpp                                       */
 /*    DATE: Nov 11th 2004                                        */
 /*                                                               */
@@ -20,13 +20,14 @@
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
-#include <math.h>
+#include <cstdlib>
+#include <cmath>
+#include <algorithm>
 #include "PMV_Viewer.h"
 #include "MBUtils.h"
 #include "AngleUtils.h"
 #include "ColorParse.h"
 #include "BearingLine.h"
-#include <cstdlib>
 
 #define USE_UTM
 
@@ -38,6 +39,7 @@ PMV_Viewer::PMV_Viewer(int x, int y, int w, int h, const char *l)
   m_scoping        = false;
   m_var_index      = 0;
   m_var_index_prev = 0;
+  m_curr_time      = 0;
 
   m_centric_view   = "";
   m_centric_view_sticky = true;
@@ -48,8 +50,11 @@ PMV_Viewer::PMV_Viewer(int x, int y, int w, int h, const char *l)
   m_mouse_y   = 0;
   m_mouse_lat = 0;
   m_mouse_lon = 0;
+  m_lclick_ix = 0;
+  m_rclick_ix = 0;
   
-  string str = "x=$(XPOS),y=$(YPOS),lat=$(LAT),lon=$(LON),vname=$(VNAME)";
+  string str = "x=$(XPOS),y=$(YPOS),lat=$(LAT),lon=$(LON)";
+  str += "vname=$(VNAME),counter=$(IX)";
   VarDataPair lft_pair("MVIEWER_LCLICK", str); 
   VarDataPair rgt_pair("MVIEWER_RCLICK", str);
   lft_pair.set_key("any_left");
@@ -65,21 +70,34 @@ void PMV_Viewer::draw()
 {
   MarineViewer::draw();
 
-  vector<XYPolygon> polys   = m_geoshapes.getPolygons();
-  vector<XYGrid>    grids   = m_geoshapes.getGrids();
-  vector<XYPoint>   points  = m_geoshapes.getPoints();
-  vector<XYSegList> segls   = m_geoshapes.getSegLists();
-  vector<XYCircle>  circles = m_geoshapes.getCircles();
-  vector<XYVector>  vectors = m_geoshapes.getVectors();
+  if(m_hash_offon)
+    calculateDrawHash();
 
-  drawPolygons(polys);
-  drawGrids(grids);
-  drawSegLists(segls);
-  drawCircles(circles);
-  drawPoints(points);
-  drawVectors(vectors);
+  vector<string> vnames = m_geoshapes_map.getVehiNames();
+  unsigned int i, vsize = vnames.size();
+  for(i=0; i<vsize; i++) {
+    vector<XYPolygon> polys   = m_geoshapes_map.getPolygons(vnames[i]);
+    vector<XYGrid>    grids   = m_geoshapes_map.getGrids(vnames[i]);
+    vector<XYPoint>   points  = m_geoshapes_map.getPoints(vnames[i]);
+    vector<XYSegList> segls   = m_geoshapes_map.getSegLists(vnames[i]);
+    vector<XYCircle>  circles = m_geoshapes_map.getCircles(vnames[i]);
+    vector<XYVector>  vectors = m_geoshapes_map.getVectors(vnames[i]);
+    vector<XYRangePulse> pulses = m_geoshapes_map.getRangePulses(vnames[i]);
+    vector<XYMarker>  markers = m_geoshapes_map.getMarkers(vnames[i]);
+    
+    drawPolygons(polys);
+    drawGrids(grids);
+    drawSegLists(segls);
+    drawCircles(circles);
+    drawPoints(points);
+    drawVectors(vectors);
+    drawRangePulses(pulses, m_curr_time);
+    drawMarkers(markers);
+  }
+
+  drawOpArea(m_op_area);
+  drawDatum(m_op_area);
   drawDropPoints();
-
 
   // Draw Mouse position
   if(Fl::event_state(FL_SHIFT)) {
@@ -98,8 +116,8 @@ void PMV_Viewer::draw()
 
   if(m_vehi_settings.isViewableVehicles()) {
     vector<string> svector = m_vehiset.getVehiNames();
-    int vsize = svector.size();
-    for(int i=0; i<vsize; i++) {
+    unsigned int i, vsize = svector.size();
+    for(i=0; i<vsize; i++) {
       string vehiname = svector[i];
       bool   isactive = (vehiname == m_vehiset.getActiveVehicle());
       string vehibody = m_vehiset.getStringInfo(vehiname, "body");
@@ -107,7 +125,7 @@ void PMV_Viewer::draw()
       // Perhaps draw the history points for each vehicle.
       if(m_vehi_settings.isViewableTrails()) {
 	CPList point_list = m_vehiset.getVehiHist(vehiname);
-	double trails_length = m_vehi_settings.getTrailsLength();
+	unsigned int trails_length = m_vehi_settings.getTrailsLength();
 	drawTrailPoints(point_list, trails_length);
       }
       // Next draw the vehicle shapes. If the vehicle index is the 
@@ -172,7 +190,18 @@ bool PMV_Viewer::setParam(string param, string value)
       handled = true;
     }
   }
+  else if(param == "op_vertex")
+    handled = m_op_area.addVertex(value, m_geodesy);
+
+  else if(param == "filter_out_tag") {
+    handled = true;
+    m_geoshapes_map.clear(value);
+    m_vehiset.clear(value);
+    VarDataPair new_pair("HELM_MAP_CLEAR", 0); 
+    m_var_data_pairs_non_mouse.push_back(new_pair);
+  }
   else if(param == "reference_tag") {
+    handled = true;
     if(value == "bearing-absolute")
       m_reference_bearing = "absolute";
     else if(value == "bearing-relative")
@@ -183,6 +212,8 @@ bool PMV_Viewer::setParam(string param, string value)
       m_vehiset.setParam("center_vehicle_name", value);
       m_reference_point = value;
     }
+    else
+      handled = false;
   }
   else if(param == "new_report_variable") {
     handled = m_vehiset.setParam(param, value);
@@ -192,9 +223,20 @@ bool PMV_Viewer::setParam(string param, string value)
     if(isNumber(value) && (dval > 0))
       m_stale_report_thresh = dval;
   }
-  else if(param == "view_marker") {
-    handled = m_vmarkers.addVMarker(value, m_geodesy);
+  else if(param == "lclick_ix_start") {
+    if(isNumber(value)) {
+      m_lclick_ix = atoi(value.c_str());
+      handled = true;
+    }
   }
+  else if(param == "rclick_ix_start") {
+    if(isNumber(value)) {
+      m_rclick_ix = atoi(value.c_str());
+      handled = true;
+    }
+  }
+  else if((param == "view_marker") || (param == "marker"))
+    handled = m_geoshapes_map.addGeoShape(param, value, "shoreside");
   else if((param == "node_report") || (param == "node_report_local")){
     handled = m_vehiset.setParam(param, value);
     if(handled && (m_centric_view != "") && m_centric_view_sticky) {
@@ -204,12 +246,22 @@ bool PMV_Viewer::setParam(string param, string value)
   else {
     handled = handled || m_vehi_settings.setParam(param, value);
     handled = handled || m_vehiset.setParam(param, value);
+    handled = handled || m_op_area.setParam(param, value);
   }
 
   if(center_needs_adjusting)
     setWeightedCenterView();
 
   return(handled);
+}
+
+
+//-------------------------------------------------------------
+// Procedure: addGeoShape()
+
+bool PMV_Viewer::addGeoShape(string param, string value, string community)
+{
+  return(m_geoshapes_map.addGeoShape(param, value, community));
 }
 
 
@@ -222,6 +274,8 @@ bool PMV_Viewer::setParam(string param, double value)
   if((param == "pan_x") || (param == "pan_y")) {
     m_centric_view = "";
   }
+  else if(param == "curr_time")
+    m_curr_time = value;
 
   bool handled = MarineViewer::setParam(param, value);
 
@@ -236,8 +290,8 @@ bool PMV_Viewer::setParam(string param, double value)
 
 void PMV_Viewer::drawVehicle(string vname, bool active, string vehibody)
 {
-  ObjectPose opose = m_vehiset.getObjectPose(vname);
-  if(!opose.isValid())
+  NodeRecord record = m_vehiset.getNodeRecord(vname);
+  if(!record.valid())  // FIXME more rigorous test
     return;
 
   BearingLine bng_line = m_vehiset.getBearingLine(vname);
@@ -254,8 +308,10 @@ void PMV_Viewer::drawVehicle(string vname, bool active, string vehibody)
   string vnames_mode = m_vehi_settings.getVehiclesNameMode();
   
   double shape_scale  = m_vehi_settings.getVehiclesShapeScale();
-  double shape_length = m_vehiset.getDoubleInfo(vname, "vlength") * shape_scale;
   double age_report   = m_vehiset.getDoubleInfo(vname, "age_ais");
+
+  //  double shape_length = m_vehiset.getDoubleInfo(vname, "vlength") * shape_scale;
+  record.setLength(record.getLength() * shape_scale);
 
   string vname_aug = vname;
   bool  vname_draw = true;
@@ -280,7 +336,7 @@ void PMV_Viewer::drawVehicle(string vname, bool active, string vehibody)
       vname_aug += " (" + helm_amode + ")";
   }
   else if(vnames_mode == "names+depth") {
-    string str_depth = dstringCompact(doubleToString(opose.getDepth(),1));
+    string str_depth = doubleToStringX(record.getDepth(), 1);
     vname_aug += " (depth=" + str_depth + ")";
   }
 
@@ -291,36 +347,41 @@ void PMV_Viewer::drawVehicle(string vname, bool active, string vehibody)
     vname_aug = vname + "(Stale Report: " + age_str + ")";
   } 
 
-  drawCommonVehicle(vname_aug, opose, bng_line, vehi_color, vname_color, 
-		    vehibody, shape_length, vname_draw, 1);
+  record.setName(vname_aug);
+  drawCommonVehicle(record, bng_line, vehi_color, vname_color, 
+		    vname_draw, 1);
 }
 
 //-------------------------------------------------------------
 // Procedure: drawTrailPoints
 
-void PMV_Viewer::drawTrailPoints(CPList &cps, int trail_length)
+void PMV_Viewer::drawTrailPoints(CPList &cps, unsigned int trail_length)
 {
   if(!m_vehi_settings.isViewableTrails())
     return;
 
-  vector<double> xvect;
-  vector<double> yvect;
+  XYSegList segl;
 
   list<ColoredPoint>::reverse_iterator p;
-  int i=0;
+  unsigned int i=0;
   for(p=cps.rbegin(); (p!=cps.rend() && (i<trail_length)); p++) {
-    if(p->isValid()) {
-      xvect.push_back(p->m_x);
-      yvect.push_back(p->m_y);
-    }
+    if(p->isValid())
+      segl.add_vertex(p->m_x, p->m_y);
     i++;
   }
 
   ColorPack   cpack = m_vehi_settings.getColorTrails();
   double    pt_size = m_vehi_settings.getTrailsPointSize();
   bool    connected = m_vehi_settings.isViewableTrailsConnect();
-  
-  drawPointList(xvect, yvect, pt_size, cpack, connected);
+
+  segl.set_color("vertex", cpack.str());
+  segl.set_vertex_size(pt_size);
+  if(connected)
+    segl.set_color("edge", "white");
+  else
+    segl.set_color("edge", "invisible");
+
+  drawSegList(segl);
 }
 
 //-------------------------------------------------------------
@@ -377,6 +438,7 @@ void PMV_Viewer::handleLeftMouse(int vx, int vy)
     else 
       native = latlon;
     dpt.set_label(native);
+    dpt.set_vertex_size(3);
     m_drop_points.addPoint(dpt, latlon, localg, native);
   }
   // Otherwise (no SHIFT/CONTROL key), the left click will be 
@@ -403,6 +465,8 @@ void PMV_Viewer::handleLeftMouse(int vx, int vy)
 	    str = findReplace(str, "$(X)", doubleToString(sx,2));
 	  if(strContains(str, "$(YPOS)")) 
 	    str = findReplace(str, "$(YPOS)", doubleToString(sy,1));
+	  if(strContains(str, "$(IX)"))
+	    str = findReplace(str, "$(IX)", intToString(m_lclick_ix));
 	  if(strContains(str, "$(Y)")) 
 	    str = findReplace(str, "$(Y)", doubleToString(sy,0));
 	  if(strContains(str, "$(Y)")) 
@@ -422,6 +486,7 @@ void PMV_Viewer::handleLeftMouse(int vx, int vy)
 	m_var_data_pairs_lft.push_back(pair);
       }
     }
+    m_lclick_ix++;
   }
 }
 
@@ -464,11 +529,14 @@ void PMV_Viewer::handleRightMouse(int vx, int vy)
 	  str = findReplace(str, "$(LAT)", doubleToString(dlat,8));
 	if(strContains(str, "$(LON)")) 
 	  str = findReplace(str, "$(LON)", doubleToString(dlon,8));
+	if(strContains(str, "$(IX)")) 
+	  str = findReplace(str, "$(IX)", intToString(m_rclick_ix));
 	pair.set_sdata(str);
       }
       m_var_data_pairs_rgt.push_back(pair);
     }
   }
+  m_rclick_ix++;
 }
 
 //-------------------------------------------------------------
@@ -602,6 +670,15 @@ void PMV_Viewer::setActiveScope(string varname)
 }
 
 //-------------------------------------------------------------
+// Procedure: isScopeVariable
+//      Note: 
+
+bool PMV_Viewer::isScopeVariable(string varname) const
+{
+  return(vectorContains(m_var_names, varname));
+}
+
+//-------------------------------------------------------------
 // Procedure: addMousePoke
 //      Note: 
 
@@ -614,7 +691,6 @@ void PMV_Viewer::addMousePoke(string key, string vardata_pair)
   
   m_var_data_pairs_all.push_back(new_pair);
 }
-
 
 // ----------------------------------------------------------
 // Procedure: getStringInfo
@@ -713,10 +789,10 @@ string PMV_Viewer::getStringInfo(const string& info_type, int precision)
   return(result);
 }
   
-
 // ----------------------------------------------------------
 // Procedure: getLeftMousePairs
 // Procedure: getRightMousePairs
+// Procedure: getNonMousePairs
 
 vector<VarDataPair> PMV_Viewer::getLeftMousePairs(bool clear)
 {
@@ -733,4 +809,39 @@ vector<VarDataPair> PMV_Viewer::getRightMousePairs(bool clear)
     m_var_data_pairs_rgt.clear();
   return(rvector);
 }
+
+vector<VarDataPair> PMV_Viewer::getNonMousePairs(bool clear)
+{
+  vector<VarDataPair> rvector = m_var_data_pairs_non_mouse;
+  if(clear)
+    m_var_data_pairs_non_mouse.clear();
+  return(rvector);
+}
+
+//-------------------------------------------------------------
+// Procedure: calculateDrawHash()
+
+void PMV_Viewer::calculateDrawHash()
+{
+  double xl = m_geoshapes_map.getXMin();
+  if(m_vehiset.getXMin() < xl)
+    xl = m_vehiset.getXMin();
+
+  double xh = m_geoshapes_map.getXMax();
+  if(m_vehiset.getXMax() > xh)
+    xh = m_vehiset.getXMax();
+
+  double yl = m_geoshapes_map.getYMin();
+  if(m_vehiset.getYMin() < yl)
+    yl = m_vehiset.getYMin();
+
+  double yh = m_geoshapes_map.getYMax();
+  if(m_vehiset.getYMax() > yh)
+    yh = m_vehiset.getYMax();
+
+  double buffer = 1000;
+
+  drawHash(xl-buffer, xh+buffer, yl-buffer, yh+buffer);
+}
+
 

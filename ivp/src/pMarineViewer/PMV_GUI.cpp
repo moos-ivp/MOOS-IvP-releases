@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: M.Benjamin, H.Schmidt, J.Leonard                     */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: PMV_GUI.cpp                                          */
 /*    DATE: November, 2004                                       */
 /*                                                               */
@@ -41,7 +41,6 @@ PMV_GUI::PMV_GUI(int g_w, int g_h, const char *g_l)
   int info_size = 12;
   int small_info_size = 11;
   
-  m_trail_color_ix = 0;
   m_curr_time      = 0;
   m_prev_out_time  = 0;
 
@@ -109,6 +108,7 @@ PMV_GUI::PMV_GUI(int g_w, int g_h, const char *g_l)
   warp->textsize(info_size); 
   warp->labelsize(info_size);
   
+#if 0
   v_range = new Fl_Output(785, h()-100, 60, 20, "Range:"); 
   v_range->set_output();
   v_range->textsize(info_size); 
@@ -118,7 +118,8 @@ PMV_GUI::PMV_GUI(int g_w, int g_h, const char *g_l)
   v_bearing->set_output();
   v_bearing->textsize(info_size); 
   v_bearing->labelsize(info_size);
-  
+#endif  
+
   m_scope_variable = new Fl_Output(60, h()-30, 100, 20, "Variable:"); 
   m_scope_variable->set_output();
   m_scope_variable->textsize(small_info_size); 
@@ -163,6 +164,9 @@ PMV_GUI::PMV_GUI(int g_w, int g_h, const char *g_l)
   mbar->add("MOOS-Scope/Add Variable", 'a', 
 	    (Fl_Callback*)PMV_GUI::cb_Scope, (void*)0, FL_MENU_DIVIDER);
     
+  mbar->add("ClearHistory/All Vehicles", FL_CTRL+'9', 
+	    (Fl_Callback*)PMV_GUI::cb_FilterOut, (void*)-1, FL_MENU_DIVIDER);
+    
   this->end();
   this->resizable(this);
   this->show();
@@ -190,8 +194,8 @@ void PMV_GUI::addButton(string btype, string svalue)
 
   bool ok_line = true;
   vector<string> svector = parseString(svalue, '#');
-  int vsize = svector.size();
-  for(int i=0; i<vsize; i++) {
+  unsigned int i, vsize = svector.size();
+  for(i=0; i<vsize; i++) {
     string param = stripBlankEnds(biteString(svector[i], '='));
     string value = stripBlankEnds(svector[i]);
     if(param == "") 
@@ -227,17 +231,6 @@ void PMV_GUI::addButton(string btype, string svalue)
     user_button_4->show();
     user_button_4->redraw();
   }
-
-#if 0
-  cout << "Report --------------------------------" << endl;
-  vsize = m_button_keys.size();
-  for(int h=0; h<vsize; h++) {
-    cout << "[" << h << "] key: [" << m_button_keys[h] << "]" << endl;
-    cout << "[" << h << "] var: [" << m_button_vars[h] << "]" << endl;
-    cout << "[" << h << "] val: [" << m_button_vals[h] << "]" << endl;
-  }
-  cout << "End------------------------------------" << endl;
-#endif
 }
 
 //----------------------------------------------------------
@@ -336,8 +329,8 @@ void PMV_GUI::updateXY() {
     v_lon->value(" n/a");
     v_dep->value(" n/a");
     v_ais->value(" n/a");
-    v_range->value(" n/a");
-    v_bearing->value(" n/a");
+    //v_range->value(" n/a");
+    //v_bearing->value(" n/a");
     return;
   }
 
@@ -367,8 +360,8 @@ void PMV_GUI::updateXY() {
   v_crs->value(crs.c_str());
   v_dep->value(dep.c_str());
   v_ais->value(age_ais.c_str());
-  v_range->value(range.c_str());
-  v_bearing->value(bearing.c_str());
+  //v_range->value(range.c_str());
+  //v_bearing->value(bearing.c_str());
 
   warp->redraw();
   v_nam->redraw();
@@ -438,9 +431,10 @@ inline void PMV_GUI::cb_Scope_i(unsigned int i) {
 	bool added = addScopeVariable(new_var);
 	if(added) {
 	  mviewer->addScopeVariable(new_var);
-	  mviewer->setActiveScope(new_var);
 	  pushPending("scope_register", new_var);
 	}
+	if(mviewer->isScopeVariable(new_var))
+	  mviewer->setActiveScope(new_var);
       }
     }
     return;
@@ -492,6 +486,23 @@ inline void PMV_GUI::cb_Reference_i(unsigned int i) {
 void PMV_GUI::cb_Reference(Fl_Widget* o, unsigned int v) {
   ((PMV_GUI*)(o->parent()->user_data()))->cb_Reference_i(v);
 }
+
+//----------------------------------------- FilterOut
+inline void PMV_GUI::cb_FilterOut_i(int i) {  
+  if(i >= (int)(m_filter_tags.size()))
+    return;
+  if(i < 0)
+    mviewer->setParam("filter_out_tag", "all");
+  else {
+    string str = m_filter_tags[i];
+    mviewer->setParam("filter_out_tag", str);
+  }
+}
+
+void PMV_GUI::cb_FilterOut(Fl_Widget* o, int v) {
+  ((PMV_GUI*)(o->parent()->user_data()))->cb_FilterOut_i(v);
+}
+
 
 //-------------------------------------------------------------------
 // Procedure: getPendingVar
@@ -689,4 +700,43 @@ void PMV_GUI::addReferenceVehicle(string vehicle_name)
 
   mbar->redraw();
 }
+
+//-------------------------------------------------------------------
+// Procedure: addFilterVehicle
+
+void PMV_GUI::addFilterVehicle(string vehicle_name)
+{
+  // First check the current list of vehicles, ignore duplicates
+  unsigned int i, vsize = m_filter_tags.size();
+  for(i=0; i<vsize; i++) {
+    if(vehicle_name == m_filter_tags[i])
+      return;
+  }
+
+  // Add the new vehicle name as a menu choice
+  m_filter_tags.push_back(vehicle_name);
+  unsigned int index = m_filter_tags.size()-1;
+  string label = "ClearHistory/";
+  label += (truncString(vehicle_name, 25, "middle"));
+  mbar->add(label.c_str(), 0, 
+	    (Fl_Callback*)PMV_GUI::cb_FilterOut, (void*)index, 0);
+
+  mbar->redraw();
+}
+
+//-------------------------------------------------------------------
+// Procedure: removeFilterVehicle
+
+void PMV_GUI::removeFilterVehicle(string vehicle_name)
+{
+  // First check the current list of vehicles, ignore duplicates
+  unsigned int i, vsize = m_filter_tags.size();
+  for(i=0; i<vsize; i++) {
+    if(vehicle_name == m_filter_tags[i])
+      mbar->remove(i+1);
+  }
+
+  mbar->redraw();
+}
+
 

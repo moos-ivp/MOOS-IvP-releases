@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: BackImg.cpp                                          */
 /*    DATE: Nov 16th 2004                                        */
 /*                                                               */
@@ -24,8 +24,8 @@
 #include <vector>
 #include <iostream>
 #include <cmath>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include <tiffio.h>
 
 #define USE_UTM
@@ -293,12 +293,16 @@ bool BackImg::readTiffInfo(string filename)
 	lon_east_set = true;
       }
       else if((left == "datum_lat") && (isNumber(right))) {
-	m_datum_lat = atof(right.c_str());
-	m_datum_lat_set = true;
+	if(!m_datum_lat_set) {
+	  m_datum_lat = atof(right.c_str());
+	  m_datum_lat_set = true;
+	}
       }
       else if((left == "datum_lon") && (isNumber(right))) {
-	m_datum_lon = atof(right.c_str());
-	m_datum_lon_set = true;
+	if(!m_datum_lon_set) {
+	  m_datum_lon = atof(right.c_str());
+	  m_datum_lon_set = true;
+	}
       }
       else
 	return(false);
@@ -467,3 +471,4 @@ void BackImg::print()
   cout << "pix_per_mtr_y: " <<(m_img_pix_height / m_img_mtr_height) << endl;
 
 }
+

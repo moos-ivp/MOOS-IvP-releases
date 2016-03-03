@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: MarineVehiGUI.cpp                                    */
 /*    DATE: November, 2004                                       */
 /*                                                               */
@@ -32,7 +32,6 @@ using namespace std;
 MarineVehiGUI::MarineVehiGUI(int g_w, int g_h, const char *g_l)
   : MarineGUI(g_w, g_h, g_l) 
 {
-  m_trail_color_ix = 0;
   m_vname_color_ix = 0;
 
   mbar->add("Vehicles/Vehicles-Toggle", FL_CTRL+'v', (Fl_Callback*)MarineVehiGUI::cb_ToggleVehicles, (void*)0, FL_MENU_DIVIDER);
@@ -185,14 +184,7 @@ void MarineVehiGUI::cb_AltTrailSize(Fl_Widget* o, int v) {
 
 //----------------------------------------- ToggleTrailColor
 inline void MarineVehiGUI::cb_ToggleTrailColor_i() {
-  cout << "In ToggleTrailColor()" << endl;
-  m_trail_color_ix = (m_trail_color_ix+1) % 3;
-  if(m_trail_color_ix == 0)
-    cmviewer->setParam("trails_color", "white");
-  else if(m_trail_color_ix == 1)
-    cmviewer->setParam("trails_color", "blue");
-  else
-    cmviewer->setParam("trails_color", "green");
+  cmviewer->setParam("trails_color", "toggle");
   cmviewer->redraw();
 }
 void MarineVehiGUI::cb_ToggleTrailColor(Fl_Widget* o) {
@@ -264,5 +256,6 @@ inline void MarineVehiGUI::cb_CenterView_i(int v) {
 void MarineVehiGUI::cb_CenterView(Fl_Widget* o, int v) {
   ((MarineVehiGUI*)(o->parent()->user_data()))->cb_CenterView_i(v);
 }
+
 
 

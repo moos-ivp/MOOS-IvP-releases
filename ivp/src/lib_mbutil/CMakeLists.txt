@@ -5,6 +5,7 @@
 
 SET(SRC
   ColorParse.cpp
+  ColorPack.cpp
   FColorMap.cpp
   FileBuffer.cpp
   MBTimer.cpp
@@ -13,6 +14,8 @@ SET(SRC
   StringTree.cpp
   StringNode.cpp
   VarDataPair.cpp
+  Figlog.cpp
+  ReleaseInfo.cpp
 )
 
 SET(HEADERS
@@ -26,6 +29,7 @@ SET(HEADERS
   StringTree.h
   TermUtils.h
   VarDataPair.h
+  ReleaseInfo.h
 )
 
 # SET_SOURCE_FILES_PROPERTIES(

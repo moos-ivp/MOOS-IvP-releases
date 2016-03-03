@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: AOF_AvoidCollisionDepth.cpp                          */
 /*    DATE: August 6th, 2008                                     */
 /*                                                               */
@@ -24,7 +24,7 @@
 #pragma warning(disable : 4503)
 #endif
 #include <iostream>
-#include <math.h> 
+#include <cmath> 
 #include "AOF_AvoidCollisionDepth.h"
 #include "AngleUtils.h"
 #include "IvPDomain.h"
@@ -249,6 +249,7 @@ double AOF_AvoidCollisionDepth::evalDiveDepth(double eval_depth,
 
   return(util);
 }
+
 
 
 

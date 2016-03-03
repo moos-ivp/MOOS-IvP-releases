@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: AOF_CutRangeCPA.cpp                                  */
 /*    DATE: Nov 4th, 2006                                        */
 /*                                                               */
@@ -23,7 +23,7 @@
 #pragma warning(disable : 4786)
 #pragma warning(disable : 4503)
 #endif
-#include <math.h> 
+#include <cmath> 
 #include "AOF_AttractorCPA.h"
 #include "AngleUtils.h"
 
@@ -208,6 +208,7 @@ double AOF_AttractorCPA::metric(double gval) const
   }
   
 }
+
 
 
 

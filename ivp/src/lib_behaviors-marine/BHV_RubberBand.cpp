@@ -1,7 +1,7 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
-/*    FILE: BHV_RubberBand.cpp                                  */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
+/*    FILE: BHV_RubberBand.cpp                                   */
 /*    DATE: Aug 25 2006                                          */
 /*                                                               */
 /* This program is free software; you can redistribute it and/or */
@@ -25,8 +25,8 @@
 #pragma warning(disable : 4503)
 #endif
 #include <iostream>
-#include <math.h> 
-#include <stdlib.h>
+#include <cmath> 
+#include <cstdlib>
 #include "BHV_RubberBand.h"
 #include "MBUtils.h"
 #include "AngleUtils.h"
@@ -56,6 +56,7 @@ BHV_RubberBand::BHV_RubberBand(IvPDomain gdomain) :
   m_outer_speed  = 1.2;
   m_extra_speed  = 0;
   m_center_activate = false;
+  width = 90;
 
   // Default values for State  Variables
   m_center_pending  = false;
@@ -84,7 +85,7 @@ bool BHV_RubberBand::setParam(string param, string val)
   val = stripBlankEnds(val);
 
   //  if(param == "station_pt") {
-  if(param == "points") {
+  if(param == "points" || param == "point") {
     m_center_assign  = val;
     m_center_pending = true;
     return(updateCenter());
@@ -140,6 +141,10 @@ bool BHV_RubberBand::setParam(string param, string val)
     stiffness = dval;
     return(true);
   }
+  else if(param == "width") 
+   {
+     width = (int) atof(val.c_str());
+   }
 
   return(false);
 }
@@ -263,8 +268,8 @@ IvPFunction *BHV_RubberBand::onRunState()
   
   ZAIC_PEAK crs_zaic(m_domain, "course");
   crs_zaic.setSummit(angle_to_station);
-  crs_zaic.setPeakWidth(120);
-  crs_zaic.setBaseWidth(60.0);
+  crs_zaic.setPeakWidth(width);
+  crs_zaic.setBaseWidth(180-width);
   crs_zaic.setSummitDelta(10.0);
   crs_zaic.setMinMaxUtil(0, 100);
   crs_zaic.setValueWrap(true);
@@ -387,5 +392,6 @@ void BHV_RubberBand::postErasableTrailPoint()
   string spec = m_trail_point.get_spec();
   postMessage("VIEW_POINT", spec);
 }
+
 
 

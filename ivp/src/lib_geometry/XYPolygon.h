@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: XYPolygon.h                                          */
 /*    DATE: Apr 29, 2005                                         */
 /*                                                               */
@@ -33,8 +33,9 @@ public:
   ~XYPolygon() {};
 
   // Polygon create and edit functions
-  bool   add_vertex(double, double, double, bool=true);
   bool   add_vertex(double, double, bool=true);
+  bool   add_vertex(double, double, double, bool=true);
+  bool   add_vertex(double, double, double, std::string, bool=true);
   bool   alter_vertex(double, double, double=0);
   bool   delete_vertex(double, double);
   bool   insert_vertex(double, double, double=0);
@@ -70,3 +71,4 @@ private:
 };
 
 #endif
+

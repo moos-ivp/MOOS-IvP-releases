@@ -1,23 +1,40 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin                                     */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: HelmReport.cpp                                       */
 /*    DATE: Sep 26th, 2006                                       */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* (IvPHelm) The IvP autonomous control Helm is a set of         */
+/* classes and algorithms for a behavior-based autonomous        */
+/* control architecture with IvP action selection.               */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* The algorithms embodied in this software are protected under  */
+/* U.S. Pat. App. Ser. Nos. 10/631,527 and 10/911,765 and are    */
+/* the property of the United States Navy.                       */
 /*                                                               */
-/* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* Permission to use, copy, modify and distribute this software  */
+/* and its documentation for any non-commercial purpose, without */
+/* fee, and without a written agreement is hereby granted        */
+/* provided that the above notice and this paragraph and the     */
+/* following three paragraphs appear in all copies.              */
+/*                                                               */
+/* Commercial licences for this software may be obtained by      */
+/* contacting Patent Counsel, Naval Undersea Warfare Center      */
+/* Division Newport at 401-832-4736 or 1176 Howell Street,       */
+/* Newport, RI 02841.                                            */
+/*                                                               */
+/* In no event shall the US Navy be liable to any party for      */
+/* direct, indirect, special, incidental, or consequential       */
+/* damages, including lost profits, arising out of the use       */
+/* of this software and its documentation, even if the US Navy   */
+/* has been advised of the possibility of such damage.           */
+/*                                                               */
+/* The US Navy specifically disclaims any warranties, including, */
+/* but not limited to, the implied warranties of merchantability */
+/* and fitness for a particular purpose. The software provided   */
+/* hereunder is on an 'as-is' basis, and the US Navy has no      */
+/* obligations to provide maintenance, support, updates,         */
+/* enhancements or modifications.                                */
 /*****************************************************************/
 
 #include "HelmReport.h"
@@ -130,47 +147,55 @@ void HelmReport::addCompletedBHV(const string& descriptor, double time,
 
 //   bhv_waypoint:100,bhv_avoid:200,bhv_opregion:100
 
-void HelmReport::addActiveBHV(const string& descriptor, 
-			      double time, double pwt, 
-			      int pcs, double cpu_time, 
-			      const string& update_summary)
+void HelmReport::addActiveBHV(const string& descriptor, double time, 
+			      double pwt, double pcs, double cpu_time, 
+			      const string& update_summary, 
+			      unsigned int ipfs, bool orig)
 {
   if(m_active_bhvs != "")
     m_active_bhvs += ":";
   
   m_active_bhvs += descriptor;
   m_active_bhvs += "$" + doubleToString(time, 1);
-  m_active_bhvs += "$" + doubleToString(pwt, 2);
-  m_active_bhvs += "$" + intToString(pcs);
+  m_active_bhvs += "$" + doubleToStringX(pwt, 2);
+  m_active_bhvs += "$" + doubleToStringX(pcs);
   m_active_bhvs += "$" + doubleToString(cpu_time,2);
   m_active_bhvs += "$" + update_summary;
+  m_active_bhvs += "$" + uintToString(ipfs);
+  m_active_bhvs += "$" + uintToString(orig);
 }
 
 
 //-----------------------------------------------------------
 // Procedure: getRunningBehaviors()
 
-string HelmReport::getRunningBehaviors()
+string HelmReport::getRunningBehaviors() const
 {
-  string result = "#";
-  result += uintToString(m_iteration);
-  result += ":";
-  result += m_running_bhvs;
-
-  return(result);
+  return(m_running_bhvs);
 }
 
 //-----------------------------------------------------------
 // Procedure: getActiveBehaviors()
 
-string HelmReport::getActiveBehaviors()
+string HelmReport::getActiveBehaviors() const
 {
-  string result = "#";
-  result += uintToString(m_iteration);
-  result += ":";
-  result += m_active_bhvs;
-  
-  return(result);
+  return(m_active_bhvs);
+}
+
+//-----------------------------------------------------------
+// Procedure: getIdleBehaviors()
+
+string HelmReport::getIdleBehaviors() const
+{
+  return(m_idle_bhvs);
+}
+
+//-----------------------------------------------------------
+// Procedure: getCompletedBehaviors()
+
+string HelmReport::getCompletedBehaviors() const
+{
+  return(m_completed_bhvs);
 }
 
 //-----------------------------------------------------------
@@ -242,5 +267,93 @@ string HelmReport::getReportAsString()
 
   return(report);
 }
+
+
+//-----------------------------------------------------------
+// Procedure: getReportAsString(const HelmReport&)
+
+string HelmReport::getReportAsString(const HelmReport& prep)
+{
+  string report = "iter=" + uintToString(m_iteration);
+  report += (",utc_time=" + doubleToString(m_time_utc, 2));
+
+  if(m_ofnum != prep.getOFNUM())
+    report += (",ofnum=" + uintToString(m_ofnum));
+  if(m_warning_count != prep.getWarnings())
+    report += (",warnings=" + uintToString(m_warning_count));
+  if(m_solve_time != prep.getSolveTime())
+    report += (",solve_time=" + doubleToString(m_solve_time, 2));
+  if(m_create_time != prep.getCreateTime())
+    report += (",create_time=" + doubleToString(m_create_time, 2));
+  if(m_loop_time != prep.getLoopTime())
+    report += (",loop_time=" + doubleToString(m_loop_time, 2));
+  
+  m_decision_summary = "";
+  map<string, double>::iterator p;
+  for(p=m_decisions.begin(); p!=m_decisions.end(); p++) {
+    string var = p->first;
+    double val = p->second;
+    m_decision_summary += ",var=" + var + ":";
+    m_decision_summary += doubleToString(val, 1);
+  }
+
+  // Now check to see if the helm did not produce a decision for one
+  // of the variables in the originally declared domain for the helm
+  unsigned int i, dsize = m_domain.size();
+  for(i=0; i<dsize; i++) {
+    string varname = m_domain.getVarName(i);
+    if(!hasDecision(varname))
+      m_decision_summary += (",var=" + varname + ":varbalk");
+  }
+
+  if(m_decision_summary != prep.getDecisionSummary())
+    report += m_decision_summary;
+
+  if(m_halted != prep.getHalted())
+    report += (",halted=" + boolToString(m_halted));
+
+  if(m_modes != prep.getModeSummary()) {
+    report += ",modes=";
+    if(m_modes == "")
+      report += "none";
+    else
+      report += m_modes;
+  }
+
+  if(m_running_bhvs != prep.getRunningBehaviors()) {
+    report += ",running_bhvs=";
+    if(m_running_bhvs == "")
+      report += "none";
+    else
+      report += m_running_bhvs;
+  }
+
+  if(m_active_bhvs != prep.getActiveBehaviors()) {
+    report += ",active_bhvs=";
+    if(m_active_bhvs == "")
+      report += "none";
+    else
+      report += m_active_bhvs;
+  }
+
+  if(m_idle_bhvs != prep.getIdleBehaviors()) {
+    report += ",idle_bhvs=";
+    if(m_idle_bhvs == "")
+      report += "none";
+    else
+      report += m_idle_bhvs;
+  }
+
+  if(m_completed_bhvs != prep.getCompletedBehaviors()) {
+    report += ",completed_bhvs=";
+    if(m_completed_bhvs == "")
+      report += "none";
+    else
+      report += m_completed_bhvs;
+  }
+
+  return(report);
+}
+
 
 

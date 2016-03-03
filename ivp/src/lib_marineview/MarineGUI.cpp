@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: MarineGUI.cpp                                        */
 /*    DATE: November, 2004                                       */
 /*                                                               */
@@ -21,7 +21,7 @@
 /*****************************************************************/
 
 #include <iostream>
-#include <stdlib.h>
+#include <cstdlib>
 #include "MarineGUI.h"
 
 using namespace std;
@@ -157,6 +157,12 @@ void MarineGUI::augmentMenu()
   mbar->add("GeoAttr/Points - Edit/point_vertex_size bigger", FL_ALT+'j', (Fl_Callback*)MarineGUI::cb_MG_SetGeoAttr, (void*)531, 0);
 
   mbar->add("GeoAttr/Points - Toggle", 'j', (Fl_Callback*)MarineGUI::cb_MG_SetGeoAttr, (void*)550, FL_MENU_DIVIDER);
+
+  // --------------------------------- Points
+  mbar->add("GeoAttr/Vectors - Edit/vector_point_labels=on", 0, (Fl_Callback*)MarineGUI::cb_MG_SetGeoAttr, (void*)700, 0);
+  mbar->add("GeoAttr/Vectors - Edit/vector_point_labels=off", 0, (Fl_Callback*)MarineGUI::cb_MG_SetGeoAttr, (void*)701, 0);
+
+  mbar->add("GeoAttr/Vectors - Toggle", FL_ALT+'v', (Fl_Callback*)MarineGUI::cb_MG_SetGeoAttr, (void*)750, FL_MENU_DIVIDER);
 
   // -------------------------------- XYGrids
   mbar->add("GeoAttr/XYGrids - Edit/grid_edge_color=red", 0, (Fl_Callback*)MarineGUI::cb_MG_SetGeoAttr, (void*)300, 0);
@@ -373,6 +379,12 @@ inline void MarineGUI::cb_MG_SetGeoAttr_i(int v) {
 
   else if(v==550) cmviewer->setParam("point_viewable_all", "toggle");
 
+  //---------------------------------- Vectors
+  else if(v==700) cmviewer->setParam("vector_viewable_labels", "on");
+  else if(v==701) cmviewer->setParam("vector_viewable_labels", "off");
+
+  else if(v==750) cmviewer->setParam("vector_viewable_all", "toggle");
+
   //---------------------------------- Datum
 
   else if(v==400) cmviewer->setParam("datum_color", "red");
@@ -381,21 +393,21 @@ inline void MarineGUI::cb_MG_SetGeoAttr_i(int v) {
   else if(v==403) cmviewer->setParam("datum_color", "dark_blue");
   else if(v==404) cmviewer->setParam("datum_color", "dark_green");
 
-  else if(v==440) cmviewer->setParam("datum_size", 1);
-  else if(v==441) cmviewer->setParam("datum_size", 3);
-  else if(v==442) cmviewer->setParam("datum_size", 5);
-  else if(v==443) cmviewer->setParam("datum_size", 10);
-  else if(v==444) cmviewer->setParam("datum_size", 15);
-  else if(v==445) cmviewer->setParam("datum_size", 20);
+  else if(v==440) cmviewer->setParam("datum_size", "1");
+  else if(v==441) cmviewer->setParam("datum_size", "3");
+  else if(v==442) cmviewer->setParam("datum_size", "5");
+  else if(v==443) cmviewer->setParam("datum_size", "10");
+  else if(v==444) cmviewer->setParam("datum_size", "15");
+  else if(v==445) cmviewer->setParam("datum_size", "20");
   else if(v==448) cmviewer->setParam("datum_size_add", "smaller");
   else if(v==449) cmviewer->setParam("datum_size_add", "bigger");
 
-  else if(v==2000) cmviewer->setParam("markers_scale_global", "reset");
-  else if(v==2001) cmviewer->setParam("markers_scale_global", "smaller");
-  else if(v==2002) cmviewer->setParam("markers_scale_global", "bigger");
-  else if(v==2020) cmviewer->setParam("markers_labels_viewable", "toggle");
-  else if(v==2030) cmviewer->setParam("markers_label_color", "toggle");
-  else if(v==2050) cmviewer->setParam("markers_viewable", "toggle");
+  else if(v==2000) cmviewer->setParam("marker_scale", "1");
+  else if(v==2001) cmviewer->setParam("marker_scale", "scale:0.9");
+  else if(v==2002) cmviewer->setParam("marker_scale", "scale:1.1");
+  else if(v==2020) cmviewer->setParam("marker_viewable_labels", "toggle");
+  else if(v==2030) cmviewer->setParam("marker_label_color", "toggle");
+  else if(v==2050) cmviewer->setParam("marker_viewable_all", "toggle");
 
   else if(v==2100) cmviewer->setParam("op_area_config", "reset");
   else if(v==2101) cmviewer->setParam("op_area_line_shade_mod", "1.05");
@@ -465,4 +477,5 @@ void MarineGUI::cb_BackShade(Fl_Widget* o, int v) {
 void MarineGUI::cb_Quit() {
   exit(0);
 }
+
 

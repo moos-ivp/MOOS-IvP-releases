@@ -1,9 +1,23 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSAE Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: VehicleSet.cpp                                       */
 /*    DATE: Aug 12th 2008                                        */
-/*          (Broken out from the Viewer class(es)                */
+/*                                                               */
+/* This program is free software; you can redistribute it and/or */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation; either version  */
+/* 2 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* This program is distributed in the hope that it will be       */
+/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the GNU General Public License for more details. */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with this program; if not, write to the Free    */
+/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
+/* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
 #include "VPlug_VehiSettings.h"
@@ -72,6 +86,27 @@ bool VPlug_VehiSettings::setParam(string param, string value)
     m_trails_color = colorParse(value);
     handled = true;
   }
+
+  else if((param=="trails_color") && (tolower(value) == "toggle")) {
+    if(m_trails_color.str() == "blue")
+      m_trails_color.setColor("green");
+    else if(m_trails_color.str() == "green")
+      m_trails_color.setColor("lightblue");
+    else if(m_trails_color.str() == "lightblue")
+      m_trails_color.setColor("red");
+    else if(m_trails_color.str() == "red")
+      m_trails_color.setColor("yellow");
+    else if(m_trails_color.str() == "yellow")
+      m_trails_color.setColor("khaki");
+    else if(m_trails_color.str() == "khaki")
+      m_trails_color.setColor("black");
+    else if(m_trails_color.str() == "black")
+      m_trails_color.setColor("white");
+    else
+      m_trails_color.setColor("blue");      
+    handled = true;
+  }
+
   else if(param == "vehicles_viewable")
     handled = setBooleanOnString(m_vehicles_viewable, value);
   else if(param == "bearing_lines_viewable")
@@ -148,15 +183,9 @@ bool VPlug_VehiSettings::setParam(string param, string value)
 
 bool VPlug_VehiSettings::setParam(string param, double value)
 {
+
   bool handled  = false;
-  if((param == "history_size") || (param == "trails_history_size")) {
-    if(value > 0) {
-      m_history_size = (int)(value);
-      handled = true;
-    }
-    m_history_size = vclip(m_history_size, 0, 10000);
-  }
-  else if(param == "trails_point_size") {
+  if(param == "trails_point_size") {
     if(value >= 0) {
       m_trails_point_size = value;
       handled = true;
@@ -181,3 +210,4 @@ bool VPlug_VehiSettings::setParam(string param, double value)
 
   return(handled);
 }
+

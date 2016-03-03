@@ -1,16 +1,27 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin                                     */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: CPAViewer.cpp                                        */
 /*    DATE: Feb 12, 2007                                         */
 /*                                                               */
-/* This is unreleased BETA code. No permission is granted or     */
-/* implied to use, copy, modify, and distribute this software    */
-/* except by the author(s).                                      */
+/* This program is free software; you can redistribute it and/or */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation; either version  */
+/* 2 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* This program is distributed in the hope that it will be       */
+/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the GNU General Public License for more details. */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with this program; if not, write to the Free    */
+/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
+/* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
 #include <iostream>
-#include <math.h>
+#include <cmath>
 #include "CPAViewer.h"
 #include "MBUtils.h"
 #include "GeomUtils.h"
@@ -75,6 +86,8 @@ int CPAViewer::handle(int event)
 void CPAViewer::draw()
 {
   MarineViewer::draw();
+  if(m_hash_offon)
+    drawHash();
 
   vector<XYPolygon> polys   = m_geoshapes.getPolygons();
   vector<XYPoint>   points  = m_geoshapes.getPoints();
@@ -86,8 +99,8 @@ void CPAViewer::draw()
 
   draw_os_point(6, 0.2, 0.2, 1.0);
 
-  int contact_count = m_cpa_model->size();
-  for(int i=0; i<contact_count; i++)
+  unsigned int i, contact_count = m_cpa_model->size();
+  for(i=0; i<contact_count; i++)
     draw_cn_vector(i, 6, 1.0, 0.2, 0.2);
 }
 
@@ -261,8 +274,8 @@ void CPAViewer::configureRadials(unsigned int radials, double dist)
     str += (", label="  + doubleToString((double)((i+1)*dist),0));
     XYPolygon poly = string2Poly(str);
     poly.set_vertex_size(0);
-    poly.set_edge_color("dark_blue");
-    poly.set_label_color("dark_blue");
+    poly.set_color("edge", "dark_blue");
+    poly.set_color("label", "dark_blue");
     string spec = poly.get_spec();
 
     bool handled = MarineViewer::setParam("view_polygon", spec);
@@ -279,3 +292,4 @@ void CPAViewer::resetPan()
   m_vshift_x = m_start_pan_x;
   m_vshift_y = m_start_pan_y;  
 }
+

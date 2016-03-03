@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: XYSquare.h                                           */
 /*    DATE: Aug 27th 2005                                        */
 /*                                                               */
@@ -23,7 +23,10 @@
 #ifndef SQUARE_XY_HEADER
 #define SQUARE_XY_HEADER
 
-class XYSquare {
+#include <string>
+#include "XYObject.h"
+
+class XYSquare : public XYObject {
 public:
   XYSquare();
   XYSquare(double, double, double, double);
@@ -37,24 +40,33 @@ public:
   double segDistToSquare(double, double, double, double) const;
   double ptDistToSquareCtr(double, double) const;
 
+  double get_min_x() const {return(m_xlow);};
+  double get_max_x() const {return(m_xhigh);};
+  double get_min_y() const {return(m_ylow);};
+  double get_max_y() const {return(m_yhigh);};
+
+
   double getVal(int, int) const;
-  void   shiftX(double v)     {xlow+=v; xhigh+=v;};
-  void   shiftY(double v)     {ylow+=v; yhigh+=v;};
-  double getLengthX() const   {return(xhigh-xlow);};
-  double getLengthY() const   {return(yhigh-ylow);};
-  bool   isValid() const      {return(valid_state);};
+  void   shiftX(double v)     {m_xlow+=v; m_xhigh+=v;};
+  void   shiftY(double v)     {m_ylow+=v; m_yhigh+=v;};
+  double getLengthX() const   {return(m_xhigh - m_xlow);};
+  double getLengthY() const   {return(m_yhigh - m_ylow);};
+  bool   valid() const        {return(m_valid);};
   
-  double getCenterX() const   {return((xhigh-xlow)/2 + xlow);};
-  double getCenterY() const   {return((yhigh-ylow)/2 + ylow);};
+  double getCenterX() const   {return((m_xhigh-m_xlow)/2 + m_xlow);};
+  double getCenterY() const   {return((m_yhigh-m_ylow)/2 + m_ylow);};
+
+  std::string get_spec(std::string s="") const;
 
 protected:
-  double xlow;
-  double xhigh;
-  double ylow;
-  double yhigh;
-  bool   valid_state;
+  double m_xlow;
+  double m_xhigh;
+  double m_ylow;
+  double m_yhigh;
+  bool   m_valid;
 };
 #endif
+
 
 
 

@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: pHelmIvP.cpp                                         */
 /*    DATE: Oct 12th 2004                                        */
 /*                                                               */
@@ -24,7 +24,9 @@
 #include "MOOSLib.h"
 #include "MOOSGenLib.h"
 #include "HelmIvP.h"
+#include "ReleaseInfo.h"
 #include "MBUtils.h"
+#include "HELM_ExampleConfig.h"
 #include <vector>
 #include <string>
 
@@ -35,23 +37,26 @@ int main(int argc, char *argv[])
   // Look for a request for usage information
   if(scanArgs(argc, argv, "-h", "--help", "-help")) {
     cout << "Usage: pHelmIvP file.moos [file.bhv]...[file.bhv]     " << endl;
-    cout << "       [--help|-h] [--version|-v]                     " << endl;
+    cout << "       [--help|-h] [--version|-v] [--example|-e]      " << endl;
     cout << "                                                      " << endl;
     cout << "[file.moos] Filename to get MOOS config parameters.   " << endl;
     cout << "[file.bhv]  Filename to get IvP Helm config paramters." << endl;
     cout << "[-v]        Output version number and exit.           " << endl;
     cout << "[-h]        Output this usage information and exit.   " << endl;
+    cout << "[-e]        Output example MOOS block configuration   " << endl;
     cout << endl;
     return(0);
   }
 
   // Look for a request for version information
   if(scanArgs(argc, argv, "-v", "--version", "-version")) {
-    vector<string> svector = getReleaseInfo("pHelmIvP");
-    unsigned int i, vsize = svector.size();
-    for(i=0; i<vsize; i++)
-      if(!strContains(svector[i], "ree"))
-	cout << svector[i] << endl;
+    showReleaseInfo("pHelmIvP", "none");
+    return(0);
+  }
+
+  // Look for a request for example configuration
+  if(scanArgs(argc, argv, "-e", "--example", "-example")) {
+    showExampleConfig();
     return(0);
   }
 
@@ -87,6 +92,7 @@ int main(int argc, char *argv[])
   
   return(0);
 }
+
 
 
 

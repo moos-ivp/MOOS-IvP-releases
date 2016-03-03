@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: XYHexagon.cpp                                        */
 /*    DATE: Oct 30th, 2005                                       */
 /*                                                               */
@@ -20,9 +20,9 @@
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
-#include <math.h>
-#include <assert.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cassert>
+#include <cstdlib>
 #include "XYHexagon.h"
 #include "MBUtils.h"
 #include "GeomUtils.h"
@@ -122,7 +122,7 @@ bool XYHexagon::initialize(double gcx, double gcy, double gdist)
 
 XYHexagon XYHexagon::addNeighbor(int nix)
 {
-  assert(vertex_x.size() == 6);
+  assert(m_vx.size() == 6);
   assert(nix >= 0);
   assert(nix <= 5);
 
@@ -143,6 +143,7 @@ XYHexagon XYHexagon::addNeighbor(int nix)
 
   return(newhex);
 }
+
 
 
 

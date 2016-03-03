@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: HelmPlot.h                                           */
 /*    DATE: July 15th, 2009                                      */
 /*                                                               */
@@ -20,10 +20,10 @@
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include <iostream>
-#include <assert.h>
+#include <cassert>
 #include "HelmPlot.h"
 #include "MBUtils.h"
 
@@ -55,14 +55,14 @@ void HelmPlot::set_vehi_type(string str)
 
 bool HelmPlot::add_entry(double gtime, string gval)
 {
-  int tsize = m_time.size();
+  unsigned int tsize = m_time.size();
 
-  if((tsize > 0) && (m_time[tsize-1] > gtime))
-    return(false);
+  if((tsize > 0) && (m_time[tsize-1] > gtime)) {
+    return(false); 
+  }
 
   string mode, utc, iter, idle, active, running, completed, decision;
   
-
   vector<string> kvector = parseString(gval, ',');
   unsigned int k, ksize = kvector.size();
   for(k=0; k<ksize; k++) {
@@ -90,8 +90,24 @@ bool HelmPlot::add_entry(double gtime, string gval)
       decision += var + "=" + val;
     }
   }
-  if((mode == "") || (iter == "") || (idle == "") || (utc == "") ||
-     (active == "") || (running=="") || (completed == ""))
+
+  bool fill_in = true;
+  if((tsize > 1) && fill_in) {
+    if(mode == "")
+      mode = m_helm_mode[tsize-1];
+    if(idle == "")
+      idle = m_helm_idle_bhvs[tsize-1];
+    if(active == "")
+      active = m_helm_active_bhvs[tsize-1];
+    if(running == "")
+      running = m_helm_running_bhvs[tsize-1];
+    if(completed == "")
+      completed = m_helm_completed_bhvs[tsize-1];
+    if(decision == "")
+      decision  = m_helm_decision[tsize-1];
+  }
+
+  if((iter == "") || (utc == ""))
     return(false);
   
   // Make an abbreviated mode string
@@ -328,5 +344,6 @@ double HelmPlot::get_max_time() const
   else
     return(0.0);
 }
+
 
 

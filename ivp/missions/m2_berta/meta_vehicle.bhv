@@ -44,7 +44,7 @@ Behavior = BHV_Loiter
      nm_radius = 15.0
        polygon = radial:: $(LOITER_POS), radius=20, pts=8, snap=1, label=$(VNAME)_LOITER
   visual_hints = nextpt_color=white, nextpt_lcolor=khaki
-  visual_hints = edge_color=blue, vertex_color=blue
+  visual_hints = edge_color=orange, vertex_color=white
   visual_hints = edge_size=1, vertex_size=2
 }
 
@@ -88,7 +88,7 @@ Behavior = BHV_StationKeep
 //----------------------------------------------
 Behavior = BHV_AvoidCollision
 {
-  name       = avd_collision
+  name       = avdcollision_
   pwt        = 200
   condition  = AVOID=true
   updates    = CONTACT_INFO
@@ -104,7 +104,7 @@ Behavior = BHV_AvoidCollision
         pwt_inner_dist = 20
         completed_dist = 75
      min_util_cpa_dist = 8
-     min_util_cpa_dist = 25
+     max_util_cpa_dist = 25
              pwt_grade = linear
    bearing_line_config = white:0, green:0.65, yellow:0.8, red:1.0
 }

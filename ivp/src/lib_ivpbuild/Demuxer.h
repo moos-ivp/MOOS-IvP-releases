@@ -1,7 +1,7 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
-/*    FILE: Demuxer.cpp                                          */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
+/*    FILE: Demuxer.h                                            */
 /*    DATE: May 20th 2006                                        */
 /*                                                               */
 /* This program is free software; you can redistribute it and/or */
@@ -20,17 +20,13 @@
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
-#ifdef _WIN32
-#pragma warning(disable : 4786)
-#pragma warning(disable : 4503)
-#endif
-
 #ifndef DEMUXER_HEADER
 #define DEMUXER_HEADER
 
 #include <string>
 #include <list>
 #include "DemuxUnit.h"
+#include "DemuxedResult.h"
 
 class Demuxer {
 public:
@@ -38,27 +34,33 @@ public:
   virtual ~Demuxer() {};
 
 public:
-  bool addMuxPacket(const std::string&, double=0);
+  bool addMuxPacket(const std::string& packet, 
+		    double timestamp, 
+		    const std::string& source="");
 
-  std::string getDemuxString();
-  std::string getDemuxString(double&);
+  std::string   getDemuxString();
+  DemuxedResult getDemuxedResult();
 
   void   removeStaleUnits(double, double);
   void   print();
-  double size()   {return(m_demuxed_strings.size());};
+  double size()     {return(m_demuxed_results.size());};
 
 protected:
   void   demuxUnits();
 
 protected:
-  std::list<DemuxUnit*>  m_units;
-  std::list<std::string> m_demuxed_strings;
-  std::list<double>      m_demuxed_strings_timestamp;
+  // Partially demuxed intermediate data
+  std::list<DemuxUnit*>     m_units;
 
+  // Ready to be retrieved demuxed information
+  std::list<DemuxedResult>  m_demuxed_results;
+  
+  // True if demuxed units are waiting for retieval
   bool m_demuxed;
 };
 
 #endif
+
 
 
 

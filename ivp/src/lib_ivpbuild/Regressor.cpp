@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: Regressor.cpp                                        */
 /*    DATE: Dec 5th, 2004 (Sat at Brueggers)                     */
 /*                                                               */
@@ -21,10 +21,10 @@
 /*****************************************************************/
 
 #include <iostream>
-#include <stdlib.h>
-#include <assert.h>
-#include <stdio.h>
-#include <math.h>
+#include <cstdlib>
+#include <cassert>
+#include <cstdio>
+#include <cmath>
 #include "Regressor.h"
 #include "BuildUtils.h"
 
@@ -651,6 +651,7 @@ bool Regressor::centerBox(const IvPBox *container_box, IvPBox *rbox)
   
   return(valid);
 }
+
 
 
 

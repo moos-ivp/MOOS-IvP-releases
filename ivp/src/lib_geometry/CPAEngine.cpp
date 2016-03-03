@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: CPAEngine.cpp                                        */
 /*    DATE: May 12th 2005                                        */
 /*                                                               */
@@ -20,9 +20,8 @@
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
-#include <iostream>
-#include <math.h> 
-#include <assert.h>
+#include <cmath> 
+#include <cassert>
 #include "CPAEngine.h"
 #include "GeomUtils.h"
 #include "AngleUtils.h"
@@ -343,6 +342,7 @@ double CPAEngine::smallAngle(double ang_a, double ang_b)
   else
     return(ang2);
 }
+
 
 
 

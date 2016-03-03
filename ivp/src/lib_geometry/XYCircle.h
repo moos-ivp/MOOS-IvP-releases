@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: XYCircle.h                                           */
 /*    DATE: Dec 26th 2006                                        */
 /*                                                               */
@@ -50,6 +50,11 @@ public:
   void   alterRad(double v)      {m_rad+=v; if(m_rad<0) m_rad=0;};
   void   alterRadPct(double v)   {m_rad*=v; if(m_rad<0) m_rad=0;};
 
+  double get_min_x() const {return(m_x - m_rad);};
+  double get_max_x() const {return(m_x + m_rad);};
+  double get_min_y() const {return(m_y - m_rad);};
+  double get_max_y() const {return(m_y + m_rad);};
+
   std::string get_spec(std::string s="") const;
   
   
@@ -85,6 +90,7 @@ protected:
   bool     m_rad_set;
 };
 #endif
+
 
 
 

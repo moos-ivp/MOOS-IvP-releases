@@ -1,23 +1,40 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin                                     */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: Populator_BehaviorSet.cpp                            */
 /*    DATE:                                                      */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* (IvPHelm) The IvP autonomous control Helm is a set of         */
+/* classes and algorithms for a behavior-based autonomous        */
+/* control architecture with IvP action selection.               */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* The algorithms embodied in this software are protected under  */
+/* U.S. Pat. App. Ser. Nos. 10/631,527 and 10/911,765 and are    */
+/* the property of the United States Navy.                       */
 /*                                                               */
-/* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* Permission to use, copy, modify and distribute this software  */
+/* and its documentation for any non-commercial purpose, without */
+/* fee, and without a written agreement is hereby granted        */
+/* provided that the above notice and this paragraph and the     */
+/* following three paragraphs appear in all copies.              */
+/*                                                               */
+/* Commercial licences for this software may be obtained by      */
+/* contacting Patent Counsel, Naval Undersea Warfare Center      */
+/* Division Newport at 401-832-4736 or 1176 Howell Street,       */
+/* Newport, RI 02841.                                            */
+/*                                                               */
+/* In no event shall the US Navy be liable to any party for      */
+/* direct, indirect, special, incidental, or consequential       */
+/* damages, including lost profits, arising out of the use       */
+/* of this software and its documentation, even if the US Navy   */
+/* has been advised of the possibility of such damage.           */
+/*                                                               */
+/* The US Navy specifically disclaims any warranties, including, */
+/* but not limited to, the implied warranties of merchantability */
+/* and fitness for a particular purpose. The software provided   */
+/* hereunder is on an 'as-is' basis, and the US Navy has no      */
+/* obligations to provide maintenance, support, updates,         */
+/* enhancements or modifications.                                */
 /*****************************************************************/
 #ifdef _WIN32
 #pragma warning(disable : 4786)
@@ -28,9 +45,9 @@
 #endif
 
 #include <iostream>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
+#include <cstdlib>
+#include <cstring>
+#include <cstdio>
 #include "MBUtils.h"
 #include "FileBuffer.h"
 #include "Populator_BehaviorSet.h"
@@ -59,7 +76,7 @@ Populator_BehaviorSet::Populator_BehaviorSet(IvPDomain g_domain,
 BehaviorSet *Populator_BehaviorSet::populate(set<string> bhv_files)
 {
   cout << "Number of behavior files: " << bhv_files.size() << endl;
-  unsigned int i, line_ix;
+  unsigned int  line_ix;
   set<string>::const_iterator p;
   for(p=bhv_files.begin(); p!=bhv_files.end(); p++) {
 
@@ -94,14 +111,22 @@ BehaviorSet *Populator_BehaviorSet::populate(set<string> bhv_files)
 	unsigned int len = line.length();	
 	string pre_line, post_line;
 	if(!is_comment) {
+	  unsigned left_braces = charCount(line, '{');
+	  unsigned right_braces = charCount(line, '{');
 	  if((len>1) && ((line.at(0) == '{') || (line.at(0) == '}'))) {
 	    pre_line += line.at(0);
 	    line.erase(0,1);
 	  }
 	  len = line.length();	
-	  if((len>1) && ((line.at(len-1) == '{') || (line.at(len-1) == '}'))) {
-	    post_line += line.at(len-1);
-	    line.erase(len-1,1);
+	  if(len > 1) {
+	    if(line.at(len-1) == '{') {
+	      post_line += line.at(len-1);
+	      line.erase(len-1,1);
+	    }
+	    if((right_braces > left_braces) && (line.at(len-1) == '}')) {
+	      post_line += line.at(len-1);
+	      line.erase(len-1,1);
+	    }
 	  }
 	}
 	// End Brace-Separate.
@@ -117,9 +142,11 @@ BehaviorSet *Populator_BehaviorSet::populate(set<string> bhv_files)
 	//<< "]" << endl; cout << "(" << line << ")" << endl;
 	
 	if(!ok) {
-	  cout << "    Problem with line " << i+1;
+	  cout << "    Problem with line " << line_ix+1;
 	  cout << "    in the BehaviorSet file: " << filename << endl;
-	  cout << line << endl;
+	  cout << "Pre_line: [" << pre_line << "]" << endl;
+	  cout << "Post_line: [" << post_line << "]" << endl;
+	  cout << "Line:     [" << line     << "]" << endl;
 	  return(0);
 	}
 
@@ -132,6 +159,7 @@ BehaviorSet *Populator_BehaviorSet::populate(set<string> bhv_files)
   // behaviors. If some fail instantiation, abort the behaviorset.
   BehaviorSet *bset = new BehaviorSet;
   bset->setDomain(m_domain);
+  unsigned int i;
   for(i=0; i<m_behavior_specs.size(); i++)
     bset->addBehaviorSpec(m_behavior_specs[i]);
   bool ok = bset-> buildBehaviorsFromSpecs();
@@ -319,6 +347,7 @@ bool Populator_BehaviorSet::handleLine(string line,
     bool ok = m_mode_entry.addCondition(a_condition_string);
     return(ok);
   }
+
   return(false);
 }
 
@@ -330,3 +359,4 @@ void Populator_BehaviorSet::closeSetMode()
   m_mode_set.addEntry(m_mode_entry);
   m_mode_entry.clear();
 }
+

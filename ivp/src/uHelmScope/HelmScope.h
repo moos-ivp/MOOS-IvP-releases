@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: HelmScope.h                                          */
 /*    DATE: Apr 12th 2008                                        */
 /*                                                               */
@@ -96,6 +96,8 @@ class HelmScope : public CMOOSApp
   std::map<int, IterBlockPosts> m_blocks_posts;
   std::map<int, IterBlockXMS>   m_blocks_xms;
 
+  IterBlockHelm m_block_helm_prev;
+
   LifeEventHistory m_life_event_history;
 
   std::vector<StringTree>  m_mode_trees;
@@ -129,8 +131,8 @@ class HelmScope : public CMOOSApp
   bool   m_lehistory_pending;
   bool   m_helpmsg_pending;
 
-  int    m_moosapp_iter;
-  int    m_warning_count;
+  unsigned int m_moosapp_iter;
+  unsigned int m_total_warning_cnt;
 
   // The last helm index received
   int    m_iteration_helm;      
@@ -163,6 +165,7 @@ class HelmScope : public CMOOSApp
   std::vector<std::string> m_var_category;
 };
 #endif 
+
 
 
 

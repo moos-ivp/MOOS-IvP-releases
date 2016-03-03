@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: MarinePID.h                                          */
 /*    DATE: April 10 2006                                        */
 /*                                                               */
@@ -53,6 +53,7 @@ protected:
   double   m_current_heading;
   double   m_current_speed;
   double   m_current_depth;
+  double   m_current_pitch;
 
   double   m_rudder_bias_duration;
   double   m_rudder_bias_limit;
@@ -63,6 +64,11 @@ protected:
   double   m_desired_speed;
   double   m_desired_depth;
   double   m_current_thrust;
+
+  double   m_max_pitch;
+  double   m_max_rudder;
+  double   m_max_thrust;
+  double   m_max_elevator;
 
   PIDEngine    m_pengine;
   std::string  m_verbose;
@@ -79,3 +85,4 @@ protected:
   double  m_tardy_nav_thresh;
 };
 #endif 
+

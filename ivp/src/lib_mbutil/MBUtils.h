@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: MBUtils.h                                            */
 /*    DATE: (1996-2005)                                          */
 /*                                                               */
@@ -41,11 +41,15 @@ std::vector<std::string> removeDuplicates(const std::vector<std::string>&);
 bool vectorContains(const std::vector<std::string>&, 
 		    const std::string&);
 
+std::string removeWhite(const std::string&);
 std::string biteString(std::string&, char);
+std::string biteStringX(std::string&, char);
+std::string biteString(std::string&, char, char);
 std::string stripBlankEnds(const std::string&);
 std::string tolower(const std::string&);
 std::string toupper(const std::string&);
-std::string truncString(const std::string&, std::string::size_type, std::string="");
+std::string truncString(const std::string&, unsigned int newlen, 
+			std::string="");
 std::string boolToString(bool);
 std::string uintToString(unsigned int);
 std::string intToString(int);
@@ -53,6 +57,7 @@ std::string intToCommaString(int);
 std::string uintToCommaString(unsigned int);
 std::string floatToString(float, int=5);
 std::string doubleToString(double, int=5);
+std::string doubleToStringX(double, int=5);
 std::string dstringCompact(const std::string&);
 std::string compactConsecutive(const std::string&, char);
 std::string findReplace(const std::string&, char, char);
@@ -82,8 +87,12 @@ double tokDoubleParse(const std::string&, const std::string&,
 		      char, char);
 
 double vclip(const double& var, const double& low, const double& high);
+double vclip_min(const double& var, const double& low);
+double vclip_max(const double& var, const double& high);
 
+bool  isBoolean(const std::string&);
 bool  isNumber(const std::string&, bool=true);
+bool  isAlphaNum(const std::string&, const std::string& s="");
 bool  isQuoted(const std::string&);
 
 int   getArg(int, char**, int, const char*, const char *s=0);
@@ -107,13 +116,6 @@ std::vector<std::string>  getReleaseInfo(const std::string&);
 std::vector<std::string> tokenizePath(const std::string&);
 std::string parseAppName(const std::string&);
 
+unsigned int charCount(const std::string&, char);
+
 #endif
-
-
-
-
-
-
-
-
-

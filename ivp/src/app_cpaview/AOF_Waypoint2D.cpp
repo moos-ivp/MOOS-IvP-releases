@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: AOF_Waypoint2D.cpp                                   */
 /*    DATE: Jan 4th 2006                                         */
 /*                                                               */
@@ -24,8 +24,8 @@
 #pragma warning(disable : 4786)
 #pragma warning(disable : 4503)
 #endif
-#include <math.h> 
-#include <assert.h> 
+#include <cmath> 
+#include <cassert> 
 #include "AOF_Waypoint2D.h"
 #include "MBUtils.h"
 
@@ -85,6 +85,7 @@ bool AOF_Waypoint2D::setParam(const string& param, double param_val)
     return(false);
   return(true);
 }
+
 
 
 

@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: pHelmIvP.cpp                                         */
 /*    DATE: Oct 12th 2004                                        */
 /*                                                               */
@@ -25,6 +25,8 @@
 #include "MOOSGenLib.h"
 #include "MarinePID.h"
 #include "MBUtils.h"
+#include "ReleaseInfo.h"
+#include "PID_ExampleConfig.h"
 
 using namespace std;
 
@@ -32,9 +34,13 @@ int main(int argc, char *argv[])
 {
   // Look for a request for version information
   if(scanArgs(argc, argv, "-v", "--version", "-version")) {
-    vector<string> svector = getReleaseInfo("pMarinePID");
-    for(unsigned int j=0; j<svector.size(); j++)
-      cout << svector[j] << endl;    
+    showReleaseInfo("pMarinePID", "gpl");
+    return(0);
+  }
+
+  // Look for a request for example configuration information
+  if(scanArgs(argc, argv, "-e", "--example", "-example")) {
+    showExampleConfig();
     return(0);
   }
 
@@ -63,6 +69,7 @@ int main(int argc, char *argv[])
   
   return(0);
 }
+
 
 
 

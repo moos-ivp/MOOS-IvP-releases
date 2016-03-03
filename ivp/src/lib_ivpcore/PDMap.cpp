@@ -1,6 +1,6 @@
 /*****************************************************************/
 /*    NAME: Michael Benjamin                                     */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: PDMap.cpp                                            */
 /*    DATE: June 1st, 2004 (pulled from OF class)                */
 /*                                                               */
@@ -38,9 +38,9 @@
 /*****************************************************************/
 
 #include <iostream>
-#include <stdio.h>
-#include <assert.h>
-#include <math.h>
+#include <cstdio>
+#include <cassert>
+#include <cmath>
 #include "PDMap.h"
 #include "BoxSet.h"
 #include "IvPGrid.h"
@@ -552,5 +552,6 @@ bool PDMap::freeOfNan() const
   }
   return(true);
 }
+
 
 

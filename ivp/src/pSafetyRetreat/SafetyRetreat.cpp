@@ -1,9 +1,24 @@
-/************************************************************/
-/*    NAME: Michael Benjamin                                */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge             */
-/*    FILE: SafetyRetreat.cpp                               */
-/*    DATE: August 2010                                     */
-/************************************************************/
+/*****************************************************************/
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
+/*    FILE: SafetyRetreat.cpp                                    */
+/*    DATE: August 2010                                          */
+/*                                                               */
+/* This program is free software; you can redistribute it and/or */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation; either version  */
+/* 2 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* This program is distributed in the hope that it will be       */
+/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the GNU General Public License for more details. */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with this program; if not, write to the Free    */
+/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
+/* Boston, MA 02111-1307, USA.                                   */
+/*****************************************************************/
 
 #include <iterator>
 #include "SafetyRetreat.h"
@@ -18,7 +33,9 @@ using namespace std;
 SafetyRetreat::SafetyRetreat()
 {
   m_retreat_duration = 1200;   // 20 minutes
-  m_verbose = false; 
+  m_mark_time = 0;
+  m_verbose   = false; 
+  m_iteration = 0;
 }
 
 //---------------------------------------------------------
@@ -33,14 +50,15 @@ bool SafetyRetreat::OnNewMail(MOOSMSG_LIST &NewMail)
 	
     string key   = msg.GetKey();
     double dval  = msg.GetDouble();
-    // string sval  = msg.GetString(); 
     // double mtime = msg.GetTime();
     // bool   mdbl  = msg.IsDouble();
     // bool   mstr  = msg.IsString();
     // string msrc  = msg.GetSource();
 
-    if(tolower(key) == tolower(m_retreat_cue))
-      handleSafetyRetreat();
+    if(tolower(key) == tolower(m_retreat_cue)) {
+      string sval  = msg.GetString(); 
+      handleContactDetection(sval);
+    }
     else if(key == "NAV_X")
       m_osx = dval;
     else if(key == "NAV_Y")
@@ -75,6 +93,23 @@ void SafetyRetreat::RegisterVariables()
 
 bool SafetyRetreat::Iterate()
 {
+  m_iteration++;
+
+
+  if((m_mark_time == 0) || (m_unresolved_contacts.size() == 0))
+    m_mark_time = MOOSTime();
+
+  double elapsed_time = (MOOSTime() - m_mark_time);
+
+#if 0
+  if((m_iteration % 20) == 0) 
+    cout << "cue: " << m_retreat_cue << m_iteration << endl;
+    cout << "elapsed_time:" << elapsed_time << endl;
+#endif
+
+  if(elapsed_time > m_retreat_duration)
+    handleContactsResolved();
+
   return(true);
 }
 
@@ -118,7 +153,8 @@ bool SafetyRetreat::OnStartUp()
     }
   }
 
-  if(m_verbose) {
+  //if(m_verbose) {
+  if(1) {
     cout << termColor("blue"); 
     cout << "Safe Areas: " << m_retreat_areas.size() << endl;
     cout << "Retreat Cue Var: [" << m_retreat_cue << "]" << endl;
@@ -147,19 +183,23 @@ bool SafetyRetreat::handleNewPolygon(string poly)
 
 
 //---------------------------------------------------------
-// Procedure: handleSafetyRetreat()
+// Procedure: handleContactDetection()
 
-bool SafetyRetreat::handleSafetyRetreat()
+bool SafetyRetreat::handleContactDetection(string contact_name)
 {
   if(m_verbose) {
     cout << termColor("red"); 
-    cout << "Threat detected, handling retreat" << endl;
+    cout << "Contact detected, handling retreat" << endl;
     cout << termColor() << endl;
   }
 
   if(m_retreat_areas.size() == 0)
     return(false);
   
+  m_mark_time = MOOSTime();
+  if(!vectorContains(m_unresolved_contacts, contact_name))
+    m_unresolved_contacts.push_back(contact_name);
+
   unsigned int index = closestPolygon();
   XYPolygon poly = m_retreat_areas[index];
   string poly_spec = poly.get_spec();
@@ -170,6 +210,18 @@ bool SafetyRetreat::handleSafetyRetreat()
   m_Comms.Notify(m_retreat_notify, "true");
   
   return(true);
+}
+
+//---------------------------------------------------------
+// Procedure: handleContactsResolved
+
+void SafetyRetreat::handleContactsResolved()
+{
+  unsigned int i, vsize = m_unresolved_contacts.size();
+  for(i=0; i<vsize; i++)
+    m_Comms.Notify("CONTACT_RESOLVED", m_unresolved_contacts[i]);
+
+  m_unresolved_contacts.clear();
 }
 
 
@@ -200,3 +252,4 @@ unsigned int SafetyRetreat::closestPolygon()
 
   return(lowix);
 }
+

@@ -4,7 +4,7 @@
 # the mac
 
 killall MOOSDB iRemote MOOSRemote iGPS iGPSMonitor pNav \
-        pHelm pHelmIvP pMarineViewer iMarineSim \
+        pHelm pHelmIvP pMarineViewer iMarineSim uSimMarine \
         pLogger iPWMController MOOSDump pAntler MOOSDump \
         iINS iDepth pScheduler pThermoTrack pNaFCon pSearch \
         pHuxley pMessageSim pBeamform uTermCommand pBearingTrack
@@ -22,10 +22,11 @@ killall iMicroModem pRouter pFramer pMessageSim  \
         p1HTracker pGPSSim uBathy uCtdSim2 pTargetOpportunity \
         pBearings_DURIP uProcessWatch uPlayBack pSubIndex \
         pBearings_GENERIC pTargetSim pMBTracker zLoggerNG \
-	iModemSim pFunctionSender uFunctionViewer uFunctionVis
+	iModemSim pFunctionSender uFunctionViewer uFunctionVis \
+        uSimBeaconRange uSimCurrent pBasicContactMgr uSimActiveSonar
 
 killall pSensorSim pArtifactMapper pNoiseSim uNafconSplitter    \
-        pBlast pSweepLines pNSWCPC pXRelay pXRelayTest logview  \
+        pBlast pSweepLines pNSWCPC pXRelay pXRelayTest alogview  \
         pAcommsHandler pCTDCodec pBTRCodec iDAS iOEX pGateway   \
         pAcommsPoller pArraySim pSimpleAcousticSim geoview      \
         pMultiTargetSim pMultiAcousticSim iOS5000 pGeneralCodec
@@ -35,6 +36,6 @@ killall pCBF pBTracker pTrackMonitor uTimerScript pDTSP         \
         pTallyomatic pNodeReporter iCommStack pMissionCtl iDSP  \
         pNotDTSP pBoundingCircle pRIDManager
 
-killall pFleetControl
+killall pFleetControl pRangingSim pBeaconFind
 
 echo Done - Killed all MOOS-Related Processes.....

@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: BHV_AvoidObstacles.cpp                               */
 /*    DATE: Aug 2nd 2006                                         */
 /*                                                               */
@@ -25,8 +25,8 @@
 #pragma warning(disable : 4503)
 #endif
 #include <iostream>
-#include <math.h> 
-#include <stdlib.h>
+#include <cmath> 
+#include <cstdlib>
 #include "BHV_AvoidObstacles.h"
 #include "OF_Reflector.h"
 #include "MBUtils.h"
@@ -259,5 +259,6 @@ void BHV_AvoidObstacles::postErasablePolygons()
     postMessage("VIEW_POLYGON", spec_buff, "buff");
   }
 }
+
 
 

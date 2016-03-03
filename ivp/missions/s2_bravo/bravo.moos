@@ -20,17 +20,45 @@ ProcessConfig = ANTLER
   MSBetweenLaunches = 200
 
   Run = MOOSDB          @ NewConsole = true
-  Run = iMarineSim      @ NewConsole = true
+  Run = pLogger         @ NewConsole = false
+  Run = uSimMarine      @ NewConsole = true
   Run = pNodeReporter   @ NewConsole = true
   Run = pMarinePID      @ NewConsole = true
   Run = pMarineViewer   @ NewConsole = true
+  Run = uSimCurrent     @ NewConsole = true
   Run = pHelmIvP        @ NewConsole = true
 }
 
 //------------------------------------------
-// iMarineSim config block
+// uSimCurrent config block
 
-ProcessConfig = iMarineSim
+ProcessConfig = uSimCurrent
+{
+  AppTick	= 10
+  CommsTick	= 10
+
+  CURRENT_FIELD = bravo.cfd
+}
+
+//------------------------------------------
+// pLogger config block
+
+ProcessConfig = pLogger
+{
+  AppTick   = 4
+  CommsTick = 4
+
+  SyncLog = false
+  AsyncLog = true
+
+  WildCardLogging = true
+  WildCardOmitPattern = *_STATUS
+}
+
+//------------------------------------------
+// uSimMarine config block
+
+ProcessConfig = uSimMarine
 {
   AppTick	= 10
   CommsTick	= 10
@@ -40,7 +68,7 @@ ProcessConfig = iMarineSim
   START_SPEED   = 0
   START_HEADING = 180
   PREFIX        = NAV
-  CURRENT_FIELD = bravo.cfd
+  //CURRENT_FIELD = bravo.cfd
 }
 
 //------------------------------------------
@@ -109,7 +137,6 @@ ProcessConfig = pMarineViewer
   hash_delta           = 50
   hash_shade           = 0.4
   hash_view            = true
-  connection_posting   = IMS_REPOST=true
 
   scope  = VIEW_POINT
   scope  = VIEW_POLYGON

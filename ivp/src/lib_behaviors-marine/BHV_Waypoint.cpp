@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: BHV_Waypoint.cpp                                     */
 /*    DATE: Nov 2004                                             */
 /*                                                               */
@@ -25,8 +25,8 @@
 #pragma warning(disable : 4503)
 #endif
 
-#include <math.h> 
-#include <stdlib.h>
+#include <cmath> 
+#include <cstdlib>
 #include <iostream>
 #include "BHV_Waypoint.h"
 #include "OF_Reflector.h"
@@ -77,12 +77,13 @@ BHV_Waypoint::BHV_Waypoint(IvPDomain gdomain) :
   m_completed  = false; 
   m_perpetual  = false;
 
-  m_osx   = -1;
-  m_osy   = -1;
-  m_osv   = -1;
+  m_osx   = 0;
+  m_osy   = 0;
+  m_osv   = 0;
 
   addInfoVars("NAV_X, NAV_Y, NAV_SPEED");
   m_markpt.set_active(false);
+  m_markpt.set_vertex_size(4);
 }
 
 //-----------------------------------------------------------
@@ -94,11 +95,13 @@ void BHV_Waypoint::onSetParamComplete()
   m_trackpt.set_label(m_us_name + "'s track-point");
   //m_trackpt.set_label(m_us_name + "_track-point");
   m_trackpt.set_type("track_point");
+  m_trackpt.set_vertex_size(4);
 
   m_nextpt.set_source(m_us_name + "_" + tolower(getDescriptor()));
   m_nextpt.set_label(m_us_name + "'s next waypoint");
   //m_nextpt.set_label(m_us_name + "_waypoint");
   m_nextpt.set_type("waypoint");
+  m_nextpt.set_vertex_size(4);
 }
 
 //-----------------------------------------------------------
@@ -115,7 +118,7 @@ bool BHV_Waypoint::setParam(string param, string param_val)
     XYSegList new_seglist = string2SegList(param_val);
     if(new_seglist.size() == 0) {
       XYPolygon new_poly = string2Poly(param_val);
-      new_seglist = new_poly.exportSegList(0,0);
+      new_seglist = new_poly.exportSegList(m_osx, m_osy);
     }
     if(new_seglist.size() == 0)
       return(false);
@@ -257,13 +260,27 @@ void BHV_Waypoint::onRunToIdleState()
 //-----------------------------------------------------------
 // Procedure: onRunState
 
+BehaviorReport BHV_Waypoint::onRunState(string input) 
+{
+  IvPFunction *ipf = onRunState();
+  BehaviorReport bhv_report(m_descriptor);
+  
+  bhv_report.addIPF(ipf);
+  bhv_report.setPriority(m_priority_wt);
+  return(bhv_report);
+}
+
+
+//-----------------------------------------------------------
+// Procedure: onRunState
+
 IvPFunction *BHV_Waypoint::onRunState() 
 {
   m_waypoint_engine.setPerpetual(m_perpetual);
 
   // Set m_osx, m_osy, m_osv
   if(!updateInfoIn()) {
-    postMessage("VIEW_POINT", m_nextpt.get_spec("active=false"));
+    postMessage("VIEW_POINT", m_nextpt.get_spec("active=false"), "wpt");
     return(0);
   }
 
@@ -282,19 +299,19 @@ IvPFunction *BHV_Waypoint::onRunState()
   if(next_point) {
     postStatusReport();
     postViewableSegList();
-    postMessage("VIEW_POINT", m_nextpt.get_spec("active=true"));
+    postMessage("VIEW_POINT", m_nextpt.get_spec("active=true"), "wpt");
     double dist = hypot((m_nextpt.x() - m_trackpt.x()), 
 			(m_nextpt.y() - m_trackpt.y()));
     // If the trackpoint and next waypoint differ by more than five
     // meters then post a visual cue for the track point.
     if(dist > 5)
-      postMessage("VIEW_POINT", m_trackpt.get_spec("active=true"));
+      postMessage("VIEW_POINT", m_trackpt.get_spec("active=true"), "trk");
     else
-      postMessage("VIEW_POINT", m_trackpt.get_spec("active=false"));
+      postMessage("VIEW_POINT", m_trackpt.get_spec("active=false"), "trk");
   }
   // Otherwise "erase" the next waypoint marker
   else {
-    postMessage("VIEW_POINT", m_nextpt.get_spec("active=false"));
+    postMessage("VIEW_POINT", m_nextpt.get_spec("active=false"), "wpt");
     return(0);
   }
   
@@ -524,9 +541,9 @@ void BHV_Waypoint::postViewableSegList()
   XYSegList seglist = m_waypoint_engine.getSegList();
   seglist.set_label(m_us_name + "_" + m_descriptor);
   if(m_hint_vertex_color != "")
-    seglist.set_vertex_color(m_hint_vertex_color);
+    seglist.set_color("vertex", m_hint_vertex_color);
   if(m_hint_edge_color != "")
-    seglist.set_edge_color(m_hint_edge_color);
+    seglist.set_color("edge", m_hint_edge_color);
   if(m_hint_edge_size >= 0)
     seglist.set_edge_size(m_hint_edge_size);
   if(m_hint_vertex_size >= 0)
@@ -543,8 +560,8 @@ void BHV_Waypoint::postViewableSegList()
 
 void BHV_Waypoint::postErasables()
 {
-  postMessage("VIEW_POINT", m_trackpt.get_spec("active=false"));
-  postMessage("VIEW_POINT", m_nextpt.get_spec("active=false"));
+  postMessage("VIEW_POINT", m_trackpt.get_spec("active=false"), "trk");
+  postMessage("VIEW_POINT", m_nextpt.get_spec("active=false"), "wpt");
 
   XYSegList seglist = m_waypoint_engine.getSegList();
   seglist.set_label(m_us_name + "_" + m_descriptor);
@@ -581,12 +598,12 @@ void BHV_Waypoint::handleVisualHint(string hint)
   double dval  = atof(value.c_str());
 
   if((param == "nextpt_color") && isColor(value)) {
-    m_trackpt.set_vertex_color(hint);
-    m_nextpt.set_vertex_color(hint);
+    m_trackpt.set_color("vertex", hint);
+    m_nextpt.set_color("vertex", hint);
   }
   else if((param == "nextpt_lcolor") && isColor(value)) {
-    m_trackpt.set_label_color(hint);
-    m_nextpt.set_label_color(hint);
+    m_trackpt.set_color("label", hint);
+    m_nextpt.set_color("label", hint);
   }
   else if((param == "vertex_color") && isColor(value))
     m_hint_vertex_color = value;
@@ -597,3 +614,4 @@ void BHV_Waypoint::handleVisualHint(string hint)
   else if((param == "vertex_size") && isNumber(value) && (dval >= 0))
     m_hint_vertex_size = dval;
 }
+

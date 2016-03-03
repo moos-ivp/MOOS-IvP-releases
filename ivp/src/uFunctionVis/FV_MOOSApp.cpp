@@ -1,8 +1,24 @@
-/*************************************************************/
-/*    NAME: Michael Benjamin                                 */
-/*    FILE: FV_MOOSApp.cpp                                   */
-/*    DATE: May 12th 2006                                    */
-/*************************************************************/
+/*****************************************************************/
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
+/*    FILE: FV_MOOSApp.cpp                                       */
+/*    DATE: May 12th 2006                                        */
+/*                                                               */
+/* This program is free software; you can redistribute it and/or */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation; either version  */
+/* 2 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* This program is distributed in the hope that it will be       */
+/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the GNU General Public License for more details. */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with this program; if not, write to the Free    */
+/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
+/* Boston, MA 02111-1307, USA.                                   */
+/*****************************************************************/
 #include <iostream>
 #include <iterator>
 #include "FV_MOOSApp.h"
@@ -11,6 +27,7 @@
 #include "OF_Reflector.h"
 #include "AOF_Rings.h"
 #include "BuildUtils.h"
+#include "ColorParse.h"
 
 using namespace std; 
 
@@ -19,16 +36,10 @@ using namespace std;
 
 FV_MOOSApp::FV_MOOSApp()
 {
-  loc_x      = 50;
-  loc_y      = 50;
-  iteration  = 0;
-  start_time = 0;
-  delta      = 10;
-  model      = 0;
-  viewer     = 0;
-  gui        = 0;
-  ipf_name   = "BHV_IPF";
-//   iterate_should_return_false = false;
+  m_model    = 0;
+  m_viewer   = 0;
+  m_gui      = 0;
+  m_ipf_name = "BHV_IPF";
 }
 
 //----------------------------------------------------------
@@ -37,7 +48,7 @@ FV_MOOSApp::FV_MOOSApp()
 bool FV_MOOSApp::OnNewMail(MOOSMSG_LIST &NewMail)
 {
   try {
-     demuxer_lock.Lock();
+     m_demuxer_lock.Lock();
 
      // The main thread will may be blocking on a call to 'Fl::wait()'.
      // This will wake up the main thread if that's the case.
@@ -46,19 +57,28 @@ bool FV_MOOSApp::OnNewMail(MOOSMSG_LIST &NewMail)
      MOOSMSG_LIST::iterator p;
      for(p=NewMail.begin(); p!=NewMail.end(); p++) {
         CMOOSMsg &msg = *p;
+	string key  = msg.GetKey();
+	double dval = msg.GetDouble();
+	double timestamp = msg.GetTime();
 
-        if(msg.m_sKey == ipf_name) {
-           string ipf_str = msg.m_sVal;
-           demuxer.addMuxPacket(ipf_str, MOOSTime());
+	if(key == m_ipf_name) {
+	  string ipf_str = msg.GetString();
+	  string community = msg.GetCommunity();
+	  m_demuxer.addMuxPacket(ipf_str, timestamp, community);
         }
-     }
+	else if(key == "NAV_DEPTH")
+	  m_model->setDepth(dval);
+	else if(key == "NAV_ALTITUDE")
+	  m_model->setAltitude(dval);
+
+    }
   }
   catch (...) {
-     demuxer_lock.UnLock();
+     m_demuxer_lock.UnLock();
      throw;
   }
 
-  demuxer_lock.UnLock();
+  m_demuxer_lock.UnLock();
   return(true);
 }
 
@@ -71,13 +91,16 @@ bool FV_MOOSApp::OnNewMail(MOOSMSG_LIST &NewMail)
 
 bool FV_MOOSApp::OnConnectToServer()
 {
-  if(!m_MissionReader.GetValue("ipf_name", ipf_name)) {
+  if(!m_MissionReader.GetValue("ipf_name", m_ipf_name)) {
     MOOSTrace("Function to be monitored not provided\n");
     //return(false);
   }
 
-  if(ipf_name != "")
-    m_Comms.Register(ipf_name, 0);
+  if(m_ipf_name != "")
+    m_Comms.Register(m_ipf_name, 0);
+  
+  m_Comms.Register("NAV_DEPTH", 0);
+  m_Comms.Register("NAV_ALTITUDE", 0);
   return(true);
 }
 
@@ -87,11 +110,10 @@ bool FV_MOOSApp::OnConnectToServer()
 
 bool FV_MOOSApp::Iterate()
 {
-//   return (! iterate_should_return_false);
-  return true;
-  
+  return(true);
   // This processing has all been moved to the process_demuxer_content()
-  // method, so that it can happen in the same thread as other FLTK operations.
+  // method, so that it can happen in the same thread as other FLTK 
+  // operations.
 }
 
 //----------------------------------------------------------
@@ -101,42 +123,43 @@ bool FV_MOOSApp::Iterate()
 void FV_MOOSApp::process_demuxer_content()
 {
   try {
-    demuxer_lock.Lock();
+    m_demuxer_lock.Lock();
 
-    iteration++;
-
-    if((iteration %10)==0) {
-      double hz = (double)(iteration) / ((MOOSTime() - start_time));
-      cout << "Iteration: (" << iteration << ")";
-      cout << "(" << hz << "/sec)" << endl;
-    }
-
-    cout << "[" << iteration << "]";
-    string str = demuxer.getDemuxString();
     bool redraw_needed = false;
-    while(str != "") {
+    DemuxedResult result = m_demuxer.getDemuxedResult();
+    while(!result.isEmpty()) {
       redraw_needed = true;
-      cout << "+";
-      if(model) {
-          cout << "Add Demux TO Model" << endl;
-          model->addIPF(str);
-      }
-      str = demuxer.getDemuxString();
+      string ipf_str = result.getString();
+      string community_src = result.getSource();
+
+      //cout << "FV_MOOSApp:process_demuxer_content():" << endl;
+      //cout << "str:" << ipf_str << endl;
+      //cout << "src:" << community_src << endl << endl;
+      
+      string context_str = StringToIvPContext(ipf_str);
+      string iter = biteString(context_str, ':');
+      string bhv  = context_str;
+
+      m_model->addIPF(ipf_str, community_src);
+      result = m_demuxer.getDemuxedResult();
+
+      if(m_gui)
+	m_gui->addBehaviorSource(bhv);
     }
-    cout << endl;
+      
     if(redraw_needed) {
-      viewer->resetQuadSet();
-      viewer->redraw();
+      m_viewer->resetQuadSet();
+      m_viewer->redraw();
     }
-    if(gui)
-      gui->updateFields();
+    if(m_gui)
+      m_gui->updateFields();
   }
   catch (...) {
-    demuxer_lock.UnLock();
+    m_demuxer_lock.UnLock();
     throw;
   }
 
-  demuxer_lock.UnLock();
+  m_demuxer_lock.UnLock();
 }
 
 //----------------------------------------------------------
@@ -145,18 +168,6 @@ void FV_MOOSApp::process_demuxer_content()
 
 bool FV_MOOSApp::OnStartUp()
 {
-  start_time = MOOSTime();  
   return(true);
 }
 
-
-//----------------------------------------------------------
-// Procedure: return_from_Run()
-//      Note: Call this to cause this object's CMOOSApp::Run(...) method to 
-//      return.
-
-// void FV_MOOSApp::return_from_Run()
-// {
-// // //   iterate_should_return_false = true;
-//   SetQuitOnFailedIterate(true);
-// }

@@ -1,8 +1,23 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: OpAreaSpec.cpp                                       */
 /*    DATE: July 6th, 2008                                       */
+/*                                                               */
+/* This program is free software; you can redistribute it and/or */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation; either version  */
+/* 2 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* This program is distributed in the hope that it will be       */
+/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the GNU General Public License for more details. */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with this program; if not, write to the Free    */
+/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
+/* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
 #include <iostream>
@@ -26,9 +41,9 @@ OpAreaSpec::OpAreaSpec()
   m_line_shade      = 1.0;
   m_label_shade     = 1.0;
 
-  m_datum_color     = colorParse("red");
+  m_datum_color     = ColorPack("red");
   m_datum_viewable  = false;
-  m_datum_size      = 3;
+  m_datum_size      = 4;
 }
 
 //-----------------------------------------------------------
@@ -191,7 +206,7 @@ bool OpAreaSpec::setParam(const string& param, string value)
   else if(param == "datum_color") {
     if(!isColor(value))
       return(false);
-    m_datum_color = colorParse(value);
+    m_datum_color = ColorPack(value);
   }
   else
     return(false);
@@ -202,7 +217,7 @@ bool OpAreaSpec::setParam(const string& param, string value)
 //-----------------------------------------------------------
 // Procedure: viewable
 
-bool OpAreaSpec::viewable(const string& str)
+bool OpAreaSpec::viewable(const string& str) const
 {
   if((str == "all") || (tolower(str) == "all"))
     return(m_viewable_all);
@@ -306,3 +321,4 @@ vector<double> OpAreaSpec::getVColor(unsigned int ix) const
   vector<double> grey_vector(3, 0.5);
   return(grey_vector);
 }
+

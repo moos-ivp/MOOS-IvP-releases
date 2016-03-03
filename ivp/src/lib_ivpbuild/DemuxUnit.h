@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: DemuxUnit.h                                          */
 /*    DATE: May 20th 2006                                        */
 /*                                                               */
@@ -33,7 +33,8 @@
 
 class DemuxUnit {
 public:
-  DemuxUnit(const std::string&, int, double=0);
+  DemuxUnit(const std::string&, unsigned int, 
+	    double, const std::string& src="");
   virtual ~DemuxUnit() {};
 
 public:
@@ -51,6 +52,7 @@ public:
   
   std::string getDemuxString();
   std::string getUnitID()       {return(m_unit_id);};
+  std::string getSource()       {return(m_source);};
   double      getTimeStamp()    {return(m_time_stamp);};
   bool        unitReady();
   void        print();
@@ -59,11 +61,13 @@ protected:
   std::string              m_unit_id;
   std::vector<std::string> m_data;
   std::vector<bool>        m_flag;
+  std::string              m_source;
 
   double m_time_stamp;
 };
 
 #endif
+
 
 
 

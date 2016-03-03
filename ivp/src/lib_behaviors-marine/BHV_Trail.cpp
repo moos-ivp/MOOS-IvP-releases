@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: BHV_Trail.cpp                                        */
 /*    DATE: Jul 3rd 2005 Sunday morning at Brueggers             */
 /*                                                               */
@@ -24,8 +24,8 @@
 #pragma warning(disable : 4503)
 #endif
 
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include "AngleUtils.h"
 #include "GeomUtils.h"
 #include "AOF_CutRangeCPA.h"
@@ -369,5 +369,6 @@ void BHV_Trail::postErasableTrailPoint()
   string spec = m_trail_point.get_spec();
   postMessage("VIEW_POINT", spec);
 }
+
 
 

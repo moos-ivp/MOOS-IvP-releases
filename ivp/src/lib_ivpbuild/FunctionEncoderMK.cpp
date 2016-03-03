@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: FunctionEncoder.h                                    */
 /*    DATE: April 17th 2006 (Patriots Day)                       */
 /*                                                               */
@@ -21,8 +21,8 @@
 /*****************************************************************/
 
 #include <iostream>
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 #include "MBUtils.h"
 #include "BuildUtils.h"
 #include "FunctionEncoderMK.h"
@@ -476,3 +476,4 @@ IvPFunction *StringToIvPFunctionMK(const string& str)
   
   return(new_of);
 }
+

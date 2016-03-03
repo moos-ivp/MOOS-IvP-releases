@@ -1,12 +1,23 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin                                     */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: IPFViewer.cpp                                        */
 /*    DATE: Feb 13, 2007                                         */
 /*                                                               */
-/* This is unreleased BETA code. No permission is granted or     */
-/* implied to use, copy, modify, and distribute this software    */
-/* except by the author(s).                                      */
+/* This program is free software; you can redistribute it and/or */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation; either version  */
+/* 2 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* This program is distributed in the hope that it will be       */
+/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the GNU General Public License for more details. */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with this program; if not, write to the Free    */
+/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
+/* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
 #include <iostream>
@@ -92,13 +103,15 @@ void IPFViewer::resetIPF(int cn_index, int unif_units)
   else if(m_view_type == 4)
     ipf = m_cpa_model->calc_r16_ipf(cn_index, unif_units);
 
-  string ipf_string = IvPFunctionToString(ipf);
-
-  //double lowval = ipf->getPDMap()->getMinWT();
-  //double hghval = ipf->getPDMap()->getMaxWT();
-
-  applyIPF(ipf_string);
+  if(ipf) {
+    m_quadset.applyIPF(ipf);
+    m_quadset.normalize(0, 100);
+    m_quadset.applyColorMap(m_color_map);
+    delete(ipf);
+  }
+    
   redraw();
 }
+
 
 

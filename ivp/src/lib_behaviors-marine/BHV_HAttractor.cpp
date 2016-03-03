@@ -1,7 +1,7 @@
 /*****************************************************************/
-/*    NAME: Henrik Schmidt and Michael Benjamin                  */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
-/*    FILE: BHV_HAttractor.cpp                                    */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
+/*    FILE: BHV_HAttractor.cpp                                   */
 /*    DATE: June 2008                                            */
 /*                                                               */
 /* This program is free software; you can redistribute it and/or */
@@ -25,8 +25,8 @@
 #pragma warning(disable : 4503)
 #endif
 #include <iostream>
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include "AOF_CutRangeCPA.h"
 #include "BHV_HAttractor.h"
 #include "OF_Reflector.h"
@@ -432,6 +432,7 @@ void BHV_HAttractor::updateContactList()
   addInfoVars(m_contact_name+"_NAV_UTC");
 
 }
+
 
 
 

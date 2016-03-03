@@ -15,14 +15,14 @@ LongOrigin = -70.330400
 // Antler configuration  block
 ProcessConfig = ANTLER
 {
-  MSBetweenLaunches = 500
+  MSBetweenLaunches = 1000
 
   Run = MOOSDB		@ NewConsole = false
   Run = pLogger         @ NewConsole = false
-  Run = iMarineSim	@ NewConsole = true
+  Run = uSimMarine	@ NewConsole = true
   Run = pNodeReporter	@ NewConsole = false
   Run = pMarinePID	@ NewConsole = true
-  Run = pHelmIvP	@ NewConsole = false
+  Run = pHelmIvP	@ NewConsole = true
   Run = pMarineViewer	@ NewConsole = true
 }
 
@@ -35,17 +35,19 @@ ProcessConfig = pLogger
   CommsTick = 4
 
   SyncLog = false
-  AsyncLog = true
+  AsyncLog = true @ 0
 
-  Log = VIEW_VECTOR @ 0
+  // For variables that are published in a bundle on their first post,
+  // explicitly declare their logging request
+
+  Log = IVPHELM_LIFE_EVENT @ 0 NOSYNC
 
   WildCardLogging = true
-
-  LoggingDirectorySummaryFile = /Users/mikerb/.plogger2
+  WildCardOmitPattern = *_STATUS
 }
 
 //------------------------------------------
-// Uxms config block
+// uXMS config block
 
 ProcessConfig = uXMS
 {
@@ -55,13 +57,22 @@ ProcessConfig = uXMS
   VAR = NAV_X
   VAR = NAV_Y
   VAR = NAV_SPEED
+  VAR = NAV_HEADING
+  VAR = DESIRED_HEADING
+  VAR = DESIRED_SPEED
+  VAR = DESIRED_RUDDER
+  VAR = DESIRED_THRUST
+  VAR = NODE_REPORT_LOCAL
+  VAR = DEPLOY
+  VAR = RETURN
+  VAR = IVPHELM_ENGAGED
 }
 
 
 //------------------------------------------
-// iMarineSim config block
+// uSimMarine config block
 
-ProcessConfig = iMarineSim
+ProcessConfig = uSimMarine
 {
   AppTick	= 10
   CommsTick	= 10
@@ -70,7 +81,11 @@ ProcessConfig = iMarineSim
   START_Y       = 0
   START_SPEED   = 0
   START_HEADING = 180
+
   PREFIX        = NAV
+  
+  TURN_RATE     = 40
+  THRUST_MAP    = 0:0, 20:1, 40:2, 60:3, 80:4, 100:5
 }
 
 //------------------------------------------
@@ -101,9 +116,9 @@ ProcessConfig = pMarinePID
   // SIM_INSTABILITY = 20
 
   // Yaw PID controller
-  YAW_PID_KP		 = 0.5
+  YAW_PID_KP		 = 1.2
   YAW_PID_KD		 = 0.0
-  YAW_PID_KI		 = 0.0
+  YAW_PID_KI		 = 0.3
   YAW_PID_INTEGRAL_LIMIT = 0.07
 
   // Speed PID controller
@@ -169,5 +184,7 @@ ProcessConfig = pNodeReporter
 {
   AppTick	= 2
   CommsTick	= 2
-  VESSEL_TYPE   = KAYAK
+
+  PLATFORM_TYPE   = KAYAK
+  PLATFORM_LENGTH = 4
 }

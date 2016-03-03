@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: PMV_Viewer.h                                         */
 /*    DATE: Nov 11th 2004                                        */
 /*                                                               */
@@ -28,6 +28,8 @@
 #include "MarineViewer.h"
 #include "VehicleSet.h"
 #include "VarDataPair.h"
+#include "VPlug_GeoShapes.h"
+#include "VPlug_GeoShapesMap.h"
 
 class PMV_Viewer : public MarineViewer
 {
@@ -40,10 +42,12 @@ class PMV_Viewer : public MarineViewer
 
   bool  setParam(std::string p, std::string v="");
   bool  setParam(std::string p, double v);
+  bool  addGeoShape(std::string p, std::string v, std::string c);
   bool  addScopeVariable(std::string);
   bool  updateScopeVariable(std::string varname, std::string value, 
 			    std::string vtime, std::string vsource);
   void  setActiveScope(std::string);
+  bool  isScopeVariable(std::string) const;
   void  addMousePoke(std::string key, std::string vardata_pair);
   void  setLeftMouseKey(std::string key)  {m_left_mouse_key = key;};
   void  setRightMouseKey(std::string key) {m_right_mouse_key = key;};
@@ -52,11 +56,13 @@ class PMV_Viewer : public MarineViewer
 
   std::vector<VarDataPair> getLeftMousePairs(bool=true);
   std::vector<VarDataPair> getRightMousePairs(bool=true);
+  std::vector<VarDataPair> getNonMousePairs(bool=true);
 
 
  private:
   void   drawVehicle(std::string, bool, std::string);
-  void   drawTrailPoints(CPList&, int=0);
+  void   calculateDrawHash();
+  void   drawTrailPoints(CPList&, unsigned int=0);
   void   handleLeftMouse(int, int);
   void   handleRightMouse(int, int);
   void   handleMoveMouse(int, int);
@@ -68,6 +74,7 @@ class PMV_Viewer : public MarineViewer
   std::string m_reference_point;
   std::string m_reference_bearing;
   double      m_stale_report_thresh;
+  double      m_curr_time;
 
   // Member variables for holding scoped info
   bool                     m_scoping;
@@ -83,6 +90,8 @@ class PMV_Viewer : public MarineViewer
   double   m_mouse_y;
   double   m_mouse_lat;
   double   m_mouse_lon;
+  int      m_lclick_ix;
+  int      m_rclick_ix;
 
   std::string m_button_one;
   std::string m_button_two;
@@ -92,11 +101,16 @@ class PMV_Viewer : public MarineViewer
   std::vector<VarDataPair> m_var_data_pairs_all;
   std::vector<VarDataPair> m_var_data_pairs_lft;
   std::vector<VarDataPair> m_var_data_pairs_rgt;
+  std::vector<VarDataPair> m_var_data_pairs_non_mouse;
   
   std::string m_centric_view; // average, active, or reference
   bool        m_centric_view_sticky;
+
+  VPlug_GeoShapesMap  m_geoshapes_map;
+  OpAreaSpec          m_op_area;
 };
 
 #endif 
+
 
 

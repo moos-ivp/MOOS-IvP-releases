@@ -1,6 +1,6 @@
 /*****************************************************************/
 /*    NAME: Michael Benjamin                                     */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: IvPDomain.h                                          */
 /*    DATE: May 29 2004 At Indigo cafe in Montreal               */
 /*                                                               */
@@ -55,6 +55,7 @@ public:
   bool   addDomain(const std::string&, double, double, unsigned int);
   bool   addDomain(const IvPDomain&, const std::string&);
   bool   hasDomain(const std::string&) const;
+  bool   hasOnlyDomain(const std::string&, const std::string& s="") const;
   void   clear();
   void   print() const;
   int    getIndex(const std::string&) const;
@@ -66,6 +67,7 @@ public:
   double getVarLow(const std::string& s) const;    
   double getVarHigh(const std::string& s) const;    
   double getVarDelta(const std::string& s) const;    
+  double getTotalPts() const;
 
   // Return number of points in the domain for a given variable name.
   // If the variable name is unknown, just return zero.
@@ -123,4 +125,5 @@ private:
 };
 
 #endif
+
 

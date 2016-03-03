@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: BHV_CutRange.cpp                                     */
 /*    DATE: May 10th 2005                                        */
 /*                                                               */
@@ -25,8 +25,8 @@
 #pragma warning(disable : 4503)
 #endif
 #include <iostream>
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include "AOF_CutRangeCPA.h"
 #include "BHV_CutRange.h"
 #include "OF_Reflector.h"
@@ -193,6 +193,7 @@ double BHV_CutRange::getRelevance()
   double pct = (m_contact_range - m_pwt_inner_dist) / total_range;
   return(pct);
 }
+
 
 
 

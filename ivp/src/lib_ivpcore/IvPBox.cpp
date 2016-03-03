@@ -1,6 +1,6 @@
 /*****************************************************************/
 /*    NAME: Michael Benjamin                                     */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: IvPBox.cpp                                           */
 /*    DATE: Too long ago to remember (1996-1999)                 */
 /*                                                               */
@@ -39,9 +39,9 @@
 
 #include <iostream>
 #include <cmath>
-#include <assert.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include <cassert>
+#include <cstdlib>
+#include <cstdio>
 #include "IvPBox.h"
 #include "BoxSet.h"
 
@@ -664,6 +664,7 @@ void IvPBox::transDomain(int newEdges, const int *edgeMap)
 
   m_dim = newDim;
 }
+
 
 
 

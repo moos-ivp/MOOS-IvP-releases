@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: VPlugPlot.cpp                                        */
 /*    DATE: Aug 9th, 2009                                        */
 /*                                                               */
@@ -20,10 +20,10 @@
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include <iostream>
-#include <assert.h>
+#include <cassert>
 #include "VPlugPlot.h"
 #include "MBUtils.h"
 
@@ -60,6 +60,10 @@ bool VPlugPlot::addEvent(const string& var, const string& val, double time)
     m_vplugs[vsize-1].addGrid(val);
   else if(var == "GRID_DELTA")
     m_vplugs[vsize-1].updateGrid(val);
+  else if(var == "VIEW_RANGE_PULSE")
+    m_vplugs[vsize-1].addRangePulse(val);
+  else if(var == "VIEW_MARKER")
+    m_vplugs[vsize-1].addMarker(val);
   return true;
 }
      
@@ -172,11 +176,4 @@ unsigned int VPlugPlot::getIndexByTime(double gtime) const
   }
   return(index);
 }
-
-
-
-
-
-
-
 

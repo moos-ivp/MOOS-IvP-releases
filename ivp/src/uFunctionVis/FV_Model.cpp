@@ -1,12 +1,30 @@
-/****************************************************************/
-/*    NAME: Mike Benjamin                                       */
-/*    FILE: FV_Model.cpp                                        */
-/*    DATE: Sep 24th 2006                                       */
-/****************************************************************/
+/*****************************************************************/
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
+/*    FILE: FV_Model.cpp                                         */
+/*    DATE: Sep 24th 2006                                        */
+/*                                                               */
+/* This program is free software; you can redistribute it and/or */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation; either version  */
+/* 2 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* This program is distributed in the hope that it will be       */
+/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the GNU General Public License for more details. */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with this program; if not, write to the Free    */
+/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
+/* Boston, MA 02111-1307, USA.                                   */
+/*****************************************************************/
 
 #include <iostream>
 #include "MBUtils.h"
 #include "FV_Model.h"
+#include "ColorParse.h"
+#include "BuildUtils.h"
 
 #define GL_PI 3.1415926f
 
@@ -17,27 +35,39 @@ using namespace std;
 
 FV_Model::FV_Model()
 {
-  m_collective = false;
   m_lock_ipf   = false;
-  m_curr_descriptor = "null_descriptor";
+  m_curr_iter  = 0;
+
+  m_bundle_series_maxlen = 50;
+  m_verbose    = true;
 }
 
 //-------------------------------------------------------------
 // Procedure: addIPF()
 
-void FV_Model::addIPF(string str)
+void FV_Model::addIPF(const string& ipf_str, const string& platform)
 {
   m_ipf_mutex.Lock();
 
   if(!m_lock_ipf) {
-    string new_descriptor = m_fqueue.addFunction(str);
-    cout << "new_descriptor: " << new_descriptor << endl;
+  
+    m_bundle_series.addIPF(ipf_str);
+    m_bundle_series_platform = platform;
 
-    if(!vectorContains(m_descriptors, new_descriptor))
-      m_descriptors.push_back(new_descriptor);
+    unsigned int bs_size = m_bundle_series.size();
+    if(bs_size > m_bundle_series_maxlen)
+      m_bundle_series.popFront(1);
+
+    if(m_curr_source == "") {
+      vector<string> sources = m_bundle_series.getAllSources();
+      if(sources.size() > 0)
+	m_curr_source = sources[0];
+    }
+
+    m_curr_iter = m_bundle_series.getMaxIteration();
     
-    if(m_curr_descriptor == "")
-      m_curr_descriptor = new_descriptor;
+    if(m_curr_source == "") 
+      m_curr_source = m_bundle_series.getFirstSource();
   }
   m_ipf_mutex.UnLock();
 }
@@ -48,101 +78,103 @@ void FV_Model::addIPF(string str)
 void FV_Model::modColorMap(const string &str)
 {
   m_ipf_mutex.Lock();
-  m_fqueue.modColorMap(str);
+  m_color_map.setType(str);
   m_ipf_mutex.UnLock();
 }
 
 //-------------------------------------------------------------
-// Procedure: incDescriptor()
+// Procedure: modSource()
 
-void FV_Model::incDescriptor()
+void FV_Model::modSource(const std::string& bhv_source)
 {
-  m_ipf_mutex.Lock();
-
-  cout << "Old descriptor: " << m_curr_descriptor << endl;
-
-  m_collective = false;
-
-  int vsize = m_descriptors.size();
-
-  if((m_curr_descriptor == "null_descriptor") && (vsize > 0))
-    m_curr_descriptor = m_descriptors[0];
-  else {
-    bool done = false;
-    for(int i=0; (i<vsize)&&!done; i++) {
-      if(m_descriptors[i] == m_curr_descriptor) {
-	if(i+1 < vsize)
-	  m_curr_descriptor = m_descriptors[i+1];
-	else
-	  m_curr_descriptor = m_descriptors[0];
-	done = true;
-      }
-    }
-  }
-
-  cout << "New descriptor: " << m_curr_descriptor << endl;
-  m_ipf_mutex.UnLock();
+  vector<string> sources = m_bundle_series.getAllSources();
+  if(vectorContains(sources, bhv_source))
+    m_curr_source = bhv_source;
 }
 
 //-------------------------------------------------------------
-// Procedure: decDescriptor()
+// Procedure: getCurrSource()
 
-void FV_Model::decDescriptor()
+string FV_Model::getCurrSource()
 {
-  m_ipf_mutex.Lock();
-
-  m_collective = false;
-
-  int vsize = m_descriptors.size();
-  bool done = false;
-  for(int i=vsize-1; (i>=0)&&!done; i--) {
-    if(m_descriptors[i] == m_curr_descriptor) {
-      if(i > 0)
-	m_curr_descriptor = m_descriptors[i-1];
-      else
-	m_curr_descriptor = m_descriptors[vsize-1];
-      done = true;
-    }
-  }
-  m_ipf_mutex.UnLock();
-}
-
-//-------------------------------------------------------------
-// Procedure: getCurrDescriptor()
-
-string FV_Model::getCurrDescriptor()
-{
-  if(m_collective)
+  if(m_collective != "")
     return("Collective Function");
-  else
-    return(m_curr_descriptor);
+  else {
+    if(m_curr_source != "")
+      return(m_curr_source);
+    else
+      return("no source detected");
+  }
 }
 
 //-------------------------------------------------------------
-// Procedure: getCurrFuncSize()
+// Procedure: getCurrPieces()
 
-string FV_Model::getCurrFuncSize()
+string FV_Model::getCurrPieces()
 {
-  if(m_collective)
+  if(m_collective != "")
     return("n/a");
-  else
-    return(m_curr_func_size);
+  else {
+    unsigned int pcs;
+    pcs = m_bundle_series.getPieces(m_curr_iter, m_curr_source);
+    return(uintToString(pcs));
+  }
+}
+
+//-------------------------------------------------------------
+// Procedure: getCurrPriority()
+
+string FV_Model::getCurrPriority()
+{
+  if(m_collective != "")
+    return("n/a");
+  else {
+    double pwt;
+    pwt = m_bundle_series.getPriority(m_curr_iter, m_curr_source);
+    return(dstringCompact(doubleToString(pwt)));
+  }
+}
+
+//-------------------------------------------------------------
+// Procedure: getCurrDomain()
+
+string FV_Model::getCurrDomain()
+{
+  if(m_collective != "")
+    return("n/a");
+  else {
+    IvPDomain ivp_domain;
+    ivp_domain = m_bundle_series.getDomain(m_curr_iter, m_curr_source);
+    return(domainToString(ivp_domain, false));
+  }
+}
+
+//-------------------------------------------------------------
+// Procedure: getCurrPlatform()
+
+string FV_Model::getCurrPlatform()
+{
+  return(m_bundle_series_platform);
 }
 
 //-------------------------------------------------------------
 // Procedure: getQuadSet()
 
-const QuadSet* FV_Model::getQuadSet()
+QuadSet FV_Model::getQuadSet()
 {
   m_ipf_mutex.Lock();
 
-  const QuadSet* quadset = 0;
-  if(m_collective)
-    quadset = m_fqueue.getCollectiveQuadSet();
+  QuadSet quadset;
+  if(m_collective != "")
+    quadset = m_bundle_series.getCollectiveQuadSet(m_curr_iter, m_collective);
   else
-    quadset = m_fqueue.getQuadSet(m_curr_descriptor);
-
+    quadset = m_bundle_series.getQuadSet(m_curr_iter, m_curr_source);
+  
   m_ipf_mutex.UnLock();
+
+  quadset.normalize(0,200);
+  quadset.applyColorMap(m_color_map);
   return(quadset);
 }
+
 

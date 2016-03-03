@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: IO_Utilities.cpp                                     */
 /*    DATE: June 2nd, 2004                                       */
 /*                                                               */
@@ -21,10 +21,10 @@
 /*****************************************************************/
 
 #include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <cstring>
 #include "MBUtils.h"
 #include "BuildUtils.h"
 #include "IO_Utilities.h"
@@ -337,3 +337,4 @@ void printZAIC_PEAK(ZAIC_PEAK zaic)
     cout << "  Maxutil: "   << maxutil << endl;
   }
 }
+

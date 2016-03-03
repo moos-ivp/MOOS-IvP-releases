@@ -1,8 +1,23 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: VPlug_DropPoints.cpp                                 */
 /*    DATE: June 13th, 2009                                      */
+/*                                                               */
+/* This program is free software; you can redistribute it and/or */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation; either version  */
+/* 2 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* This program is distributed in the hope that it will be       */
+/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the GNU General Public License for more details. */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with this program; if not, write to the Free    */
+/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
+/* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
 #include <iostream>
@@ -72,12 +87,12 @@ bool VPlug_DropPoints::setParam(const string& param, string value)
   else if(param == "drop_point_vertex_color") {
     unsigned int i, vsize = m_points.size();
     for(i=0; i<vsize; i++)
-      m_points[i].set_vertex_color(param);
+      m_points[i].set_color("vertex", param);
   }
   else if(param == "drop_point_label_color") {
     unsigned int i, vsize = m_points.size();
     for(i=0; i<vsize; i++)
-      m_points[i].set_label_color(param);
+      m_points[i].set_color("label", param);
   }
   else if(param == "drop_point_vertex_size") {
     cout << "Setting drop_point_vertex_size to " << value << endl;
@@ -121,9 +136,9 @@ void VPlug_DropPoints::addPoint(const XYPoint& new_point,
   unsigned int vsize = m_points.size();
   
   if(latlon_str == native_str)
-    m_points[vsize-1].set_label_color(m_coord_color_latlon);
+    m_points[vsize-1].set_color("label", m_coord_color_latlon);
   else
-    m_points[vsize-1].set_label_color(m_coord_color_localg);
+    m_points[vsize-1].set_color("label", m_coord_color_localg);
 }
 
 //-------------------------------------------------------------
@@ -154,3 +169,4 @@ string VPlug_DropPoints::getCoordinates(unsigned int index) const
   else
     return(m_points_native[index]);
 }
+

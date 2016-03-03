@@ -1,8 +1,24 @@
-/*********************************************************/
-/*    NAME: Michael Benjamin                             */
-/*    FILE: FV_MOOSApp.h                                 */
-/*    DATE: May 12th 2006                                */
-/*********************************************************/
+/*****************************************************************/
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
+/*    FILE: FV_MOOSApp.h                                         */
+/*    DATE: May 12th 2006                                        */
+/*                                                               */
+/* This program is free software; you can redistribute it and/or */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation; either version  */
+/* 2 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* This program is distributed in the hope that it will be       */
+/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the GNU General Public License for more details. */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with this program; if not, write to the Free    */
+/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
+/* Boston, MA 02111-1307, USA.                                   */
+/*****************************************************************/
 
 #ifndef FV_MOOSAPP_HEADER
 #define FV_MOOSAPP_HEADER
@@ -20,46 +36,41 @@ class FV_MOOSApp : public CMOOSApp
   FV_MOOSApp();
   virtual ~FV_MOOSApp() {};
 
-  void setViewer(FV_Viewer* g_viewer)  {viewer = g_viewer;};
-  void setModel(FV_Model* g_model)     {model = g_model;};
-  void setGUI(FV_GUI* g_gui)           {gui = g_gui;};
+  void setViewer(FV_Viewer* viewer)  {m_viewer = viewer;};
+  void setModel(FV_Model* model)     {m_model = model;};
+  void setGUI(FV_GUI* gui)           {m_gui = gui;};
 
   bool OnNewMail(MOOSMSG_LIST &NewMail);
   bool Iterate();
   bool OnConnectToServer();
   bool OnStartUp();
 
-  /// Call this when you want the object's CMOOSApp::Run(...) method to return
-  /// soon.
-//   void return_from_Run();
+  /// Call this when you want the object's CMOOSApp::Run(...) method 
+  /// to return soon.
 
-  /// This interacts with FLTK, and therefore should execute on the main thread,
-  /// which is where all the other FLTK operations are occurring.
+  //   void return_from_Run();
+
+  /// This interacts with FLTK, and therefore should execute on the 
+  /// main thread, which is where all the other FLTK operations are 
+  /// occurring.
   void process_demuxer_content();
   
 protected:
-//   bool    iterate_should_return_false;
+  std::string m_ipf_name;
   
-  int     loc_x;
-  int     loc_y;
+  FV_GUI*     m_gui;
+  FV_Model*   m_model;
+  FV_Viewer*  m_viewer;
 
-  int     iteration;
-  double  start_time;
-  int     delta;
-  std::string ipf_name;
-  
-  FV_GUI*     gui;
-  FV_Model*   model;
-  FV_Viewer*  viewer;
-
-  /// This is populated by OnNewMail, which is invoked by the MOOS application 
-  /// thread.  It's content is consumed by the main thread, so that all FLTK-
-  /// related operation can happen on the same thread, which is the safest way
-  /// to use FLTK.  
-  Demuxer demuxer;
+  /// This is populated by OnNewMail, which is invoked by the MOOS 
+  /// application thread.  It's content is consumed by the main thread, 
+  /// so that all FLTK-related operation can happen on the same thread, 
+  /// which is the safest way to use FLTK.  
+  Demuxer m_demuxer;
 
   /// Hold this lock whenever invoking a method on 'demuxer'.
-  CMOOSLock demuxer_lock;
+  CMOOSLock m_demuxer_lock;
 };
 
 #endif
+

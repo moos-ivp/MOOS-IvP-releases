@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: AngleUtils.cpp                                       */
 /*    DATE: Nov 26, 2000                                         */
 /*                                                               */
@@ -20,9 +20,9 @@
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
+#include <cstdlib>
+#include <cmath>
 #include "AngleUtils.h"
-#include <stdlib.h>
-#include <math.h>
 
 #ifndef M_PI
 #define M_PI 3.1415926
@@ -241,6 +241,7 @@ bool containsAngle(double aval, double bval, double qval)
   else
     return((qval >= aval) && (qval <= bval));
 }
+
 
 
 

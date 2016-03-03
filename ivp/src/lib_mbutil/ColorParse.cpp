@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: ColorParse.h                                         */
 /*    DATE: Aug 19th 2006                                        */
 /*                                                               */
@@ -21,7 +21,7 @@
 /*****************************************************************/
 
 #include <iostream>
-#include <stdlib.h>
+#include <cstdlib>
 #include "ColorParse.h"
 #include "MBUtils.h"
 
@@ -32,8 +32,17 @@ using namespace std;
 //   Example: "DarkKhaki"
 //            "Dark_Khaki"
 //            "dark_khaki"
-//            "hex: bd, b7, 6b"
+//   
+//            "hex: bd, b7, 6b"          Commma delimited
 //            "0.741, 0.718, 0.420"
+//            "hex: bd % b7 % 6b"        % delimited also ok
+//            "0.741 % 0.718 % 0.420"
+//            "hex: bd $ b7 $ 6b"        $ delimited also ok
+//            "0.741 $ 0.718 $ 0.420"
+//            "hex: bd # b7 # 6b"        # delimited also ok
+//            "0.741 # 0.718 # 0.420"
+//            "hex: bd : b7 : 6b"        : delimited also ok
+//            "0.741 : 0.718 : 0.420"
 //
 //   Returns: <0.741, 0.718, 0.420>
 
@@ -44,7 +53,9 @@ vector<double> colorParse(const std::string &str)
   // e.g., "blue". Detected by lack of comma-separated fields
 
   string numerical_str;
-  if(!strContains(str, ","))
+  if(!strContains(str, ",")  && !strContains(str, "%") &&
+     !strContains(str, "$")  && !strContains(str, "#") &&
+     !strContains(str, ":"))
     numerical_str = colorNameToHex(str);
   else
     numerical_str = str;
@@ -117,7 +128,18 @@ vector<double> colorDecToVector(const std::string& str)
   vector<double> return_vector(3,0);
   int i;
 
-  vector<string> svector = parseString(str, ',');
+  vector<string> svector;
+  if(strContains(str, ","))
+    svector = parseString(str, ',');
+  else if(strContains(str, "%"))
+    svector = parseString(str, '%');
+  else if(strContains(str, "$"))
+    svector = parseString(str, '$');
+  else if(strContains(str, "#"))
+    svector = parseString(str, '#');
+  else if(strContains(str, ":"))
+    svector = parseString(str, ':');
+
   int vsize = svector.size();
   if(vsize != 3)
     return(return_vector);
@@ -215,7 +237,7 @@ string colorNameToHex(const std::string &str)
   if(cstr == "deepskyblue")    return("hex:00,bf,ff");
   if(cstr == "dimgray")        return("hex:69,69,69");
   if(cstr == "dodgerblue")     return("hex:1e,90,ff");
-  if(cstr == "firenrick")      return("hex:b2,22,22");
+  if(cstr == "firebrick")      return("hex:b2,22,22");
   if(cstr == "floralwhite")    return("hex:ff,fa,f0");
   if(cstr == "forestgreen")    return("hex:22,8b,22");
   if(cstr == "fuchsia")        return("hex:ff,00,ff");
@@ -400,3 +422,31 @@ string termColor(const string& raw_color_in)
     return("\33[0m");
 }
   
+
+//-------------------------------------------------------------
+// Procedure: blu, blk, red, grn, mag
+
+void blu(const string& str, const string& xstr)
+{
+  cout << "\33[34m" << str << "\33[0m" << xstr << endl;
+}
+
+void blk(const string& str, const string& xstr)
+{
+  cout << "\33[0m" << str << xstr << endl;
+}
+
+void red(const string& str, const string& xstr)
+{
+  cout << "\33[31m" << str << "\33[0m" << xstr << endl;
+}
+
+void grn(const string& str, const string& xstr)
+{
+  cout << "\33[32m" << str << "\33[0m" << xstr << endl;
+}
+
+void mag(const string& str, const string& xstr)
+{
+  cout << "\33[35m" << str << "\33[0m" << xstr << endl;
+}

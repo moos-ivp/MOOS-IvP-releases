@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: BHV_Hystereis.cpp                                    */
 /*    DATE: August 4th 2008 (aboard the Alliance)                */
 /*                                                               */
@@ -25,8 +25,8 @@
 #pragma warning(disable : 4503)
 #endif
 
-#include <math.h> 
-#include <stdlib.h>
+#include <cmath> 
+#include <cstdlib>
 #include "BHV_Hysteresis.h"
 #include "ZAIC_PEAK.h"
 #include "MBUtils.h"
@@ -256,5 +256,6 @@ double BHV_Hysteresis::getHeadingVariance(double current_average)
   }
   return(sqrt(total)/(double)(counter));
 }
+
 
 

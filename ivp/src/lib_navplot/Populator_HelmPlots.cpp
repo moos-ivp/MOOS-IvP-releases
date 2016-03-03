@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: Populator_HelmPlots.cpp                              */
 /*    DATE: July 15th, 2009                                      */
 /*                                                               */
@@ -20,8 +20,8 @@
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstdlib>
+#include <cstdio>
 #include <iostream>
 #include "Populator_HelmPlots.h"
 #include "MBUtils.h"
@@ -47,4 +47,5 @@ bool Populator_HelmPlots::populateFromEntries(const vector<ALogEntry>& entries)
   }
   return(true);
 }
+
 

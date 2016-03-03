@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: AOF_Gaussian.cpp                                     */
 /*    DATE: June 9th 2008                                        */
 /*                                                               */
@@ -26,7 +26,7 @@
 #   define _USE_MATH_DEFINES
 #endif
 
-#include <math.h>
+#include <cmath>
 
 using namespace std;
 
@@ -82,3 +82,4 @@ double AOF_Gaussian::evalPoint(const vector<double>& point) const
   return(pct * m_range);
 }
 #endif
+

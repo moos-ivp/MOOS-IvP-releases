@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: FColorMap.cpp                                        */
 /*    DATE: Jan 12th 2006                                        */
 /*                                                               */
@@ -21,7 +21,7 @@
 /*****************************************************************/
 
 #include <iostream>
-#include <math.h>
+#include <cmath>
 #include "FColorMap.h"
 
 using namespace std;
@@ -99,8 +99,8 @@ void FColorMap::applyMidWhite(double plateau, double basewidth)
   
   int vsize = rval.size();
 
-  cout << "plateau: "   << plateau   << endl;
-  cout << "basewidth: " << basewidth << endl;
+  //cout << "plateau: "   << plateau   << endl;
+  //cout << "basewidth: " << basewidth << endl;
 
   double whitener = 0;
   for(int i=0; i<vsize; i++) {
@@ -116,8 +116,8 @@ void FColorMap::applyMidWhite(double plateau, double basewidth)
       double pct = (delta-plateau) / basewidth;
       whitener = (1.0 - pct) * 100.0;
     }
-    cout << "delta[" << i << "]: " << delta << endl;
-    cout << "whitener[" << i << "]: " << whitener << endl;
+    //cout << "delta[" << i << "]: " << delta << endl;
+    //cout << "whitener[" << i << "]: " << whitener << endl;
 
 #if 0
     rval[i] += ((1.0 - rval[i]) * whitener);
@@ -359,6 +359,7 @@ void FColorMap::setBoneMap()
   addRGB(0.9783, 0.9861, 0.9861);
   addRGB(1.0000, 1.0000, 1.0000);
 }
+
 
 
 

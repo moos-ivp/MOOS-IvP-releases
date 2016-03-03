@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: AOF_Ring.cpp                                         */
 /*    DATE: Very old - modernized Jan 21 2006                    */
 /*                                                               */
@@ -21,8 +21,8 @@
 /*****************************************************************/
 
 #include <iostream> 
-#include <stdlib.h>
-#include <math.h>
+#include <cstdlib>
+#include <cmath>
 #include "AOF_Ring.h"
 #include "MBUtils.h"
 #include "BuildUtils.h"
@@ -307,6 +307,7 @@ double AOF_Ring::boxDist(const IvPBox& box1, const IvPBox& box2) const
   }
   return(sqrt(tally));
 }
+
 
 
 

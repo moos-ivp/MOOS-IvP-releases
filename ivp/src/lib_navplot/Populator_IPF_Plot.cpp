@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: Populator_IPF_Plot.cpp                               */
 /*    DATE: Feb 24th, 2007                                       */
 /*                                                               */
@@ -21,12 +21,13 @@
 /*****************************************************************/
 
 #include <iostream>
-#include <stdlib.h>
+#include <cstdlib>
 #include "Populator_IPF_Plot.h"
 #include "MBUtils.h"
 #include "IvPFunction.h"
 #include "FunctionEncoder.h"
 #include "FileBuffer.h"
+#include "DemuxedResult.h"
 
 using namespace std;
 
@@ -46,8 +47,10 @@ bool Populator_IPF_Plot::populateFromEntries(const vector<ALogEntry>& entries)
   
   bool done = false;
   while(!done) {
-    double time_stamp = 0;
-    string demux_string = m_demuxer.getDemuxString(time_stamp);
+    DemuxedResult result = m_demuxer.getDemuxedResult();
+    
+    double time_stamp   = result.getTStamp();
+    string demux_string = result.getString();
     if(demux_string != "")
       handleEntry(time_stamp, demux_string);
     else
@@ -69,10 +72,12 @@ void Populator_IPF_Plot::handleEntry(double g_time,
     return;
   }
 
-  string context = ipf->getContextStr();
-  int    ipf_pieces = ipf->size();
-  string ipf_source;
-  int    ipf_iteration;
+  string    context    = ipf->getContextStr();
+  int       ipf_pieces = ipf->size();
+  string    ipf_source;
+  int       ipf_iteration;
+  double    ipf_pwt    = ipf->getPWT();
+  IvPDomain ivp_domain = ipf->getPDMap()->getDomain();
 
   // The Context string might come in the form of NUM:CONTEXT"
   vector<string> svector = parseString(context, ':');
@@ -101,7 +106,8 @@ void Populator_IPF_Plot::handleEntry(double g_time,
     index = vsize;
   }
   
-  m_ipf_plots[index].addEntry(g_time, g_ipf_str, ipf_iteration, ipf_pieces);
+  m_ipf_plots[index].addEntry(g_time, g_ipf_str, ipf_iteration, ipf_pieces,
+			      ipf_pwt, ivp_domain);
 }
 
 //---------------------------------------------------------------
@@ -156,6 +162,7 @@ void Populator_IPF_Plot::print()
     cout << "    IPF_VName: "  << m_ipf_plots[i].getVName() << endl;
   }
 }
+
 
 
 

@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: main_uXMS.cpp                                        */
 /*    DATE: May 27th 2007                                        */
 /*                                                               */
@@ -27,6 +27,7 @@
 #include "XMS.h"
 #include "TermUtils.h"
 #include "MBUtils.h"
+#include "ReleaseInfo.h"
 
 #ifdef _WIN32
    #include <process.h>
@@ -43,9 +44,7 @@ int main(int argc ,char * argv[])
 {
   // Look for a request for version information
   if(scanArgs(argc, argv, "-v", "--version", "-version")) {
-    vector<string> svector = getReleaseInfo("uXMS");
-    for(unsigned int j=0; j<svector.size(); j++)
-      cout << svector[j] << endl;    
+    showReleaseInfo("uXMS", "gpl");
     return(0);
   }
 
@@ -320,7 +319,7 @@ int main(int argc ,char * argv[])
     else if(strBegins(str, "--history="))
       g_theXMS.addVariable(str.substr(10), true);
 
-    // "history" without the double dashes is depricated
+    // "history" without the double dashes is deprecated
     else if(strBegins(str, "history="))
       g_theXMS.addVariable(str.substr(8), true);
     
@@ -341,6 +340,7 @@ int main(int argc ,char * argv[])
 
   return(0);
 }
+
 
 
 

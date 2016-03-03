@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: MBUtils.cpp                                          */
 /*    DATE: (1996-2005)                                          */
 /*                                                               */
@@ -21,9 +21,9 @@
 /*****************************************************************/
 
 #include <cmath>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
 #include <ctype.h>
 #include <iostream>
 #include "MBUtils.h"
@@ -219,6 +219,24 @@ vector<string> chompString(const string& string_str, char separator)
 }
 
 //----------------------------------------------------------------
+// Procedure: removeWhite(const string&)
+//   Example: input_str = "apples, pears, bananas "
+//            str = removeWhite(input_str)
+//            str = "apples,pears,bananas"
+
+string removeWhite(const string& str)
+{
+  string return_string;
+  unsigned int i, vsize = str.length();
+  for(i=0; i<vsize; i++) {
+    int c = (int)(str.at(i));
+    if((c != 9) && (c != 32))
+      return_string += str.at(i);
+  }
+  return(return_string);
+}
+
+//----------------------------------------------------------------
 // Procedure: biteString(const string&, char)
 //   Example: input_str = "apples, pears, bananas"
 //            str = biteString(input_str, ',')
@@ -229,6 +247,42 @@ string biteString(string& str, char separator)
 {
   string::size_type i=0;
   while((str[i]!=separator)&&(str[i]!='\0'))
+    i++;
+
+  string str_front(str.c_str(), i);
+
+  if(str[i] == '\0')
+    str = "";
+  else {  
+    string str_back(str.c_str()+i+1);
+    str = str_back;
+  }
+
+  return(str_front);
+}
+
+//----------------------------------------------------------------
+// Procedure: biteStringX(const string&, char)
+//      Note: Same as biteString except blank ends will be removed
+//            from both the returned and remaining value.
+
+string biteStringX(string& str, char separator)
+{
+  string front = stripBlankEnds(biteString(str, separator));
+  stripBlankEnds(str);
+  return(front);
+}
+
+//----------------------------------------------------------------
+// Procedure: biteString(const string&, char, char)
+//      Note: Same as biteString(string,char) except the bite will
+//            occur at the point where either of the two given
+//            characters occur.
+
+string biteString(string& str, char sep1, char sep2)
+{
+  string::size_type i=0;
+  while((str[i]!=sep1) && (str[i]!=sep2) && (str[i]!='\0'))
     i++;
 
   string str_front(str.c_str(), i);
@@ -404,10 +458,54 @@ string toupper(const string& str)
 //----------------------------------------------------------------
 // Procedure: truncString
 
-string truncString(const string& str, std::string::size_type sz, string style)
+string truncString(const string& str, unsigned int newlen, string style)
 {
-  if(sz < 0)
-    sz = 0;
+  unsigned int len = str.length();
+  if(newlen > len)
+    return(str);
+
+  if((style == "") || (style == "basic") || (style == "front"))
+    return(str.substr(0, newlen));
+
+  if(style == "back")
+    return(str.substr(len-newlen, newlen));
+
+  // Otherwise the style is request is assumed to be "middle"
+
+  // It doesnt' make sense to middle down to a string less than 4 since
+  // the two periods in the middle should have at least one character
+  // on each side. If this is requested, just return trunc-front.
+  if(newlen < 4)
+    return(str.substr(0, newlen));
+
+  unsigned int back = newlen / 2;
+  unsigned int front = newlen - back;
+  back--;
+  front--;
+  string new_str = str.substr(0,front) + ".." + str.substr(len-back,len);
+  return(new_str);
+}
+
+//----------------------------------------------------------------
+// Procedure: truncString
+
+#if 0
+string truncStringX(const string& str, unsigned int newlen, string style)
+{
+  unsigned int len = str.length();
+  if(newlen > len)
+    return(str);
+
+  if((style = "basic") || (style == "front"))
+    return(str.substr(0, newlen));
+
+  if(style == "back")
+    return(str.substr(len-newlen, newlen));
+
+  // Else style is middle
+
+
+
 
   string::size_type len  = str.length();
   if(len <= sz)
@@ -439,6 +537,7 @@ string truncString(const string& str, std::string::size_type sz, string style)
   string rstr = buff;
   return(rstr);
 }
+#endif
 
 //----------------------------------------------------------------
 // Procedure: xxxToString(value)
@@ -497,6 +596,11 @@ string doubleToString(double val, int digits)
   return(str);
 }
 
+string doubleToStringX(double val, int digits)
+{
+  return(dstringCompact(doubleToString(val, digits)));
+}
+
 //----------------------------------------------------------------
 // Procedure: intToCommaString
 
@@ -541,7 +645,6 @@ string uintToCommaString(unsigned int ival)
 
 string dstringCompact(const string& str)
 {
-  //if(str=="0")     return("123456");
   if(str=="0") 
     return("0");
 
@@ -771,6 +874,28 @@ bool strEnds(const string& str, const string& qstr, bool case_matters)
 }
     
 //----------------------------------------------------------------
+// Procedure: isBoolean
+
+bool isBoolean(const string& str)
+{
+  string s = tolower(str);
+  if((s == "true") || (s == "false"))
+    return(true);
+  return(false);
+}
+    
+//----------------------------------------------------------------
+// Procedure: stringIsFalse
+
+bool stringIsFalse(const string& str)
+{
+  string s = tolower(str);
+  if((s == "false") || (s == "0") || (s == "no"))
+    return(true);
+  return(false);
+}
+    
+//----------------------------------------------------------------
 // Procedure: strContainsWhite
 //      Note: Returns true if the given string contains either a 
 //            blank or tab character.
@@ -883,6 +1008,26 @@ double vclip(const double& var, const double& low, const double& high)
   return(var);
 }
 
+//----------------------------------------------------------------
+// Procedure: vclip_min
+
+double vclip_min(const double& var, const double& low)
+{
+  if(var < low)
+    return(low);
+  return(var);
+}
+
+//----------------------------------------------------------------
+// Procedure: vclip_max
+
+double vclip_max(const double& var, const double& high)
+{
+  if(var > high)
+    return(high);
+  return(var);
+}
+
 
 //----------------------------------------------------------------
 // Procedure: tokParse
@@ -903,6 +1048,32 @@ bool tokParse(const string& str, const string& left,
 
   rval = atof(rstr.c_str());
   return(true);
+}
+
+//----------------------------------------------------------------
+// Procedure: isAlphaNum
+
+bool isAlphaNum(const string& str, const std::string& achars)
+{
+  unsigned int i, len = str.length();
+  bool ok = false;
+  for(i=0; i<len; i++) {
+    char c = str.at(i);
+    if((c >= 48) && (c <= 57))
+      ok = true;
+    else if((c >= 65) && (c <= 90))
+      ok = true;
+    else if((c >= 97) && (c <= 122))
+      ok = true;
+    else {
+      unsigned int j, alen = achars.length();
+      for(j=0; (j<alen)&&!ok; j++) {
+	if(c == achars.at(j))
+	  ok = true;
+      }
+    }
+  }
+  return(ok);
 }
 
 //----------------------------------------------------------------
@@ -1161,7 +1332,8 @@ int validateArgs(int argc, char *argv[], string ms)
 
 float snapToStep(float gfloat, float step)
 { 
-  if(step <= 0) return(gfloat);
+  if(step <= 0) 
+    return(gfloat);
   float fval   = gfloat / step;    // Divide by step
   int   itemp;
   if(fval < 0.0)
@@ -1318,8 +1490,8 @@ vector<string> getReleaseInfo(const string& app)
   string pad = padString("", (16-app.length()));
   vector<string> v;
   v.push_back("************************************************************************");
-  v.push_back("* " + app + " - MOOS-IvP Release Bundle - VERSION 4.1.5" + pad + "         *");
-  v.push_back("* M.Benjamin (MIT), P.Newman (Oxford), Schmidt and Leonard (MIT)       *");
+  v.push_back("* " + app + " - MOOS-IvP Release Bundle - VERSION 4.1+HEAD" + pad + "  r3431 *");
+  v.push_back("* M.Benjamin (NUWC/MIT), P.Newman (Oxford), Schmidt and Leonard (MIT)  *");
   v.push_back("* Copyright (C) 2008 Free Software Foundation, Inc.                    *");
   v.push_back("* This is free software; see the source for copying conditions.        *");
   v.push_back("************************************************************************");
@@ -1404,4 +1576,19 @@ string parseAppName(const string& name){
 #endif
     
     return appFilename;
+}
+
+
+//----------------------------------------------------------------
+// Procedure: charCount()
+
+unsigned int charCount(const std::string& str, char mychar)
+{
+  unsigned int count = 0;
+  unsigned int k, ksize = str.length();
+  for(k=0; k<ksize; k++) {
+    if(str.at(k) == mychar)
+      count++;
+  }
+  return(count);
 }

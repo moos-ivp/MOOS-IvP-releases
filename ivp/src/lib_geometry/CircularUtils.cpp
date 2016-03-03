@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: CircularUtils.cpp                                    */
 /*    DATE: Jan 1st, 2007 Monday afternoon at Brueggers          */
 /*                                                               */
@@ -20,7 +20,7 @@
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
  
-#include <math.h>
+#include <cmath>
 #include "GeomUtils.h"
 #include "AngleUtils.h"
 #include "CircularUtils.h"
@@ -156,5 +156,6 @@ XYArc arcFlight(double x1, double y1, double heading, double radius,
 
   return(arc);
 }
+
 
 

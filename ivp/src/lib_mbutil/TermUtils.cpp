@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: TermUtils.cpp                                        */
 /*    DATE: March 25th 2005                                      */
 /*                                                               */
@@ -23,7 +23,7 @@
 #ifndef _WIN32
 #include <string>
 #include <termios.h>
-#include <stdio.h>
+#include <cstdio>
 #include "TermUtils.h"
 #endif
 
@@ -34,7 +34,7 @@
 #include <conio.h>
 #endif
 
-#include <string.h>
+#include <cstring>
 
 //--------------------------------------------------------
 // Procedure: getCharNoWait()
@@ -76,6 +76,7 @@ char getCharNoWait()
   return _getch() ;
 }
 #endif
+
 
 
 

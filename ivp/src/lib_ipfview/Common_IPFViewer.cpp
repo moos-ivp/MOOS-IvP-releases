@@ -1,24 +1,30 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin                                     */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: Common_IPFViewer.cpp                                 */
 /*    DATE: Feb 13, 2007                                         */
 /*                                                               */
-/* This is unreleased BETA code. No permission is granted or     */
-/* implied to use, copy, modify, and distribute this software    */
-/* except by the author(s).                                      */
+/* This program is free software; you can redistribute it and/or */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation; either version  */
+/* 2 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* This program is distributed in the hope that it will be       */
+/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the GNU General Public License for more details. */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with this program; if not, write to the Free    */
+/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
+/* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
 #include <iostream>
-#include <string.h>
+#include <cstring>
 #include "Common_IPFViewer.h"
 #include "GeomUtils.h"
-#include "BuildUtils.h"
-#include "ZAIC_PEAK.h"
-#include "OF_Coupler.h"
 #include "MBUtils.h"
-#include "ColorParse.h"
-#include "FunctionEncoder.h"
 
 using namespace std;
 
@@ -32,7 +38,8 @@ Common_IPFViewer::Common_IPFViewer(int g_x, int g_y, int g_width,
   m_xRot         = -72;
   m_zRot         = 40;
   m_zoom         = 1;
-  m_rad_extra    = 15;
+  m_rad_extra    = 1;
+  m_draw_pin     = true;
   m_draw_frame   = true;
   m_draw_base    = true;
   m_polar        = 1; 
@@ -41,6 +48,25 @@ Common_IPFViewer::Common_IPFViewer(int g_x, int g_y, int g_width,
   setParam("frame_color", "dark_red");
 
   m_frame_height = 250;
+
+  // 1D configuration parameters
+  m_xoffset     = 50;
+  m_yoffset     = g_height / 3.5;
+  m_grid_width  = g_width  - (m_xoffset*2);
+  m_grid_height = 0.5 * g_height;
+}
+
+//-------------------------------------------------------------
+// Procedure: resize
+
+void Common_IPFViewer::resize(int x, int y, int wid, int hgt)
+{
+  Fl_Gl_Window::resize(x, y, wid, hgt);
+  // 1D configuration parameters
+  m_xoffset     = 50;
+  m_yoffset     = hgt / 3.5;
+  m_grid_width  = wid  - (m_xoffset*2);
+  m_grid_height = 0.5 * hgt;
 }
 
 //-------------------------------------------------------------
@@ -93,6 +119,8 @@ bool Common_IPFViewer::setParam(string param, string value)
     m_draw_base = true;
   else if((param == "draw_base") && (value == "false"))
     m_draw_base = false;
+  else if(param == "draw_pin")
+    setBooleanOnString(m_draw_pin, value);
   else if(param == "reset_view") {
     if(value=="1")
       {m_xRot=-78; m_zRot=40;}
@@ -194,7 +222,7 @@ void Common_IPFViewer::draw()
   // Reset projection matrix stack
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  
+
   // Establish clipping volume (left, right, bottom, top, near, far)
   if(w() <= h()) 
     glOrtho (-nRange, nRange, -nRange*h()/w(), nRange*h()/w(), -nRange, nRange);
@@ -227,76 +255,171 @@ void Common_IPFViewer::draw()
     glDisable(GL_DEPTH_TEST);
 }
 
-// ----------------------------------------------------------
-// Procedure: applyIPF
-//   Purpose: 
-
-void Common_IPFViewer::applyIPF(const std::string& ipf_str)
-{
-  IvPDomain null_domain;
-  m_quadset.clear();
-  if(ipf_str != "")
-    m_quadset = setQuadSetFromIPF(ipf_str, null_domain);
-}
-
-// ----------------------------------------------------------
-// Procedure: applyIPF
-//   Purpose: 
-
-void Common_IPFViewer::applyIPF(const std::string& ipf_str,
-				const IvPDomain& ivp_domain)
-{
-  m_quadset.clear();
-  if(ipf_str != "")
-    m_quadset = setQuadSetFromIPF(ipf_str, ivp_domain);
-}
 
 //-------------------------------------------------------------
 // Procedure: drawIvPFunction
 
-void Common_IPFViewer::drawIvPFunction()
+bool Common_IPFViewer::drawIvPFunction()
 {
-  int quad_cnt = m_quadset.size();
-  for(int i=0; i<quad_cnt; i++) {
-    Quad3D quad = m_quadset.getQuad(i);
-    drawQuad(quad);
-  }
+  unsigned int qdim = m_quadset.getQuadSetDim();
 
-  string null_txt = "No Function on Helm Iteration #" + m_active_ipf_iter;
+  if(qdim == 1)
+    return(drawIvPFunction1D());
+  else if(qdim == 2)
+    return(drawIvPFunction2D());
+  else
+    return(false);
+}
 
-  if(quad_cnt == 0)
-    drawText(((w()/5)), ((h()/2)-5), null_txt, m_label_color, 12);
+//-------------------------------------------------------------
+// Procedure: drawIvPFunction1D
 
-  double hpos1 = h()-15;
-  double hpos2 = h()-33;
-  double hpos3 = h()-51;
+bool Common_IPFViewer::drawIvPFunction1D()
+{
+  double clear_red = m_clear_color.red();
+  double clear_grn = m_clear_color.grn();
+  double clear_blu = m_clear_color.blu();
+  glClearColor(clear_red, clear_grn, clear_blu, 0.0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  string vname_info = " vname = " + m_active_ipf_vname;
-  vname_info += " (" + m_active_ipf_iter + ")";
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  glOrtho(0, w(), 0, h(), -1 ,1);
+
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+  glLoadIdentity();
+
+  glTranslatef(m_xoffset, m_yoffset, 0);
+
+  ColorPack max_vertc("light_green");
   
-  if(m_active_ipf_vname != "")
-    drawText(4, hpos1, vname_info, m_label_color, 12);
-  if(m_active_ipf_source != "")
-    drawText(4, hpos2, "source = "+m_active_ipf_source, m_label_color, 12);
-  if(m_active_ipf_pieces != "")
-    drawText(4, hpos3, " pcs = "+m_active_ipf_pieces, m_label_color, 12);
+  vector<ColorPack> key_colors;
+  vector<string>    key_strings;
+
+  unsigned int fix, fsize = m_quadset.size1DFs();
+  
+  for(fix=0; fix<fsize; fix++) {
+
+    vector<double>  domain_pts     = m_quadset.getDomainPts(fix);
+    vector<bool>    domain_ptsx    = m_quadset.getDomainPtsX(fix);
+    vector<double>  range_vals     = m_quadset.getRangeVals(fix);
+    double          range_val_max  = m_quadset.getRangeValMax(0);
+    string          source         = m_quadset.getSource(fix);
+
+    ColorPack linec("firebrick");
+    if((fix==1) || (fsize == 1))
+      linec.setColor("royalblue");
+    if(fix==2) 
+      linec.setColor("green");
+    if(fix>2)  
+      linec.setColor("gray");
+    ColorPack vertc = linec;
+    vertc.shade(-0.4);
+
+    key_strings.push_back(source);
+    key_colors.push_back(linec);
+
+     // Draw the vertices
+    glEnable(GL_POINT_SMOOTH);
+    glColor3f(vertc.red(), vertc.grn(), vertc.blu());
+    glPointSize(3);
+    glBegin(GL_POINTS);
+    unsigned int j, xsize = domain_ptsx.size();
+
+    double domain_val_max = m_quadset.getDomain().getVarHigh(0);
+    double x_stretch = ((double)(m_grid_width)  / domain_val_max);
+    
+
+    double y_stretch = ((double)(m_grid_height) / (double)(range_val_max));
+    for(j=0; j<xsize; j++) {
+      if((j==0) || (domain_ptsx[j])) {
+	if((j==0) || (!domain_ptsx[j-1])) {
+	  double x = domain_pts[j];
+	  double y = range_vals[j];
+	  if(y >= range_val_max)
+	    glColor3f(max_vertc.red(), max_vertc.grn(), max_vertc.blu());
+	  x *= x_stretch;
+	  y *= y_stretch;
+	  glVertex2f(x, y);
+	  glColor3f(vertc.red(), vertc.grn(), vertc.blu());
+	}
+      }
+    }
+    glEnd();
+    glDisable(GL_POINT_SMOOTH);
+    
+    // Draw the lines
+    glColor3f(linec.red(), linec.grn(), linec.blu());
+    glLineWidth(2.0);
+    glBegin(GL_LINE_STRIP);
+    unsigned int i, vsize = domain_pts.size();
+    for(i=0; i<vsize; i++) {
+      double x = domain_pts[i] * x_stretch;
+      double y = range_vals[i] * y_stretch;
+      glVertex2f(x,y);
+
+    }
+    
+    glEnd();
+    glLineWidth(1.0);
+
+  }
+  
+  glFlush();
+  glPopMatrix();
+
+  draw1DAxes(m_quadset.getDomain());
+  draw1DLabels(m_quadset.getDomain());
+  draw1DKeys(key_strings, key_colors);
+  draw1DLine();
+
+  return(false);
+}
+
+//-------------------------------------------------------------
+// Procedure: drawIvPFunction2D
+
+bool Common_IPFViewer::drawIvPFunction2D()
+{
+  IvPDomain domain = m_quadset.getDomain();
+  double calc_rad_extra = 1;
+  if(domain.hasDomain("speed")) {
+    unsigned int spd_pts = domain.getVarPoints("speed");
+    double min_extent = w();
+    if(h() < min_extent)
+      min_extent = h();
+    if(spd_pts >= 1)
+      calc_rad_extra = min_extent / (double)(spd_pts);
+  } 
+  
+  unsigned int i, quad_cnt = m_quadset.size2D();
+  if(quad_cnt == 0)
+    return(false);
+
+  for(i=0; i<quad_cnt; i++)
+    drawQuad(m_quadset.getQuad(i), calc_rad_extra);
+
+  return(true);
 }
 
 //-------------------------------------------------------------
 // Procedure: drawQuad
 
-void Common_IPFViewer::drawQuad(Quad3D &q)
-
+void Common_IPFViewer::drawQuad(Quad3D q, double rad_extra_extra)
 {
-  double m_intensity   = 1.0;
+  
+  double m_intensity = 1.0;
+
+  double rad_extra = m_rad_extra * rad_extra_extra;
 
   if(m_polar == 2) {
-    q.xl *= m_rad_extra;
-    q.xh *= m_rad_extra;
+    q.xl *= rad_extra;
+    q.xh *= rad_extra;
   }
   else if(m_polar == 1) {
-    q.yl *= m_rad_extra;
-    q.yh *= m_rad_extra;
+    q.yl *= rad_extra;
+    q.yh *= rad_extra;
   }
 
   q.llval_r *= m_intensity;   q.hlval_r *= m_intensity;
@@ -315,17 +438,17 @@ void Common_IPFViewer::drawQuad(Quad3D &q)
   double x0,x1,x2,x3,y0,y1,y2,y3;
   if(m_polar == 1) {
     double delta = 360.0 / q.xpts;
-    projectPoint(q.xl*delta, q.yl/2, 0, 0, x0, y0);
-    projectPoint(q.xh*delta, q.yl/2, 0, 0, x1, y1);
-    projectPoint(q.xh*delta, q.yh/2, 0, 0, x2, y2);
-    projectPoint(q.xl*delta, q.yh/2, 0, 0, x3, y3);
+    projectPoint(q.xl*delta, q.yl, 0, 0, x0, y0);
+    projectPoint(q.xh*delta, q.yl, 0, 0, x1, y1);
+    projectPoint(q.xh*delta, q.yh, 0, 0, x2, y2);
+    projectPoint(q.xl*delta, q.yh, 0, 0, x3, y3);
   }
   else if(m_polar == 2) {
     double delta = 360.0 / q.ypts;
-    projectPoint(q.yl*delta, q.xl/2, 0, 0, y0, x0);
-    projectPoint(q.yh*delta, q.xl/2, 0, 0, y1, x1);
-    projectPoint(q.yh*delta, q.xh/2, 0, 0, y2, x2);
-    projectPoint(q.yl*delta, q.xh/2, 0, 0, y3, x3);
+    projectPoint(q.yl*delta, q.xl, 0, 0, y0, x0);
+    projectPoint(q.yh*delta, q.xl, 0, 0, y1, x1);
+    projectPoint(q.yh*delta, q.xh, 0, 0, y2, x2);
+    projectPoint(q.yl*delta, q.xh, 0, 0, y3, x3);
   }      
   else {
     q.xl -= 250;  q.xh -= 250; q.yl -= 250;  q.yh -= 250;
@@ -445,142 +568,375 @@ void Common_IPFViewer::drawOwnPoint()
 {
   if((m_xRot != 0) || (m_zRot != 0))
     return;
-  if(m_quadset.size() == 0)
+  if(m_quadset.size2D() == 0)
     return;
 
   double w = 250;
 
-  glPointSize(8.0 * m_zoom);
+  glPointSize(3.0 * m_zoom);
 
   glColor3f(1.0f, 1.0f, 1.0f);
   glShadeModel(GL_FLAT);
   
+  glEnable(GL_POINT_SMOOTH);
   glBegin(GL_POINTS);
   glVertex3f(0, 0, w); 
+  glEnd();
+  glDisable(GL_POINT_SMOOTH);
+
+  glFlush();
+}
+
+//-------------------------------------------------------------
+// Procedure: drawMaxPoint
+
+void Common_IPFViewer::drawMaxPoint(double crs, double spd)
+{
+  if(m_quadset.size2D() == 0)
+    return;
+
+  spd *= m_rad_extra;
+  double x,y,z=250;
+  projectPoint(crs, spd, 0, 0, x, y);
+    
+  glPointSize(3.0 * m_zoom);
+
+  glColor3f(1.0f, 0.5, 1.0f);
+  glShadeModel(GL_FLAT);
+
+  glEnable(GL_POINT_SMOOTH);
+  glBegin(GL_POINTS);
+  glVertex3f(x, y, z); 
+  glEnd();
+  glDisable(GL_POINT_SMOOTH);
+
+  glBegin(GL_LINE_STRIP);
+  glVertex3f(x, y, z); 
+  glVertex3f(x, y, -z); 
   glEnd();
 
   glFlush();
 }
 
-//-------------------------------------------------------------
-// Procedure: drawText
 
-void Common_IPFViewer::drawText(double px, double py, const string& text,
-				const ColorPack& font_c, double font_size) 
+
+//-------------------------------------------------------------
+// Procedure: draw1DAxes
+
+void Common_IPFViewer::draw1DAxes(const IvPDomain& domain)
 {
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   glOrtho(0, w(), 0, h(), -1 ,1);
-  
-  //double tx = meters2img('x', 0);
-  //double ty = meters2img('y', 0);
-  //double qx = img2view('x', tx);
-  //double qy = img2view('y', ty);
 
   glMatrixMode(GL_MODELVIEW);
   glPushMatrix();
   glLoadIdentity();
-  
-  if(font_c.visible()) {
-    glColor3f(font_c.red(), font_c.grn(), font_c.blu());
-    gl_font(1, font_size);
-    int slen = text.length();
-    char *buff = new char[slen+1];
-    glRasterPos3f(px, py, 0);
-    strncpy(buff, text.c_str(), slen);
-    buff[slen] = '\0';
-    gl_draw(buff, slen);
-    delete [] buff;
+
+    double  domain_rng = (domain.getVarHigh(0) - domain.getVarLow(0));
+  double  units = 5;
+  double  lines = (domain_rng / units);
+  while(lines > 20) {
+    units += 5;
+    lines = (domain_rng / units);
   }
+  
+  int mark_line = 100;
+  if(units <= 10)
+    mark_line = 50;
+  if(units <= 5)
+    mark_line = 25;
+
+  // The actual grid_block length will vary slightly on the horizontal 
+  // axis, but this is a rough average, which is good for using as the 
+  // fixed grid_block length on the verticle axis.
+  int grid_block = (m_grid_width / domain_rng) * units;
+
+  glTranslatef(m_xoffset, m_yoffset, 0);
+
+  ColorPack hash_color      = m_clear_color;
+  ColorPack hash_color_dark = m_clear_color;
+  hash_color.shade(-0.07);
+  hash_color_dark.shade(-0.25);
+  double hash_red = hash_color.red();
+  double hash_grn = hash_color.grn();
+  double hash_blu = hash_color.blu();
+
+  double hash_redd = hash_color_dark.red();
+  double hash_grnd = hash_color_dark.grn();
+  double hash_blud = hash_color_dark.blu();
+  
+  // Draw Grid outline
+  glColor4f(0,  0,  0,  0.1);
+  glBegin(GL_LINE_STRIP);
+  glVertex2f(0,  0);
+  glVertex2f(m_grid_width, 0);
+  glVertex2f(m_grid_width, m_grid_height);
+  glVertex2f(0, m_grid_height);
+  glVertex2f(0, 0);
+  glEnd();
+
+  // Draw Vertical Hashmarks
+  double total_units = units;
+  double xpos = (total_units * (m_grid_width / domain_rng)) + 1;
+  while(xpos < m_grid_width) {
+    if(((int)(total_units) % mark_line) == 0)
+      glColor4f(hash_redd,  hash_grnd,  hash_blud,  0.1);
+    else
+      glColor4f(hash_red,  hash_grn,  hash_blu,  0.1);
+
+    glBegin(GL_LINE_STRIP);
+    glVertex2f(xpos, 0);
+    glVertex2f(xpos, m_grid_height);
+
+    total_units += units;
+    xpos = (total_units * (m_grid_width / domain_rng)) + 1;
+
+    glEnd();
+  }
+
+  // Draw Horizontal Hashmarks
+  glColor4f(hash_red,  hash_grn,  hash_blu,  0.1);
+  for(int j=0; j<m_grid_height; j+=grid_block) {
+    glBegin(GL_LINE_STRIP);
+    glVertex2f(0, j);
+    glVertex2f(m_grid_width,  j);
+    glEnd();
+  }
+
   glFlush();
   glPopMatrix();
 }
 
-//-------------------------------------------------------------
-// Procedure: setLabelColor
 
-void Common_IPFViewer::setLabelColor(string new_color)
-{
-  m_label_color.setColor(new_color);
-}
-  
-//-------------------------------------------------------------
-// Procedure: setClearColor
-
-void Common_IPFViewer::setClearColor(string new_color)
-{
-  m_clear_color.setColor(new_color);
-}
-  
-//-------------------------------------------------------------
-// Procedure: setFrameColor
-
-void Common_IPFViewer::setFrameColor(string new_color)
-{
-  m_frame_color.setColor(new_color);
-}
-  
 
 //-------------------------------------------------------------
-// Procedure: setQuadSetFromIPF
-//      Note: The ivp_function domain is used to help expand 
-//            incoming functions over course, speed.
+// Procedure: draw1DLabels
 
-QuadSet Common_IPFViewer::setQuadSetFromIPF(const string& ipf_str,
-					    IvPDomain ivp_domain)
+void Common_IPFViewer::draw1DLabels(const IvPDomain& domain)
 {
-  QuadSet null_quadset;
- 
-  IvPFunction *ivp_function = StringToIvPFunction(ipf_str);
-  if(!ivp_function)
-    return(null_quadset);
+  if(m_grid_height < 200)
+    gl_font(1, 10);
+  else
+    gl_font(1, 12);
     
-  IvPDomain domain = ivp_function->getPDMap()->getDomain();
+  glColor4f(0, 0, 0, 0.1);
 
-  if(!domain.hasDomain("course") && !domain.hasDomain("speed"))
-     return(null_quadset);
+  //---------------------------------- Draw the two zeros
+  drawText(m_xoffset+1,  m_yoffset-14, "0");
+  drawText(m_xoffset-12, m_yoffset+1,  "0");
   
-  // Case where ipf defined only over COURSE
-  if((domain.hasDomain("course")) && (!domain.hasDomain("speed"))) {
-    // Try to expand this IPF into a 2D IPF
-    IvPDomain spd_domain = subDomain(ivp_domain, "speed");
-    if(spd_domain.size() == 0)
-      return(null_quadset);
+  // Draw the max value on the x-axis
+  double domain_hgh = domain.getVarHigh(0);
+  string dh_str     = doubleToStringX(domain_hgh);
+  int xpos = m_xoffset + m_grid_width - 10;
+  int ypos = m_yoffset - 14;
+  drawText(xpos, ypos, dh_str);
 
-    ZAIC_PEAK spd_zaic(spd_domain, "speed");
-    spd_zaic.setSummit(2.5);
-    spd_zaic.setPeakWidth(20);
-    IvPFunction *spd_of = spd_zaic.extractOF();
-    OF_Coupler coupler;
-    IvPFunction *new_ipf = coupler.couple(ivp_function, spd_of);
-    ivp_function = new_ipf;
-  }
-  // Case where ipf defined only over SPEED
-  if((!domain.hasDomain("course")) && (domain.hasDomain("speed"))) {
-    // Try to expand this IPF into a 2D IPF
-    IvPDomain crs_domain = subDomain(ivp_domain, "course");
-    if(crs_domain.size() == 0)
-      return(null_quadset);
+  // Draw the max value on the y-axis
+  double range_hgh = m_quadset.getRangeValMax();
 
-    ZAIC_PEAK crs_zaic(crs_domain, "course");
-    crs_zaic.setSummit(180);
-    crs_zaic.setPeakWidth(360);
-    IvPFunction *crs_of = crs_zaic.extractOF();
-    OF_Coupler coupler;
-    ivp_function = coupler.couple(ivp_function, crs_of);
-  }
+  string rh_str    = uintToCommaString((unsigned int)(range_hgh));
+  unsigned int indent  = 2 * rh_str.length() + 2;
 
-  if(!ivp_function)
-    return(null_quadset);
-  
-  QuadSet ret_quadset;
-  ret_quadset.applyIPF(ivp_function, "course", "speed");
-  
-  double lowval = ivp_function->getPDMap()->getMinWT();
-  double hghval = ivp_function->getPDMap()->getMaxWT();
-  ret_quadset.applyColorMap(m_color_map, lowval, hghval);  
-  
-  delete(ivp_function);
-  return(ret_quadset);
+  xpos = (m_xoffset/2) - indent;
+  ypos = m_yoffset + m_grid_height - 5;
+  drawText(xpos, ypos, rh_str);
+
+  string dom_var = domain.getVarName(0);
+  xpos = m_xoffset + (m_grid_width/2.2);
+  ypos = m_yoffset - 14;
+  drawText(xpos, ypos, dom_var);
 }
+
+//-------------------------------------------------------------
+// Procedure: draw1DKeys
+
+void Common_IPFViewer::draw1DKeys(vector<string> key_strings, 
+				  vector<ColorPack> key_colors)
+{
+  if(key_strings.size() != key_colors.size())
+    return;
   
+  gl_font(1,10);
+  unsigned int i, vsize = key_strings.size();
+  double xpos = m_xoffset + (m_grid_width / 2.2);
+  for(i=0; i<vsize; i++)
+    drawText(xpos,  m_yoffset-(35+14*i), key_strings[i]);
+
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  glOrtho(0, w(), 0, h(), -1 ,1);
+
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+  glLoadIdentity();
+
+  glLineWidth(2.0);
+  for(i=0; i<vsize; i++) {
+    double kred = key_colors[i].red();
+    double kgrn = key_colors[i].grn();
+    double kblu = key_colors[i].blu();
+    
+    glColor4f(kred, kgrn, kblu,  0.1);
+    glBegin(GL_LINE_STRIP);
+    glVertex2f(xpos-60, m_yoffset-(32+14*i));
+    glVertex2f(xpos-10, m_yoffset-(32+14*i));
+    glEnd();
+  }
+  glLineWidth(1.0);
+
+  glFlush();
+  glPopMatrix();
+}
+
+
+//-------------------------------------------------------------
+// Procedure: draw1DLine
+
+void Common_IPFViewer::draw1DLine(double val, string label)
+{
+  ColorPack cpack("purple");
+  double kred = cpack.red();
+  double kgrn = cpack.grn();
+  double kblu = cpack.blu();
+  
+  unsigned int dom_pts = m_quadset.getDomainPts().size();
+  double x_stretch     = ((double)(m_grid_width)  / (double)(dom_pts));
+
+  unsigned int domain_ix = m_quadset.getDomainIXMax();
+  double domain_val      = m_quadset.getDomain().getVal(0, domain_ix);
+
+  // Draw the label for the line
+  string mstr = "preferred_depth = " + doubleToStringX(domain_val);
+ 
+  double xpos = m_xoffset + ((double)(domain_ix) * x_stretch);
+  double ypos = m_yoffset + m_grid_height;
+
+  glColor3f(kred, kgrn, kblu);
+  gl_font(1,10);
+
+  double text_xpos = xpos - 50;
+  if(text_xpos < (m_xoffset/2))
+    text_xpos = m_xoffset/2;
+  drawText(text_xpos, ypos+40, mstr);
+
+    // Draw the line
+  cpack.moregray(0.7);
+  kred = cpack.red();
+  kgrn = cpack.grn();
+  kblu = cpack.blu();
+  
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  glOrtho(0, w(), 0, h(), -1 ,1);
+
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+  glLoadIdentity();
+
+  glColor4f(kred, kgrn, kblu,  0.1);
+  glBegin(GL_LINE_STRIP);
+  glVertex2f(xpos, m_yoffset);
+  glVertex2f(xpos, ypos+35);
+  glEnd();
+
+  glFlush();
+  glPopMatrix();
+
+}
+
+
+
+//-------------------------------------------------------------
+// Procedure: draw1DLine
+
+void Common_IPFViewer::draw1DLineX(double value, 
+				   string label,
+				   int offset,
+				   ColorPack cpack)
+{
+  IvPDomain domain = m_quadset.getDomain();
+  if(domain.size() != 1)
+    return;
+
+  double kred = cpack.red();
+  double kgrn = cpack.grn();
+  double kblu = cpack.blu();
+  
+  double dlow = domain.getVarLow(0);
+  double dhgh = domain.getVarHigh(0);
+  double range = dhgh - dlow;
+
+  value = vclip(value, dlow, dhgh);
+  
+  double pct = 0;
+  if(range > 0)
+    pct = (value - dlow) / range;
+
+  double xpos = pct * m_grid_width;
+  double ypos = m_yoffset + m_grid_height;
+
+  // Draw the label for the line
+  string mstr = label + doubleToStringX(value);
+ 
+  glColor3f(kred, kgrn, kblu);
+  gl_font(1,10);
+
+  double text_xpos = xpos - 50;
+  if(text_xpos < (m_xoffset/2))
+    text_xpos = m_xoffset/2;
+  drawText(text_xpos, ypos+offset, mstr);
+
+    // Draw the line
+  cpack.moregray(0.7);
+  kred = cpack.red();
+  kgrn = cpack.grn();
+  kblu = cpack.blu();
+  
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  glOrtho(0, w(), 0, h(), -1 ,1);
+
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+  glLoadIdentity();
+
+  glColor4f(kred, kgrn, kblu,  0.1);
+  glBegin(GL_LINE_STRIP);
+  glVertex2f(xpos, m_yoffset);
+  glVertex2f(xpos, ypos+35);
+  glEnd();
+
+  glFlush();
+  glPopMatrix();
+}
+
+
+
+//-------------------------------------------------------------
+// Procedure: drawText
+
+void Common_IPFViewer::drawText(int x, int y, string str)
+{
+  if(x<0) x=0;
+  if(y<0) y=0;
+    
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  glOrtho(0, w(), 0, h(), -1 ,1);
+
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+  glLoadIdentity();
+
+  glTranslatef(x, y, 0);
+
+  glRasterPos3f(0, 0, 0);
+  gl_draw(str.c_str());
+
+  glFlush();
+  glPopMatrix();
+
+}
+

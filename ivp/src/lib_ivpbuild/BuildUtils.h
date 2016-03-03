@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: BuildUtils.h                                         */
 /*    DATE: May 15th, 2003                                       */
 /*                                                               */
@@ -33,13 +33,13 @@ IvPBox  makeRand(const IvPDomain&);
 bool    containedWithinBox(const IvPBox&, const IvPBox&);
 bool    intersectDomain(const IvPDomain&, const IvPDomain&);
 
-IvPDomain   unionDomain(const IvPDomain&, const IvPDomain&);
+IvPDomain   unionDomain(const IvPDomain&, const IvPDomain&B);
 IvPDomain   subDomain(const IvPDomain&, std::string);
 IvPDomain   boxToDomain(const IvPBox&);
 IvPDomain   stringToDomain(const std::string&);
 IvPBox      domainToBox(const IvPDomain&);
 IvPBox      stringToBox(const std::string&);
-std::string domainToString(const IvPDomain&);
+std::string domainToString(const IvPDomain&, bool=true);
 
 std::string domainAndBoxToString(const IvPBox&, const IvPDomain&);
 
@@ -69,13 +69,4 @@ IvPBox  stringDiscreteToRegionBox(const std::string&, const IvPDomain&,
 				  const char gsep=',', const char lsep=':');
 
 #endif
-
-
-
-
-
-
-
-
-
 

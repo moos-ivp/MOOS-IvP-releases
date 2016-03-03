@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: LogPlot.cpp                                          */
 /*    DATE: May 31st, 2005                                       */
 /*                                                               */
@@ -20,8 +20,8 @@
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include <iostream>
 #include "LogPlot.h"
 #include "MBUtils.h"
@@ -236,6 +236,7 @@ unsigned int LogPlot::get_index_by_time(double gtime) const
   }
   return(index);
 }
+
 
 
 

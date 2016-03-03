@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: PMV_MOOSApp.h                                        */
 /*    DATE:                                                      */
 /*                                                               */
@@ -60,7 +60,6 @@ class PMV_MOOSApp : public CMOOSApp
 
  protected:
   void handlePendingGUI();
-  void receiveVehicleState(CMOOSMsg &Msg);
   bool receivePK_SOL(std::string sval);
   void registerVariables();
   void postConnectionPairs();
@@ -83,4 +82,5 @@ class PMV_MOOSApp : public CMOOSApp
 };
 
 #endif 
+
 

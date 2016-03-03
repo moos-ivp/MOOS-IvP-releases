@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: XYFormatUtilsVector.h                                */
 /*    DATE: Oct 18, 2010 In Waterloo                             */
 /*                                                               */
@@ -27,11 +27,10 @@
 #include "XYVector.h"
 
 //---------------------------------------------------------------
-// Create a point from a string specification. 
-// Example: label=bobby, type=destination, x=val, y=val, z=val
+// Create an XYVector instance  from a string specification. 
+// Example: x=12,y=4,mag=1.5,ang=45,vertex_size=3,label=foobar
+
 XYVector string2Vector(std::string);
 
-XYVector stringPairs2Vector(std::string);
-XYVector stringShort2Vector(std::string);
-
 #endif
+

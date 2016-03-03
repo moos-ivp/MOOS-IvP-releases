@@ -1,9 +1,24 @@
-/************************************************************/
-/*    NAME: Michael Benjamin, H.Schmidt, J.Leonard          */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge             */
-/*    FILE: TS_MOOSApp.cpp                                  */
-/*    DATE: May 21st 2009                                   */
-/************************************************************/
+/*****************************************************************/
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
+/*    FILE: TS_MOOSApp.cpp                                       */
+/*    DATE: May 21st 2009                                        */
+/*                                                               */
+/* This program is free software; you can redistribute it and/or */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation; either version  */
+/* 2 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* This program is distributed in the hope that it will be       */
+/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the GNU General Public License for more details. */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with this program; if not, write to the Free    */
+/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
+/* Boston, MA 02111-1307, USA.                                   */
+/*****************************************************************/
 
 #include <cstdlib>
 #include <iterator>
@@ -149,7 +164,7 @@ bool TS_MOOSApp::Iterate()
   m_utc_time = MOOSTime();
   if(m_start_time == 0) {
     m_start_time = m_utc_time;
-    scheduleEvents();
+    scheduleEvents(m_shuffle);
   }
 
   if(m_paused || !m_conditions_ok) {
@@ -231,6 +246,8 @@ bool TS_MOOSApp::OnStartUp()
 	setBooleanOnString(m_atomic, value);
       else if(param == "verbose")
 	setBooleanOnString(m_verbose, value);
+      else if(param == "shuffle")
+	setBooleanOnString(m_shuffle, value);
       else if(param == "upon_awake") {
 	string lvalue = tolower(value);
 	if((lvalue=="reset") || (lvalue=="restart") || (lvalue =="n/a"))
@@ -238,7 +255,7 @@ bool TS_MOOSApp::OnStartUp()
       }
       else if(param == "reset_max") {
 	string str = tolower(value);
-	if((str == "any") || (str == "unlimited"))
+	if((str == "any") || (str == "unlimited") || (str == "nolimit"))
 	  m_reset_forever = true;
 	else if(isNumber(value) && (atoi(value.c_str()) >= 0)) {
 	  m_reset_max = atoi(value.c_str());
@@ -720,11 +737,11 @@ void TS_MOOSApp::postStatus()
   status += ", paused=" + boolToString(m_paused);
   status += ", conditions_ok=" + boolToString(m_conditions_ok);
   status += ", time_warp=";
-  status += dstringCompact(doubleToString(m_time_warp.getValue()));
+  status += doubleToStringX(m_time_warp.getValue());
   status += ", delay_start=";
-  status += dstringCompact(doubleToString(m_delay_start.getValue()));
+  status += doubleToStringX(m_delay_start.getValue());
   status += ", delay_reset=";
-  status += dstringCompact(doubleToString(m_delay_reset.getValue()));
+  status += doubleToStringX(m_delay_reset.getValue());
   status += ", shuffle="     + boolToString(m_shuffle);
   status += ", upon_awake=" + m_upon_awake;
   
@@ -757,15 +774,14 @@ void TS_MOOSApp::seedRandom()
 
 bool TS_MOOSApp::updateInfoBuffer(CMOOSMsg &msg)
 {
-  string key = msg.m_sKey;
-  string sdata = msg.m_sVal;
-  double ddata = msg.m_dfVal;
-  char   mtype = msg.m_cDataType;
+  string key = msg.GetKey();
+  string sdata = msg.GetString();
+  double ddata = msg.GetDouble();
 
-  if(mtype == MOOS_DOUBLE) {
+  if(msg.IsDataType(MOOS_DOUBLE)) {
     return(m_info_buffer->setValue(key, ddata));
   }
-  else if(mtype == MOOS_STRING) {
+  else if(msg.IsDataType(MOOS_STRING)) {
     return(m_info_buffer->setValue(key, sdata));
   }
   return(false);
@@ -937,11 +953,12 @@ bool TS_MOOSApp::handleMathExpr(string& str)
     result = ldval + rdval;
   else if(xtype == '-')
     result = ldval - rdval;
-  string replacement = dstringCompact(doubleToString(result, 6));
+  string replacement = doubleToStringX(result, 6);
   
   string target = str.substr(max_lix, (max_rix-max_lix)+1);
   str = findReplace(str, target, replacement);
 
   return(true);
 }
+
 

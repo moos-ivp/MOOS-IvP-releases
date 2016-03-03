@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: BHV_StationKeep.h                                    */
 /*    DATE: Aug 25 2006                                          */
 /*                                                               */
@@ -47,6 +47,7 @@ protected:
   bool         historyShowsProgressStart();
   bool         historyShowsProgressEnd();
   void         handleVisualHint(std::string);
+  void         historyClear();
 
 private:  // Configuration Parameters
   double      m_station_x;
@@ -102,3 +103,4 @@ private:  // State Variables
 };
 
 #endif
+

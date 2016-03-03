@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Henrik Schmidt and Michael Benjamin                  */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: BHV_Attractor.cpp                                    */
 /*    DATE: June 2008                                            */
 /*                                                               */
@@ -25,8 +25,8 @@
 #pragma warning(disable : 4503)
 #endif
 #include <iostream>
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include "AngleUtils.h"
 #include "AOF_AttractorCPA.h"
 #include "BHV_Attractor.h"
@@ -514,6 +514,7 @@ void BHV_Attractor::postErasableTrailPoint()
   string spec = m_trail_point.get_spec();
   postMessage("VIEW_POINT", spec);
 }
+
 
 
 

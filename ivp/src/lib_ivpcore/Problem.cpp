@@ -1,6 +1,6 @@
 /*****************************************************************/
 /*    NAME: Michael Benjamin                                     */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: Problem.cpp                                          */
 /*    DATE: Too long ago to remember (1996-1999)                 */
 /*                                                               */
@@ -38,8 +38,8 @@
 /*****************************************************************/
 
 #include <iostream>
-#include <string.h> 
-#include <assert.h>
+#include <cstring> 
+#include <cassert>
 #include "Problem.h"
 #include "IvPBox.h"
 #include "IvPFunction.h"
@@ -117,8 +117,13 @@ void Problem::addOF(IvPFunction *gof)
   // positive priority weight.
   if(gof->getPWT() <= 0) return;
 
+  double range = gof->getPDMap()->getMaxWT() - gof->getPDMap()->getMinWT();
+  if(range > 100)
+    gof->getPDMap()->normalize(0,100);
+
   // Apply the priority weight to the OF
   gof->getPDMap()->applyWeight(gof->getPWT());
+
 
   IvPFunction** newOFs = new IvPFunction*[m_ofnum+1];
   for(int i=0; (i < m_ofnum); i++)
@@ -356,6 +361,7 @@ bool Problem::universesInSync()
   }
   return(true);
 }
+
 
 
 

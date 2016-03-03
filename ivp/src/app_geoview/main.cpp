@@ -1,13 +1,29 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: main.cpp                                             */
 /*    DATE: May 1st, 2005                                        */
+/*                                                               */
+/* This program is free software; you can redistribute it and/or */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation; either version  */
+/* 2 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* This program is distributed in the hope that it will be       */
+/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the GNU General Public License for more details. */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with this program; if not, write to the Free    */
+/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
+/* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
 #include <vector>
 #include "GEO_GUI.h"
 #include "MBUtils.h"
+#include "ReleaseInfo.h"
 #include "IO_GeomUtils.h"
 #include "XYPolygon.h"
 #include "XYSegList.h"
@@ -37,9 +53,7 @@ int main(int argc, char *argv[])
 
   // Look for a request for version information
   if(scanArgs(argc, argv, "-v", "--version", "-version")) {
-    vector<string> svector = getReleaseInfo("geoview");
-    for(unsigned int j=0; j<svector.size(); j++)
-      cout << svector[j] << endl;    
+    showReleaseInfo("geoview", "gpl");
     return(0);
   }
   
@@ -71,7 +85,7 @@ int main(int argc, char *argv[])
   vector<string>    all_poly_strings;
   vector<string>    all_segl_strings;
   vector<string>    all_grid_strings;
-  vector<XYCircle>  all_circles;
+  vector<string>    all_circle_strings;
   vector<XYHexagon> all_hexagons;
   vector<string>    all_markers;
   vector<string>    all_opvertices;
@@ -94,13 +108,14 @@ int main(int argc, char *argv[])
       for(j=0; j<svector.size(); j++)
 	all_segl_strings.push_back(svector[j]);
 
+      svector = readEntriesFromFile(argi, "circle");
+      for(j=0; j<svector.size(); j++)
+	all_circle_strings.push_back(svector[j]);
+
       svector = readEntriesFromFile(argi, "grid:xygrid");
       for(j=0; j<svector.size(); j++)
 	all_grid_strings.push_back(svector[j]);
 
-      vector<XYCircle> cvector = readCirclesFromFile(argi);
-      for(j=0; j<cvector.size(); j++) 
-	all_circles.push_back(cvector[j]);
       vector<XYHexagon> hvector = readHexagonsFromFile(argi);
       for(j=0; j<hvector.size(); j++)
 	all_hexagons.push_back(hvector[j]);
@@ -130,9 +145,9 @@ int main(int argc, char *argv[])
   for(j=0; j<all_grid_strings.size(); j++)
     gui->pviewer->setParam("grid", all_grid_strings[j]);
   
-  cout << "# of file circles: " << all_circles.size() << endl;
-  for(j=0; j<all_circles.size(); j++)
-    gui->pviewer->addCircle(all_circles[j]);
+  cout << "# of file circles: " << all_circle_strings.size() << endl;
+  for(j=0; j<all_circle_strings.size(); j++)
+    gui->pviewer->setParam("view_circle", all_circle_strings[j]);
   
 #if 0
   cout << "# of file hexagons: " << all_hexagons.size() << endl;
@@ -156,4 +171,5 @@ int main(int argc, char *argv[])
 
   return Fl::run();
 }
+
 

@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: BHV_StationKeep.cpp                                  */
 /*    DATE: Aug 25 2006                                          */
 /*                                                               */
@@ -25,8 +25,8 @@
 #pragma warning(disable : 4503)
 #endif
 #include <iostream>
-#include <math.h> 
-#include <stdlib.h>
+#include <cmath> 
+#include <cstdlib>
 #include "BHV_StationKeep.h"
 #include "MBUtils.h"
 #include "AngleUtils.h"
@@ -92,7 +92,7 @@ bool BHV_StationKeep::setParam(string param, string val)
   param = tolower(param);
   val   = stripBlankEnds(val);
 
-  if(param == "station_pt") {
+  if((param == "station_pt") || (param == "point")) {
     string left  = stripBlankEnds(biteString(val, ','));
     string right = stripBlankEnds(val);
     if(!isNumber(left) || !isNumber(right))
@@ -190,8 +190,7 @@ bool BHV_StationKeep::setParam(string param, string val)
 
 void BHV_StationKeep::onRunToIdleState()
 {
-  m_distance_history.clear();
-  m_distance_thistory.clear();
+  historyClear();
   postStationMessage(false);
 
   // If conigured for center_activation, declare the need for it
@@ -365,7 +364,7 @@ void BHV_StationKeep::postStationMessage(bool post)
   string poly_str = "radial:: x=" + str_x;
   poly_str += ",y=" + str_y;
   poly_str += ",source=" + m_us_name+ ":" + m_descriptor;
-  poly_str += ",pts=16";
+  poly_str += ",pts=32";
   if(m_hint_edge_size >= 0)
     poly_str += ",edge_size=" + doubleToString(m_hint_edge_size);
   if(m_hint_vertex_size >= 0)
@@ -376,16 +375,19 @@ void BHV_StationKeep::postStationMessage(bool post)
     poly_str += ",vertex_color=" + m_hint_vertex_color;
 
   string poly_str_outer = poly_str;
-  string poly_str_inner  = poly_str;
+  string poly_str_inner = poly_str;
+  string poly_str_hiber = poly_str;
   poly_str_outer += ",label="  + m_us_name + ":station-keep-out";
   poly_str_outer += ",radius=" + doubleToString(m_outer_radius,1);
   poly_str_inner += ",label="  + m_us_name + ":station-keep-in";
   poly_str_inner += ",radius=" + doubleToString(m_inner_radius,1);
-
+  poly_str_hiber += ",label="  + m_us_name + ":station-keep-hiber";
+  poly_str_hiber += ",radius=" + doubleToString(m_pskeep_radius,1);
 
   if(post==false) {
     poly_str_outer += ",active=false";
     poly_str_inner += ",active=false";
+    poly_str_hiber += ",active=false";
   }
 
   postMessage("VIEW_POLYGON", poly_str_outer, "outer");
@@ -395,6 +397,12 @@ void BHV_StationKeep::postStationMessage(bool post)
   // dangling artifacts from the radii being altered dynaically.
   if((m_inner_radius < m_outer_radius) || (post==false))
     postMessage("VIEW_POLYGON", poly_str_inner, "inner");
+
+  // No need to post both circles if the radii are collapsed, but if
+  // we're trying to erase a circle, post anyway just ensure no 
+  // dangling artifacts from the radii being altered dynaically.
+  if((m_pskeep_radius > m_outer_radius) || (post==false))
+    postMessage("VIEW_POLYGON", poly_str_hiber, "hiber");
 }
 
 
@@ -407,8 +415,10 @@ void BHV_StationKeep::updateHibernationState()
     return;  
   
   if(m_transit_state == "pending_progress_start") {
-    if(historyShowsProgressStart())
+    if(historyShowsProgressStart()) {
+      historyClear();
       m_transit_state = "noted_progress_start";
+    }
   }
   else if(m_transit_state == "noted_progress_start") {
     if(historyShowsProgressEnd())
@@ -418,8 +428,7 @@ void BHV_StationKeep::updateHibernationState()
   if(m_pskeep_state == "hibernating") {
     if(m_dist_to_station > m_pskeep_radius) {
       m_pskeep_state = "seeking_station";
-      m_distance_history.clear();
-      m_distance_thistory.clear();
+      historyClear();
       m_transit_state = "pending_progress_start";
     }
     return;
@@ -430,8 +439,7 @@ void BHV_StationKeep::updateHibernationState()
        (m_transit_state == "noted_progress_end")) {
       m_pskeep_state = "hibernating";
       m_transit_state = "hibernating";
-      m_distance_history.clear();
-      m_distance_thistory.clear();
+      historyClear();
     }
   }
   
@@ -501,7 +509,7 @@ bool BHV_StationKeep::historyShowsProgressEnd()
     return(false);
 
   double rate = (newest_dist - oldest_dist) / delta_time;
-  if(rate > -0.05)
+  if(rate > 0)
     return(true);
 
   return(false);
@@ -525,3 +533,13 @@ void BHV_StationKeep::handleVisualHint(string hint)
   else if((param == "vertex_size") && isNumber(value))
     m_hint_vertex_size = atof(value.c_str());
 }
+
+//-----------------------------------------------------------
+// Procedure: historyClear()
+
+void BHV_StationKeep::historyClear()
+{
+  m_distance_history.clear();
+  m_distance_thistory.clear();
+}
+

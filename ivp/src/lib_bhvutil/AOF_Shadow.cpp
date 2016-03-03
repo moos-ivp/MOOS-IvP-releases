@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: AOF_Shadow.cpp                                       */
 /*    DATE: May 10th, 2005                                       */
 /*                                                               */
@@ -24,8 +24,8 @@
 #pragma warning(disable : 4503)
 #endif
 #include <iostream>
-#include <math.h> 
-#include <assert.h>
+#include <cmath> 
+#include <cassert>
 #include "AOF_Shadow.h"
 #include "AngleUtils.h"
 #include "IvPDomain.h"
@@ -132,6 +132,7 @@ double AOF_Shadow::metric(double cval, double sval) const
   double range = 100.0;
   return((1.0 - total_pct) * range);
 }
+
 
 
 

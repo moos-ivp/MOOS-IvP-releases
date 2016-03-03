@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: ZAIC_LEQ.cpp                                         */
 /*    DATE: June 15th 2006                                       */
 /*                                                               */
@@ -21,7 +21,7 @@
 /*****************************************************************/
 
 #include <iostream>
-#include <math.h>
+#include <cmath>
 #include "ZAIC_LEQ.h"
 #include "MBUtils.h"
 #include "BuildUtils.h"
@@ -173,4 +173,5 @@ PDMap *ZAIC_LEQ::setPDMap()
   }
   return(pdmap);
 }
+
 

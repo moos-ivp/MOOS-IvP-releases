@@ -1,9 +1,24 @@
-/************************************************************/
-/*    NAME: M.Benjamin, H.Schmidt, J.Leonard                */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge             */
-/*    FILE: BasicContactMgr.cpp                             */
-/*    DATE: Feb 24th 2010                                   */
-/************************************************************/
+/*****************************************************************/
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
+/*    FILE: BasicContactMgr.cpp                                  */
+/*    DATE: Feb 24th 2010                                        */
+/*                                                               */
+/* This program is free software; you can redistribute it and/or */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation; either version  */
+/* 2 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* This program is distributed in the hope that it will be       */
+/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the GNU General Public License for more details. */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with this program; if not, write to the Free    */
+/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
+/* Boston, MA 02111-1307, USA.                                   */
+/*****************************************************************/
 
 #ifdef _WIN32
   #define _USE_MATH_DEFINES
@@ -16,6 +31,7 @@
 #include "MBUtils.h"
 #include "ColorParse.h"
 #include "CPAEngine.h"
+#include "NodeRecordUtils.h"
 
 using namespace std;
 
@@ -254,89 +270,38 @@ void BasicContactMgr::postErrorMsg(const string& msg)
 
 //---------------------------------------------------------
 // Procedure: handleNodeReport
-//   Example: NAME=alpha,TYPE=KAYAK,MOOSDB_TIME=30.07, 
-//            UTC_TIME=1267294386.51,X=29.66,Y=-23.49, 
-//            LAT=43.825089, LON=-70.330030, SPD=2.00, 
-//            HDG=119.06,YAW=119.05677,DEPTH=0.00,     
+//   Example: NAME=alpha,TYPE=KAYAK,UTC_TIME=1267294386.51,
+//            X=29.66,Y=-23.49, LAT=43.825089,LON=-70.330030, 
+//            SPD=2.00,HDG=119.06,YAW=119.05677,DEPTH=0.00,     
 //            LENGTH=4.0,MODE=ENGAGED
 
 bool BasicContactMgr::handleNodeReport(const string& report)
 {
-  string vname, vtype, mode;
-  double x, y, lat, lon, utime, mtime, depth, speed, heading;
-  double yaw, length;
-
-  vector<string> svector = parseString(report, ',');
-  unsigned int i, vsize = svector.size();
-  for(i=0; i<vsize; i++) {
-    string param = toupper(stripBlankEnds(biteString(svector[i], '=')));
-    string value = stripBlankEnds(svector[i]);
-    
-    if(param == "NAME")
-      vname = value;
-    else if(param == "TYPE")
-      vtype = value;
-    else if(param == "MODE")
-      mode = value;
-    else if(param == "MOOSDB_TIME")
-      mtime = atof(value.c_str());
-    else if(param == "UTC_TIME")
-      utime = atof(value.c_str());
-    else if(param == "X")
-      x = atof(value.c_str());
-    else if(param == "Y")
-      y = atof(value.c_str());
-    else if(param == "LAT")
-      lat = atof(value.c_str());
-    else if(param == "LON")
-      lon = atof(value.c_str());
-    else if(param == "SPD")
-      speed = atof(value.c_str());
-    else if(param == "HDG")
-      heading = atof(value.c_str());
-    else if(param == "YAW")
-      yaw = atof(value.c_str());
-    else if(param == "DEPTH")
-      depth = atof(value.c_str());
-    else if(param == "LENGTH")
-      length = atof(value.c_str());
-  }
+  NodeRecord new_node_record = string2NodeRecord(report);
+  string vname = new_node_record.getName();
 
   // If incoming node name matches ownship, just ignore the node report
   // but don't return false which would indicate an error.
-  if(vname == m_ownship) {
+  if(vname == m_ownship)
     return(true);
+
+  bool record_exists = false;
+  unsigned int i, vsize = m_node_records.size();
+  for(i=0; i<vsize; i++) {
+    if(vname == m_node_records[i].getName()) {
+      record_exists = true;
+      m_node_records[i] = new_node_record;
+    }
   }
-
-  // Find out if the node report corresponds to a contact already
-  // in the records
-  unsigned int j, jsize = m_records.size();
-  unsigned int ix = jsize;
-  for(j=0; j<jsize; j++)
-    if(vname == m_records[j].getName())
-      ix = j;
-
-  // If the record does not already exist, make one
-  if(ix == jsize) {
-    ContactRecord new_record(vname);
-    m_records.push_back(new_record);
+  if(!record_exists) {
+    m_node_records.push_back(new_node_record);
     m_par.addVehicle(vname);
     m_ranges.push_back(0);
   }
 
-  // Now push the info into the (either new or old) record.
-  m_records[ix].setX(x);
-  m_records[ix].setY(y);
-  m_records[ix].setLat(lat);
-  m_records[ix].setLon(lon);
-  m_records[ix].setHeading(heading);
-  m_records[ix].setSpeed(speed);
-  m_records[ix].setDepth(depth);
-  m_records[ix].setTimeStamp(utime);
-  m_records[ix].setType(vtype);
-
   return(true);
 }
+
 
 //---------------------------------------------------------
 // Procedure: handleResolved
@@ -427,14 +392,14 @@ void BasicContactMgr::postSummaries()
   string contacts_unalerted;
   string contacts_recap;
 
-  unsigned int i, vsize = m_records.size();
+  unsigned int i, vsize = m_node_records.size();
   for(i=0; i<vsize; i++) {
-    string contact_name = m_records[i].getName();
+    string contact_name = m_node_records[i].getName();
     if(contacts_list != "")
       contacts_list += ",";
     contacts_list += contact_name;
 
-    double age = m_curr_time - m_records[i].getTimeStamp();
+    double age = m_curr_time - m_node_records[i].getTimeStamp();
     if(age > m_contact_max_age) {
       if(contacts_retired == "")
 	contacts_retired += ",";
@@ -455,14 +420,14 @@ void BasicContactMgr::postSummaries()
     m_prev_contacts_list = contacts_list;
   }
 
+  contacts_alerted = m_par.getAlertedGroup(true);
   if(m_prev_contacts_alerted != contacts_alerted) {
-    contacts_alerted = m_par.getAlertedGroup(true);
     m_Comms.Notify("CONTACTS_ALERTED", contacts_alerted);
     m_prev_contacts_alerted = contacts_alerted;
   }
 
+  contacts_unalerted = m_par.getAlertedGroup(false);
   if(m_prev_contacts_unalerted != contacts_unalerted) {
-    contacts_unalerted = m_par.getAlertedGroup(false);
     m_Comms.Notify("CONTACTS_UNALERTED", contacts_unalerted);
     m_prev_contacts_unalerted = contacts_unalerted;
   }
@@ -493,27 +458,27 @@ bool BasicContactMgr::postAlerts()
 #endif  
 
   bool new_alerts = false;
-  unsigned int i, isize = m_records.size();
+  unsigned int i, isize = m_node_records.size();
   unsigned int j, jsize = m_alert_var.size();
   for(i=0; i<isize; i++) {
     for(j=0; j<jsize; j++) {
-      string ivname = m_records[i].getName();
+      string ivname = m_node_records[i].getName();
       string jalert = m_alert_id[j];;
       bool alerted = m_par.getValue(ivname, jalert);
       if(!alerted) {
 	double range = m_ranges[i];
-	double age = m_curr_time - m_records[i].getTimeStamp();
+	double age = m_curr_time - m_node_records[i].getTimeStamp();
 	if((age <= m_contact_max_age) && (range <= m_alert_range)) {
-	  string x_str   = m_records[i].getValue("x", m_curr_time);
-	  string y_str   = m_records[i].getValue("y", m_curr_time);
-	  string lat_str = m_records[i].getValue("lat", m_curr_time);
-	  string lon_str = m_records[i].getValue("lon", m_curr_time);
-	  string spd_str = m_records[i].getValue("speed");
-	  string hdg_str = m_records[i].getValue("heading");
-	  string dep_str = m_records[i].getValue("depth");
-	  string time_str = m_records[i].getValue("time");
-	  string name_str = m_records[i].getName();
-	  string type_str = m_records[i].getType();
+	  string x_str   = m_node_records[i].getStringValue("x");
+	  string y_str   = m_node_records[i].getStringValue("y");
+	  string lat_str = m_node_records[i].getStringValue("lat");
+	  string lon_str = m_node_records[i].getStringValue("lon");
+	  string spd_str = m_node_records[i].getStringValue("speed");
+	  string hdg_str = m_node_records[i].getStringValue("heading");
+	  string dep_str = m_node_records[i].getStringValue("depth");
+	  string time_str = m_node_records[i].getStringValue("time");
+	  string name_str = m_node_records[i].getName();
+	  string type_str = m_node_records[i].getType();
 	  
 	  new_alerts = true;
 
@@ -561,16 +526,16 @@ bool BasicContactMgr::postAlerts()
 
 void BasicContactMgr::updateRanges()
 {
-  unsigned int i, vsize = m_records.size();
+  unsigned int i, vsize = m_node_records.size();
   for(i=0; i<vsize; i++) {
 
     // First figure out the raw range to the contact
-    double cnx = m_records[i].getX(m_curr_time);
-    double cny = m_records[i].getY(m_curr_time);
+    double cnx = m_node_records[i].getX();
+    double cny = m_node_records[i].getY();
     // Extrapolation from last node report added by henrik
-    double cnh = m_records[i].getHeading();
-    double cns = m_records[i].getSpeed();
-    double cnt = m_records[i].getTimeStamp();
+    double cnh = m_node_records[i].getHeading();
+    double cns = m_node_records[i].getSpeed();
+    double cnt = m_node_records[i].getTimeStamp();
     double ang = (90.0-cnh)*M_PI;
     cnx += cns*(m_curr_time - cnt)*cos(ang);
     cny += cns*(m_curr_time - cnt)*sin(ang);
@@ -653,4 +618,5 @@ void BasicContactMgr::augmentAlertHistory(const string& alert)
   if(m_alert_history.size() > 10)
     m_alert_history.pop_front();
 }
+
 

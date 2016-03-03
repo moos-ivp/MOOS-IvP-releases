@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: XYHexGrid.cpp                                        */
 /*    DATE: Oct 30th 2005                                        */
 /*                                                               */
@@ -20,9 +20,8 @@
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
-#include <iostream>
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include "XYHexGrid.h"
 #include "MBUtils.h"
 #include "XYFormatUtilsPoly.h"
@@ -71,7 +70,7 @@ bool XYHexGrid::initialize(string given_config_str)
   // Label of poly will also be label of this searchgrid.
   string poly_label = poly.get_label();
   if(poly_label == "") {
-    cout << "Un-labeled searchgrid specification" << endl;
+    //cout << "Un-labeled searchgrid specification" << endl;
     return(false);
   }
 
@@ -87,7 +86,7 @@ bool XYHexGrid::initialize(string given_config_str)
   double yh = atof(svector[1].c_str());
   XYSquare unit_square(xl,xh,yl,yh);
   // Check for the validity of the square
-  if(!unit_square.isValid())
+  if(!unit_square.valid())
     return(false);
 
   bool ok = initialize(poly, unit_square);
@@ -108,6 +107,7 @@ bool XYHexGrid::initialize(XYPolygon poly,
 {
   return(true);
 }
+
 
 
 

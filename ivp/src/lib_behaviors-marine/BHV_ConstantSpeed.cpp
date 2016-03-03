@@ -25,8 +25,8 @@
 #pragma warning(disable : 4503)
 #endif
 #include <iostream>
-#include <math.h> 
-#include <stdlib.h>
+#include <cmath> 
+#include <cstdlib>
 #include "BHV_ConstantSpeed.h"
 #include "MBUtils.h"
 #include "BuildUtils.h"
@@ -66,28 +66,20 @@ bool BHV_ConstantSpeed::setParam(string param, string val)
   
   double dval = atof(val.c_str());
 
-  if(param == "speed") {
-    if((dval < 0) || (!isNumber(val)))
-      return(false);
-    m_desired_speed = dval;
+  if((param == "speed") && isNumber(val)) {
+    m_desired_speed = vclip_min(dval, 0);
     return(true);
   }
-  else if(param == "peakwidth") {
-    if((dval < 0) || (!isNumber(val)))
-      return(false);
-    m_peakwidth = dval;
+  else if((param == "peakwidth") && isNumber(val)) {
+    m_peakwidth = vclip_min(dval, 0);
     return(true);
   }
-  else if(param == "basewidth") {
-    if((dval < 0) || (!isNumber(val)))
-      return(false);
-    m_basewidth = dval;
+  else if((param == "basewidth") && isNumber(val)) {
+    m_basewidth = vclip_min(dval, 0);
     return(true);
   }
-  else if(param == "summitdelta") {
-    if((dval < 0) || (!isNumber(val)))
-      return(false);
-    m_summitdelta = dval;
+  else if((param == "summitdelta") && isNumber(val)) {
+    m_summitdelta = vclip(dval, 0, 100);
     return(true);
   }
   return(false);

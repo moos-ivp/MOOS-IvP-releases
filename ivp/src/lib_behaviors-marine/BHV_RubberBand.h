@@ -1,7 +1,7 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
-/*    FILE: BHV_RubberBand.h                                    */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
+/*    FILE: BHV_RubberBand.h                                     */
 /*    DATE: Aug 25 2006                                          */
 /*                                                               */
 /* This program is free software; you can redistribute it and/or */
@@ -71,7 +71,7 @@ private:  // Configuration Parameters
   // distance stiffness is the rate of increase in the priority with range
   double stiffness ;
   double relevance;
-
+  int width;
 private:  // State Variables
   bool         m_center_pending;
   std::string  m_center_assign;
@@ -80,6 +80,7 @@ private:  // State Variables
 };
 
 #endif
+
 
 
 

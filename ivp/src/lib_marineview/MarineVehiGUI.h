@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: MarineVehiGUI.h                                      */
 /*    DATE: Nov 11th 2004                                        */
 /*                                                               */
@@ -73,9 +73,9 @@ protected:
   inline void cb_CenterView_i(int);
   static void cb_CenterView(Fl_Widget*, int);
 
-  int    m_trail_color_ix;
   int    m_vname_color_ix;
 };
 #endif
+
 
 

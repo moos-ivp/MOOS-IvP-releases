@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: HelmIvP.cpp                                          */
 /*    DATE: Oct 12th 2004                                        */
 /*                                                               */
@@ -27,7 +27,7 @@
 #include <iterator>
 #include <iostream>
 #include <cstdlib>
-#include <math.h>
+#include <cmath>
 #include "HelmIvP.h"
 #include "MBUtils.h"
 #include "BuildUtils.h"
@@ -37,6 +37,8 @@
 #include "HelmReport.h"
 #include "Populator_BehaviorSet.h"
 #include "LifeEvent.h"
+#include "NodeRecord.h"
+#include "NodeRecordUtils.h"
 
 using namespace std;
 
@@ -65,6 +67,8 @@ HelmIvP::HelmIvP()
   m_disengage_on_allstop = false;
 
   m_curr_time_updated = false;
+
+  m_rejournal_requested = true;
 
   m_init_vars_ready  = false;
   m_init_vars_done   = false;
@@ -165,6 +169,8 @@ bool HelmIvP::OnNewMail(MOOSMSG_LIST &NewMail)
 	MOOSTrace("\n");
 	MOOSDebugWrite("pHelmIvP Has Been Re-Started");
       }
+      else if(moosvar == "IVPHELM_REJOURNAL")
+	m_rejournal_requested = true;
       else if(vectorContains(m_node_report_vars, moosvar)) {
 	bool ok = processNodeReport(sval);
 	if(!ok) {
@@ -255,9 +261,19 @@ bool HelmIvP::Iterate()
   // Should be called after postBehaviorMessages() where warnings
   // are detected and the count is incremented.
   helm_report.setWarningCount(m_warning_count);
-
+  
+  string report;
+  if(m_rejournal_requested) {    
+    report = helm_report.getReportAsString();
+    m_rejournal_requested = false;
+  }
+  else
+    report = helm_report.getReportAsString(m_prev_helm_report); 
+  
+  m_Comms.Notify("IVPHELM_SUMMARY", report);
   m_Comms.Notify("HELM_IPF_COUNT", helm_report.getOFNUM());
-  m_Comms.Notify("IVPHELM_SUMMARY", helm_report.getReportAsString());
+  m_prev_helm_report = helm_report;
+
  
   if(m_verbose == "verbose") {
     MOOSTrace("(End) Iteration: %d", m_helm_iteration);
@@ -702,6 +718,7 @@ void HelmIvP::registerVariables()
   registerSingleVariable("MOOS_MANUAL_OVERRIDE");
   registerSingleVariable("RESTART_HELM");
   registerSingleVariable("HELM_VERBOSE");
+  registerSingleVariable("IVPHELM_REJOURNAL");
   
   registerSingleVariable("NAV_SPEED");
   registerSingleVariable("NAV_HEADING");
@@ -1090,53 +1107,23 @@ void HelmIvP::postAllStop(string msg)
 
 bool HelmIvP::processNodeReport(const string& report)
 {
-  string x_val, dep_val, spd_val, hdg_val, vname, raw_vname;
-  string y_val, utc_val, lat_val, long_val;
-  
-  vector<string> svector = parseString(report, ',');
-  unsigned int i, vsize = svector.size();
-  for(i=0; i<vsize; i++) {
-    string left  = stripBlankEnds(biteString(svector[i], '='));
-    string right = stripBlankEnds(svector[i]);
-    bool right_isnum = isNumber(right);
-
-    if(left=="NAME") {
-      raw_vname = right;
-      vname = toupper(right);
-    }
-    else if((left == "UTC_TIME") && right_isnum)
-      utc_val = right;
-    else if((left == "MOOS_TIME") && right_isnum) 
-      utc_val = right;
-    else if((left == "X") && right_isnum)
-      x_val = right;
-    else if((left == "Y") && right_isnum)
-      y_val = right;
-    else if((left == "LAT") && right_isnum)
-      lat_val = right;
-    else if((left == "LON") && right_isnum)
-      long_val = right;
-    else if((left == "SPD") && right_isnum)
-      spd_val = right;
-    else if((left == "HDG") && right_isnum)
-      hdg_val = right;
-    else if((left == "DEPTH") && right_isnum) 
-      dep_val = right;
-  }
-
-  if((x_val=="") || (spd_val=="") || (utc_val=="") || (vname=="") ||
-     (y_val=="") || (hdg_val=="") || (dep_val==""))
+  NodeRecord new_record = string2NodeRecord(report);
+  if(!new_record.valid("name,x,y,time,heading,speed,depth")) {
+    cout << "************ Unhandle Node Report:" << report << endl << endl;
     return(false);
+  }
+  string raw_vname = new_record.getName();
+  string vname = toupper(raw_vname);
+  
+  m_info_buffer->setValue(vname+"_NAV_X", new_record.getX());
+  m_info_buffer->setValue(vname+"_NAV_Y", new_record.getY());
+  m_info_buffer->setValue(vname+"_NAV_SPEED", new_record.getSpeed());
+  m_info_buffer->setValue(vname+"_NAV_HEADING", new_record.getHeading());
+  m_info_buffer->setValue(vname+"_NAV_DEPTH", new_record.getDepth());
+  m_info_buffer->setValue(vname+"_NAV_LAT", new_record.getLat());
+  m_info_buffer->setValue(vname+"_NAV_LONG", new_record.getLon());
 
-  m_info_buffer->setValue(vname+"_NAV_X", atof(x_val.c_str()));
-  m_info_buffer->setValue(vname+"_NAV_Y", atof(y_val.c_str()));
-  m_info_buffer->setValue(vname+"_NAV_SPEED", atof(spd_val.c_str()));
-  m_info_buffer->setValue(vname+"_NAV_HEADING", atof(hdg_val.c_str()));
-  m_info_buffer->setValue(vname+"_NAV_DEPTH", atof(dep_val.c_str()));
-  m_info_buffer->setValue(vname+"_NAV_LAT", atof(lat_val.c_str()));
-  m_info_buffer->setValue(vname+"_NAV_LONG", atof(long_val.c_str()));
-
-  double timestamp = atof(utc_val.c_str());
+  double timestamp = new_record.getTimeStamp();
   
   // Apply a skew if one is declared for this vehicle
   map<string, double>::iterator p = m_node_skews.find(vname);
@@ -1150,3 +1137,4 @@ bool HelmIvP::processNodeReport(const string& report)
 
   return(true);
 }
+

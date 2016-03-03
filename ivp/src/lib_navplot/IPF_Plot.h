@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: IPF_Plot.h                                           */
 /*    DATE: Feb 24th, 2007                                       */
 /*                                                               */
@@ -38,7 +38,9 @@ public:
   bool   addEntry(double timestamp, 
 		  const std::string& ipf_str, 
 		  unsigned int iteration, 
-		  unsigned int piece_count);
+		  unsigned int piece_count,
+		  double  priority,
+		  IvPDomain domain);
 
   double getTimeByIndex(unsigned int) const;
 
@@ -46,6 +48,8 @@ public:
   std::string getIPFByTime(double) const;
   std::string getIPFByHelmIteration(unsigned int) const;
   unsigned int getPcsByHelmIteration(unsigned int) const;
+  double       getPwtByHelmIteration(unsigned int) const;
+  IvPDomain    getDomainByHelmIter(unsigned int) const;
   unsigned int getHelmIterByTime(double);
 
   std::string getSource() const {return(m_source);};
@@ -56,10 +60,8 @@ public:
   int    size() const          {return(m_time_stamp.size());};
   void   print() const;
 
-  std::string  nullHeadingSpeedIPF() const;
-
   void      setIvPDomain(IvPDomain dom) {m_ivp_domain = dom;};
-  IvPDomain getIvPDomain()   {return(m_ivp_domain);};
+  IvPDomain getIvPDomain() const  {return(m_ivp_domain);};
 
 protected:
   unsigned int getIndexByTime(double) const;
@@ -75,7 +77,10 @@ protected:
   std::vector<double>       m_time_stamp; 
   std::vector<unsigned int> m_helm_iteration;
   std::vector<unsigned int> m_piece_count;
+  std::vector<unsigned int> m_priority;
+  std::vector<IvPDomain>    m_ivp_domain_iter;
 
   IvPDomain                 m_ivp_domain;
 };
 #endif 
+

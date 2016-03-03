@@ -1,6 +1,6 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin and John Leonard                    */
-/*    ORGN: NAVSEA Newport RI and MIT Cambridge MA               */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
+/*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: AOF_AvoidCollision.cpp                               */
 /*    DATE: Nov 18th, 2006                                       */
 /*                                                               */
@@ -24,7 +24,7 @@
 #pragma warning(disable : 4503)
 #endif
 #include <iostream>
-#include <math.h> 
+#include <cmath> 
 #include "AOF_AvoidCollision.h"
 #include "AngleUtils.h"
 #include "IvPDomain.h"
@@ -180,6 +180,7 @@ double AOF_AvoidCollision::metric(double eval_dist) const
   double tween = 25.0 + 75.0 * (eval_dist - min) / (max-min);
   return(tween);
 }
+
 
 
 
