@@ -73,7 +73,11 @@ public:
     double GetTimeNow();
     int GetSize();
     bool IsOpen();
-    bool Initialise(const string & sFileName);
+
+    // Throws CannotOpenFileForReadingException,
+    //        CannotOpenIndexFileForReadingException
+    void Initialise(const string & sFileName);
+
     STRING_SET GetSources(){return m_ALog.GetSourceNames();};
     CMOOSPlayBackIndex();
     virtual ~CMOOSPlayBackIndex();

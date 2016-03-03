@@ -4,27 +4,28 @@
 /*    FILE: main.cpp                                             */
 /*    DATE: Feb 1st 2011                                         */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iostream>
 #include "MBUtils.h"
 #include "ColorParse.h"
-#include "CRS_App.h"
-#include "CRS_Info.h"
+#include "CRS_App_HP.h"
+#include "CRS_Info_HP.h"
 
 using namespace std;
 
@@ -32,6 +33,7 @@ int main(int argc, char *argv[])
 {
   string mission_file;
   string run_command = argv[0];
+  string verbose;
 
   for(int i=1; i<argc; i++) {
     string argi = argv[i];
@@ -59,10 +61,13 @@ int main(int argc, char *argv[])
   cout << termColor() << endl;
 
   CRS_App contact_range_sensor;
+
   contact_range_sensor.Run(run_command.c_str(), mission_file.c_str());
  
   return(0);
 }
+
+
 
 
 

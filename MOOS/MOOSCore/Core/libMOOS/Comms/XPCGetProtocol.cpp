@@ -30,27 +30,31 @@
 //
 //////////////////////////    END_GPL    //////////////////////////////////
 #include "MOOS/libMOOS/Comms/XPCGetProtocol.h"
+#include "MOOS/libMOOS/Utils/MOOSScopedLock.h"
+
+CMOOSLock _ProtocolLock;
 
 XPCGetProtocol::XPCGetProtocol(const char *_sName)
 {
+    MOOS::ScopedLock L(_ProtocolLock);
+
 #ifdef UNIX
        cIteratorFlag = 0;
 #endif
+
        // Retrieves the protocol structure by name
        protocolPtr = getprotobyname(_sName);
-       if (protocolPtr == NULL)
-       {
-             XPCException exceptObject("Could Not Get Protocol By Name");
-             throw exceptObject;
-             return;
-        }
+
 }
 
 XPCGetProtocol::XPCGetProtocol(int _iProtocol)
 {
+        MOOS::ScopedLock L(_ProtocolLock);
+
 #ifdef UNIX
         cIteratorFlag = 0;
 #endif
+
         // Retrieves the protocol structure by number
         protocolPtr = getprotobynumber(_iProtocol);
         if (protocolPtr == NULL)
@@ -60,3 +64,41 @@ XPCGetProtocol::XPCGetProtocol(int _iProtocol)
               return;
         }
 }
+
+XPCGetProtocol::~XPCGetProtocol()
+{
+    MOOS::ScopedLock L(_ProtocolLock);
+#ifdef UNIX
+        endprotoent();
+#endif
+}
+
+
+#ifdef UNIX
+    void XPCGetProtocol::vOpenProtocolDb()
+    {
+        MOOS::ScopedLock L(_ProtocolLock);
+
+        endprotoent();
+        cIteratorFlag = 1;
+        setprotoent(1);
+    }
+
+    // Iterates through the list of protocols
+    char XPCGetProtocol::cGetNextProtocol()
+    {
+        MOOS::ScopedLock L(_ProtocolLock);
+
+        if (cIteratorFlag == 1)
+        {
+            if ((protocolPtr = getprotoent()) == NULL)
+                return 0;
+            else
+                return 1;
+        }
+        return 0;
+    }
+#endif
+
+
+

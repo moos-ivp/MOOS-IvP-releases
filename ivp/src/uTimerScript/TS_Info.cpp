@@ -4,20 +4,21 @@
 /*    FILE: TS_Info.cpp                                          */
 /*    DATE: July 7th 2011                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
  
 #include <cstdlib>
@@ -99,6 +100,8 @@ void showExampleConfigAndExit()
   blu("  AppTick   = 4                                                 ");
   blu("  CommsTick = 4                                                 ");
   blk("                                                                ");
+  blk("  // List of apps to block/pause on until they appear to the DB ");
+  blk("  block_on       = pGenerateInfo, pPostValues                   ");
   blk("  // Logic condition that must be met for script to be unpaused ");
   blk("  condition      = WIND_GUSTS = true                            ");
   blk("  // Seconds added to each event time, on each script pass      ");
@@ -135,6 +138,8 @@ void showExampleConfigAndExit()
   blu("  status_var     = UTS_STATUS   "," // or other MOOS variable   ");
   blk("  // Rate at which time is accelerated in execuing the script   ");
   blu("  time_warp      = 1                                            ");
+  blk("  // Base time upon which script event times are based          ");
+  blu("  time_zero      = db_start "," // Or script_start (default)    ");
   blk("}                                                               ");
   blk("                                                                ");
   exit(0);
@@ -185,5 +190,8 @@ void showReleaseInfoAndExit()
   showReleaseInfo("uTimerScript", "gpl");
   exit(0);
 }
+
+
+
 
 

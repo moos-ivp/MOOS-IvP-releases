@@ -4,20 +4,21 @@
 /*    FILE: LogUtils.cpp                                         */
 /*    DATE: August 7th, 2008                                     */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iostream>
@@ -300,9 +301,9 @@ void addVectorKey(vector<string>& v_keys, vector<bool>& v_pmatch,
     key.erase(len-1, 1);
   }
   
-  unsigned int i, prior_ix, ksize = v_keys.size();
+  unsigned int prior_ix = 0;
   bool prior = false;
-  for(i=0; i<ksize; i++) {
+  for(unsigned int i=0; i<v_keys.size(); i++) {
     if(key == v_keys[i]) {
       prior = true;
       prior_ix = i;
@@ -504,7 +505,9 @@ double getEpochSecsFromDayOfYear(string date_str, int format)
 {
   date_str = stripBlankEnds(date_str);
   
-  double d_month, d_day, d_year;
+  double d_month = 0;
+  double d_day   = 0;
+  double d_year  = 0;
   if(format == 0) {
     string s_month = biteString(date_str, '/');
     string s_day   = biteString(date_str, '/');
@@ -605,5 +608,8 @@ double getEpochSecsFromDayOfYear(double d_day, double d_month,
 
   return(total_seconds);
 }
+
+
+
 
 

@@ -4,20 +4,21 @@
 /*    FILE: FileBuffer.cpp                                       */
 /*    DATE:                                                      */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include "FileBuffer.h"
@@ -78,6 +79,59 @@ vector<string> fileBuffer(const string& filename, int amt)
   fclose(f);
 
   return(fvector);
+}
+
+//----------------------------------------------------------------
+// Procedure: fileBufferList
+//      Note: Same as fileBuffer, but a STL list is returned instead
+
+
+list<string> fileBufferList(const string& filename, int amt)
+{
+  list<string> flist;
+
+  FILE *f = fopen(filename.c_str(), "r");
+  if(f==NULL)
+    return(flist);
+
+  const int MAX_LINE_LENGTH = 500000;
+
+  int  myint = '\0';
+  int  buffix = 0;
+  bool EOL    = false;
+  char buff[MAX_LINE_LENGTH];
+  int  lines = 0;
+  bool reached_line_limit = false;
+
+  while((myint!=EOF) && (!reached_line_limit)) {
+    EOL = false;
+    buffix = 0;
+    while((!EOL) && (buffix < MAX_LINE_LENGTH)) {
+      myint = fgetc(f);
+      unsigned char   mychar = myint;
+      switch(myint) {
+      case '\n':
+      case EOF:
+        buff[buffix] = '\0';  // attach terminating NULL
+        EOL = true;
+        break;
+      default:
+        buff[buffix] = mychar;
+        buffix++;
+      }
+    }
+    string str = buff;
+    flist.push_back(str);
+    if(amt != 0) {
+      lines++;
+      if(lines >= amt)
+        reached_line_limit = true;
+    }
+
+  }
+  fclose(f);
+
+  return(flist);
 }
 
 
@@ -157,6 +211,9 @@ vector<string> fileBufferSlash(const string& filename, int amt)
  
   return(fvector);
 }
+
+
+
 
 
 

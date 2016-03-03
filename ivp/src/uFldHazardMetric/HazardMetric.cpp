@@ -4,20 +4,21 @@
 /*    FILE: HazardMetric.cpp                                     */
 /*    DATE: March 12th, 2012                                     */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iterator>
@@ -107,6 +108,9 @@ bool HazardMetric::Iterate()
 {
   AppCastingMOOSApp::Iterate();
 
+  if((m_iteration % 50) == 0)
+    Notify("UHZ_MISSION_PARAMS", m_mission_params);
+
   if(m_search_start_time > 0) 
     m_elapsed_time = MOOSTime() - m_search_start_time;
 
@@ -185,12 +189,15 @@ bool HazardMetric::OnStartUp()
   str += ",penalty_nonopt_hazard=" + doubleToStringX(m_penalty_nonopt_hazard,5);
   str += ",penalty_false_alarm="   + doubleToStringX(m_penalty_false_alarm,5);
   str += ",penalty_max_time_over=" + doubleToStringX(m_penalty_max_time_over,5);
+  str += ",max_time=" + doubleToStringX(m_max_time,2);
   str += ",penalty_max_time_rate=" + doubleToStringX(m_penalty_max_time_rate,5);
   if(m_transit_path_width > 0)
     str += ",transit_path_width=" + doubleToStringX(m_transit_path_width,5);
   if(m_search_region.is_convex())
     str += ",search_region=" + m_search_region.get_spec_pts();
-  Notify("UHZ_MISSION_PARAMS", str);
+
+  m_mission_params = str;
+  Notify("UHZ_MISSION_PARAMS", m_mission_params);
 
   registerVariables();	
   return(true);
@@ -505,5 +512,8 @@ bool HazardMetric::buildReport()
 
   return(true);
 }
+
+
+
 
 

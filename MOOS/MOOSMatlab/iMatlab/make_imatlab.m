@@ -74,7 +74,7 @@ end
 
 
 
-components = {'App','Comms', 'Utils'};
+components = {'App','Comms', 'Utils','Thirdparty/PocoBits'};
 include_directive = [' -I',include_root,'/include'];
 for(i = 1:length(components))
     new_path = [' -I',include_root,'/',components{i},'/include'];

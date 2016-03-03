@@ -31,12 +31,12 @@
 #ifndef IPV4ADDRESS_H_
 #define IPV4ADDRESS_H_
 
-/*
+/**
  * simple class to hold IPV4 IP addresses
- */
+ **/
 #include <string>
 namespace MOOS {
-
+//! class for representing and working with IP4 addresses
 class IPV4Address {
 public:
 	IPV4Address();
@@ -47,6 +47,8 @@ public:
 	bool operator==(const IPV4Address & a) const;
 
 	static std::string GetNumericAddress(const std::string & address);
+	static std::string GetIPAddress();
+
 	bool ConvertHostToNumeric();
 
 	/** support for simple lexical sort*/

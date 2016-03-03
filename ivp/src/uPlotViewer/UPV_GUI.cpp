@@ -4,20 +4,21 @@
 /*    FILE: UPV_GUI.cpp                                          */
 /*    DATE: May 18th, 2012                                       */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <cstdio>
@@ -159,12 +160,12 @@ inline void UPV_GUI::cb_ToggleScopeVar_i(int index) {
   if(item) {
     if(item->value() == 0) {
       // Viewer will not allow all vars to be hidden, only toggle if done
-      bool done = m_plot_viewer->hide(varname);
+      bool done = m_plot_viewer->hideVar(varname);
       if(!done)
 	item->set();
     }
     else
-      m_plot_viewer->show(varname);
+      m_plot_viewer->showVar(varname);
     m_plot_viewer->redraw();
   }
 }
@@ -183,7 +184,7 @@ inline void UPV_GUI::cb_ChangeScopeVar_i(int index) {
   string fullpath = "Render/" + varname;
   Fl_Menu_Item *item = (Fl_Menu_Item*)m_menubar->find_item(fullpath.c_str());
   if(item) {
-    m_plot_viewer->show(varname);
+    m_plot_viewer->showVar(varname);
     item->set();
   }
 
@@ -263,5 +264,8 @@ void UPV_GUI::updateOutput()
   string sval = doubleToStringX(val, 4);
   m_varavg->value(sval.c_str());
 }
+
+
+
 
 

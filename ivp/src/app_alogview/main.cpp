@@ -4,20 +4,21 @@
 /*    FILE: main.cpp                                             */
 /*    DATE: May 1st, 2005                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <vector>
@@ -50,17 +51,29 @@ void idleProc(void *)
 
 int main(int argc, char *argv[])
 {
-  if(scanArgs(argc, argv, "-v", "--version", "-version")) {
-    showReleaseInfo("alogview", "gpl");
-    return(0);
-  }
-  
-  if(scanArgs(argc, argv, "-h", "--help", "-help")) {
-    help_message();
-    return(0);
-  }
- 
   LogViewLauncher launcher;
+
+  for(int i=1; i<argc; i++) {
+    string argi = argv[i];
+    if((argi=="-v") || (argi=="--version") || (argi=="-version")) {
+      showReleaseInfo("alogview", "gpl");
+      return(0);
+    }
+    else if((argi == "-h") || (argi == "--help") || (argi=="-help")) {
+      help_message();
+      return(0);
+    }
+    else if(strBegins(argi, "--plot=")) {
+      string plot_request = argi.substr(7);
+      bool ok = launcher.addPlotRequest(plot_request);
+      if(!ok) {
+	cout << "Plot request --plot=" << plot_request << " not handled." << endl;
+	cout << "Exiting." << endl;
+	exit(0);
+      }
+    }
+  }
+
   gui = launcher.launch(argc, argv);
   
   if(gui) {
@@ -92,14 +105,20 @@ void help_message()
   cout << "Options:                                                  " << endl;
   cout << "  -h,--help       Displays this help message              " << endl;
   cout << "  -v,--version    Displays the current release version    " << endl;
-  cout << "  --mintime=val   Clip data with timestamps < val         " << endl;
-  cout << "  --maxtime=val   Clip data with timestamps > val         " << endl;
-  cout << "  --nowtime=val   Set the initial startup time            " << endl;
-  cout << "  --geometry=val  Viewer window pixel size in HGTxWID     " << endl;
-  cout << "                  or large, medium, small, xsmall         " << endl;
-  cout << "                  Default size is 1400x1100 (large)       " << endl;
+  cout << "                                                          " << endl;
+  cout << "  --plot=VAR,FLD,...,FLD                                  " << endl;
+  cout << "                  Make extra numerical plots based on the " << endl;
+  cout << "                  given MOOS variable and one or more flds" << endl;
+
+  //cout << "  --mintime=val   Clip data with timestamps < val         " << endl;
+  //cout << "  --maxtime=val   Clip data with timestamps > val         " << endl;
+  //cout << "  --nowtime=val   Set the initial startup time            " << endl;
+  //cout << "  --geometry=val  Viewer window pixel size in HGTxWID     " << endl;
+  //cout << "                  or large, medium, small, xsmall         " << endl;
+  //cout << "                  Default size is 1400x1100 (large)       " << endl;
   //cout << "  --image                                                 " << endl;
   //cout << "  --ipfs                                                  " << endl;
+
   cout << "                                                          " << endl;
   cout << "Further Notes:                                            " << endl;
   cout << "  (1) Multiple .alog files ok - typically one per vehicle " << endl;
@@ -107,6 +126,9 @@ void help_message()
   cout << "  (3) See also: alogscan, alogrm, alogclip, aloggrep      " << endl;
   cout << endl;
 }
+
+
+
 
 
 

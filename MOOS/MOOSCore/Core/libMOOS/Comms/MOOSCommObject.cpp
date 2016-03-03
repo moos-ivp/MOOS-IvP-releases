@@ -51,6 +51,9 @@ CMOOSCommObject::CMOOSCommObject()
     m_dfDodgeyCommsDelay = 1.0;
     m_dfDodgeyCommsProbability = 0.5;
     m_dfTerminateProbability = 0.0;
+    m_bDisableNagle = false;
+    m_bBoostIOThreads = false;
+
 
     SetReceiveBufferSizeInKB(DEFAULT_SOCKET_RECEIVE_BUFFER_SIZE_KB);
     SetSendBufferSizeInKB(DEFAULT_SOCKET_SEND_BUFFER_SIZE_KB);
@@ -69,6 +72,8 @@ bool CMOOSCommObject::ConfigureCommsTesting(double dfDodgeyCommsProbability,doub
     m_dfDodgeyCommsProbability = dfDodgeyCommsProbability;
     m_dfDodgeyCommsDelay = dfDodgeyCommsDelay;
     m_dfTerminateProbability = dfTerminateProbability;
+
+
     return true;
 }
 
@@ -82,6 +87,13 @@ bool CMOOSCommObject::SetReceiveBufferSizeInKB(unsigned int KBytes)
 	}
 	return false;
 }
+
+
+void CMOOSCommObject::SetTCPNoDelay(bool bTCPNoDelay)
+{
+	m_bDisableNagle = bTCPNoDelay;
+}
+
 
 
 void CMOOSCommObject::BoostIOPriority(bool bBoost)
@@ -129,6 +141,70 @@ void CMOOSCommObject::SimulateCommsError()
 }
 
 bool CMOOSCommObject::ReadPkt(XPCTcpSocket *pSocket, CMOOSCommPkt &PktRx, int nSecondsTimeout)
+{
+    #define CHUNK_READ 8192
+
+    //now receive a message back..
+    int nRqd=0;
+    while((nRqd=PktRx.GetBytesRequired())!=0)
+    {
+        //std::cerr<<"I'm asking for "<<nRqd<<"\n";
+        int nRxd = 0;
+
+        try
+        {
+            if(nRqd<CHUNK_READ)
+            {
+                //read in in chunks of 1k
+                if(nSecondsTimeout<0)
+                {
+                    nRxd  = pSocket->iRecieveMessage(PktRx.NextWrite(),nRqd);
+                }
+                else
+                {
+                    nRxd  = pSocket->iReadMessageWithTimeOut(PktRx.NextWrite(),nRqd,(double)nSecondsTimeout);
+                }
+            }
+            else
+            {
+                if(nSecondsTimeout<0)
+                {
+                    nRxd  = pSocket->iRecieveMessage(PktRx.NextWrite(),CHUNK_READ);
+                }
+                else
+                {
+                    nRxd  = pSocket->iReadMessageWithTimeOut(PktRx.NextWrite(),CHUNK_READ,(double)nSecondsTimeout);
+                }
+            }
+        }
+        catch( XPCException & e)
+        {
+            MOOSTrace("Exception %s\n",e.sGetException());
+            throw CMOOSException("CMOOSCommObject::ReadPkt() Failed Rx");
+        }
+
+        switch(nRxd)
+        {
+        case -1:
+            throw CMOOSException("Gross error....");
+            break;
+        case 0:
+            if(nSecondsTimeout>0)
+                throw CMOOSException(MOOSFormat("remote side closed or lazy client ( waited more than %ds )",nSecondsTimeout));
+            else
+                throw CMOOSException("remote side closed....");
+            break;
+        default:
+            if(!PktRx.OnBytesWritten(PktRx.NextWrite(),nRxd))
+                throw CMOOSException("CMOOSCommObject::ReadPkt() Failed Rx - Packet rejects filling");
+            break;
+        }
+    }
+
+    return true;
+}
+
+bool CMOOSCommObject::ReadPktV2(XPCTcpSocket *pSocket, CMOOSCommPkt &PktRx, int nSecondsTimeout)
 {
     #define CHUNK_READ 8192
     unsigned char Buffer[CHUNK_READ];
@@ -205,13 +281,13 @@ bool CMOOSCommObject::SendPkt(XPCTcpSocket *pSocket, CMOOSCommPkt &PktTx)
             //this is some very low level cruft that is only hear to provide
         	//some gruesome testing - normal programmers should ignore this
         	//block of code
-        	nSent+=pSocket->iSendMessage(PktTx.m_pStream,sizeof(int));
+        	nSent+=pSocket->iSendMessage(PktTx.Stream(),sizeof(int));
         	SimulateCommsError();
-        	nSent+=pSocket->iSendMessage(&(PktTx.m_pStream[sizeof(int)]),PktTx.GetStreamLength()-sizeof(int));
+        	nSent+=pSocket->iSendMessage(PktTx.Stream()+sizeof(int),PktTx.GetStreamLength()-sizeof(int));
         }
         else
         {
-        	nSent = pSocket->iSendMessage(PktTx.m_pStream,PktTx.GetStreamLength());
+        	nSent = pSocket->iSendMessage(PktTx.Stream(),PktTx.GetStreamLength());
         }
     }
     catch(XPCException e)
@@ -263,6 +339,19 @@ bool CMOOSCommObject::ReadMsg(XPCTcpSocket *pSocket,CMOOSMsg &Msg, int nSecondsT
 
 
     return !MsgList.empty();
+}
+
+
+
+std::string CMOOSCommObject::GetLocalIPAddress()
+{
+    char Name[255];
+    if(gethostname(Name,sizeof(Name))!=0)
+    {
+        MOOSTrace("Error getting host name\n");
+        return "unknown";
+    }
+    return std::string(Name);
 }
 
 

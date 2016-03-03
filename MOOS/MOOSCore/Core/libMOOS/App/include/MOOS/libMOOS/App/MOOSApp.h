@@ -32,12 +32,15 @@
 
 #include "MOOS/libMOOS/Utils/MOOSUtilityFunctions.h"
 #include "MOOS/libMOOS/Utils/ProcessConfigReader.h"
+#include "MOOS/libMOOS/Comms/SuicidalSleeper.h"
 #include "MOOS/libMOOS/Utils/CommandLineParser.h"
 #include "MOOS/libMOOS/Utils/ProcInfo.h"
+#include "MOOS/libMOOS/Utils/Macros.h"
 
 
 #include "MOOS/libMOOS/Comms/MOOSCommClient.h"
 #include "MOOS/libMOOS/Comms/MOOSVariable.h"
+
 
 #include <set>
 #include <map>
@@ -59,11 +62,18 @@ class Event;
 }
 #endif
 
-/** This is a class from which all MOOS component applications can be derived
-main() will typically end with a call to MOOSAppDerivedClass::Run(). It provides
-automatic connection to the MOOSDB, provides slots for Mail Processing and application
-work, callbacks for connection/disconnection to MOOSDB, Configuration file reading and
-dynamic (runtime) variables. Definately worth getting to know. */
+
+
+/** @brief Commonly used based class for writing MOOS Applications.
+* This is a class from which  MOOS component applications may be derived
+* main() will typically end with a call to MOOSAppDerivedClass::Run(). It provides
+* automatic connection to the MOOSDB, provides slots for Mail Processing and application
+* work, callbacks for connection/disconnection to MOOSDB, Configuration file reading and
+* dynamic (runtime) variables. Definitely worth getting to know.
+* @author Paul Newman
+* @ingroup App
+*
+*/
 class CMOOSApp
 {
 public:
@@ -86,8 +96,8 @@ public:
     */
     bool Run( const std::string & sName,const std::string & sMissionFile,const std::string & sSubscribeName);
     bool Run( const std::string & sName,const std::string & sMissionFile="Mission.moos");
-    bool Run(const std::string &  sName,const std::string & sMissionFile, int argc, char * argv[]);
-    bool Run( const std::string &,int argc, char * argv[]);
+    bool Run(const std::string &  sName,const std::string & sMissionFile, int argc,  char * argv[]);
+    bool Run( const std::string &,int argc,  char * argv[]);
 
 	/** requests the MOOSApp to quit (i.e return from Run)*/
 	bool RequestQuit();
@@ -96,7 +106,7 @@ public:
 	 * pass in a copy of any command line parameters so options can be
 	 * queried later
 	 */
-	void SetCommandLineParameters(int argc, char * argv[]);
+	void SetCommandLineParameters(int argc,  char * argv[]);
 
 
 protected:
@@ -150,6 +160,10 @@ protected:
 	/** called when command line is asking for version to be printed */
 	virtual void OnPrintVersionAndExit();
 
+    /** print all searched for parameters */
+    void PrintSearchedConfigurationFileParameters();
+
+
 
 public:
     /** Called when the class has succesfully connected to the server. Overload this function
@@ -159,7 +173,8 @@ public:
     /** Called when the class has disconnects from  the server. Put code you want to run when this happens in a virtual version of this method*/
     virtual bool OnDisconnectFromServer();
 
-    /** called by a separate thread if a callback has been installed by calling AddMessageCallback()*/
+    /** called by a separate thread if a callback
+     * has been installed by calling AddMessageCallback()*/
     virtual bool OnMessage(CMOOSMsg & M);
 
 protected:
@@ -283,14 +298,93 @@ protected:
     @param sVar name of variable of interest*/
     bool UnRegister(const std::string & sVar);
 
+
+
     /**
-     * Register a custom call back for a particular message. This call back will be called from its own thread.
-     * @param sMsgName name of message to watch for
-     * @param pfn  pointer to your function should be type bool func(CMOOSMsg &M, void *pParam)
+     * Register a custom call back for a particular message. This call back
+     * will be called from its own thread.
+     * @param sQueueName nick name of queue
+     * @param pfn  pointer to your function should be type
+     * bool func(CMOOSMsg &M, void *pParam)
      * @param pYourParam a void * pointer to the thing we want passed as pParam above
      * @return true on success
      */
-    bool AddCustomMessageCallback(const std::string & sCallbackName,const std::string & sMsgName, bool (*pfn)(CMOOSMsg &M, void * pYourParam), void * pYourParam );
+	bool AddActiveQueue(const std::string & sQueueName,
+		bool (*pfn)(CMOOSMsg &M, void * pYourParam),
+		void * pYourParam );
+
+
+    /**
+     * Register a custom call back for a particular message. This call back
+     * will be called from its own thread.
+     * @param sQueueName nick name of queue
+     * @param sMsgName name of message to watch for
+     * @param pfn  pointer to your function should be type
+     * bool func(CMOOSMsg &M, void *pParam)
+     * @param pYourParam a void * pointer to the thing we want passed as pParam above
+     * @return true on success
+     */
+	bool AddActiveQueue(const std::string & sQueueName,
+		const std::string & sMsgName,
+		bool (*pfn)(CMOOSMsg &M, void * pYourParam),
+		void * pYourParam );
+
+    /**
+   	 * Register a custom call back for a particular message. This call back will be called from its own thread.
+   	 * @param sQueueName
+   	 * @param Instance of class on which to invoke member function
+   	 * @param member function of class bool func(CMOOSMsg &M)
+   	 * @return true on success
+   	 */
+	template <class T>
+	bool AddActiveQueue(const std::string & sQueueName,
+		T* Instance,bool (T::*memfunc)(CMOOSMsg &)  );
+
+
+	/**
+	 * Add a route to an active queue (which must already exist)
+	 * @param  sQueueName name of queue
+	 * @param  sMsgName name of message to route
+	 */
+	bool AddMessageRouteToActiveQueue(const std::string & sQueueName,
+                    const std::string & sMsgName);
+
+
+    /**
+       * Register a custom callback and create the active queue as needed.
+  	 * @param sQueueName the queue name
+  	 * @param sMsgName name of message to route to this queue
+  	 * @param pfn  pointer to your function should be type bool func(CMOOSMsg &M, void *pParam)
+  	 * @param pYourParam a void * pointer to the thing we want passed as pParam above
+  	 * @return true on success
+       *
+       */
+      bool AddMessageRouteToActiveQueue(const std::string & sQueueName,
+      				const std::string & sMsgName,
+      				bool (*pfn)(CMOOSMsg &M, void * pYourParam),
+      				void * pYourParam );
+
+      bool AddActiveMessageQueueCallback(const std::string & sQueueName,
+          		const std::string & sMsgName,
+          		bool (*pfn)(CMOOSMsg &M, void * pYourParam),
+          		void * pYourParam );
+
+
+
+      /**
+		* Register a custom callback and create the active queue as needed.
+		* @param sQueueName the queue name
+		* @param sMsgName name of message to route to this queue
+		* @param Instance of class on which to invoke member function
+		* @param member function of class bool func(CMOOSMsg &M)
+		* @return true on success
+		*/
+      template <class T>
+      bool AddMessageRouteToActiveQueue(const std::string & sQueueName,
+      				const std::string & sMsgName,
+      				T* Instance,bool (T::*memfunc)(CMOOSMsg &) );
+
+
 
     /**
      * Add a callback to ::OnMessage() for a particular message. This will cause OnMessage() to be called from its own thread
@@ -299,7 +393,11 @@ protected:
      * @param sMsgName
      * @return true on success
      */
-    bool AddMessageCallback(const std::string & sMsgName);
+    bool AddMessageRouteToOnMessage(const std::string & sMsgName);
+
+
+   //deprecated versions
+    DEPRECATED(bool AddMessageCallback(const std::string & sMsgName));
 
 
 
@@ -330,7 +428,7 @@ protected:
 	{
 		REGULAR_ITERATE_AND_MAIL=0,
 		COMMS_DRIVEN_ITERATE_AND_MAIL,
-		REGULAR_ITERATE_AND_COMMS_DRIVEN_MAIL,
+		REGULAR_ITERATE_AND_COMMS_DRIVEN_MAIL
 	}m_IterationMode;
 
 	//set up the iteration mode of the app
@@ -348,7 +446,7 @@ protected:
     /** sets the error state of the app and a comment  - this is published as a field in <PROCNAME>_STATUS */
     void SetAppError(bool bFlag, const std::string & sReason);
 
-
+    /** make the whole application print not many things */
 	bool SetQuiet(bool bQuiet);
 
 	
@@ -368,6 +466,9 @@ protected:
     /** By default MOOSDB comms are on - but you may want to use the structuire of MOOSApp as a standalone
     application - if so call this function with a false parameter*/
     bool UseMOOSComms(bool bUse);
+
+    /** Set the MOOSName - ie the name this appl will use when talking MOOS*/
+    void SetMOOSName(const std::string &sMOOSName);
 
     /** call to say if you want mail to be delivered sorted by time*/
     void SortMailByTime(bool bSort=true){m_bSortMailByTime = bSort;};
@@ -575,6 +676,19 @@ protected:
      response times. It is not recommended for general use*/
     bool UseMailCallBack();
 
+    /**
+     * look for  a parameter in the mission file and on the command line. If found in both command line
+     * wins. It is (default) assumed "--" is prepended on command line. So foo=xx in mission file appears as
+     * --foo=xx on command line
+     * @param sOption name of parameter
+     * @param var variable to be returned
+     * @param bPrependMinusMinusForCommandLine if true then add "--" to command line
+     */
+    template <class T>
+    bool GetParameterFromCommandLineOrConfigurationFile(std::string sOption, T & var,bool bPrependMinusMinusForCommandLine=true);
+
+    bool GetFlagFromCommandLineOrConfigurationFile(std::string sOption,bool bPrependMinusMinusForCommandLine=true);
+
 
 
 private:
@@ -611,8 +725,12 @@ private:
 	/** ::Run continues forever or until this variable is false*/
 	bool m_bQuitRequested;
 protected:
-    MOOS::ProcInfo m_CPULoadMonitor;
+    MOOS::ProcInfo m_ProcessMonitor;
     
+    MOOS::SuicidalSleeper m_SuicidalSleeper;
+
 };
+
+#include "MOOS/libMOOS/App/MOOSApp.hxx"
 
 #endif

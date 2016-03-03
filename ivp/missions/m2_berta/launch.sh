@@ -56,21 +56,26 @@ nsplug meta_vehicle.bhv targ_henry.bhv -f VNAME=$VNAME1     \
     START_POS=$START_POS1 LOITER_POS=$LOITER_POS1       
 
 nsplug meta_vehicle.bhv targ_gilda.bhv -f VNAME=$VNAME2     \
-    START_POS=$START_POS1 LOITER_POS=$LOITER_POS2       
+    START_POS=$START_POS2 LOITER_POS=$LOITER_POS2       
+
+if [ ! -e targ_henry.moos ]; then echo "no targ_henry.moos"; exit; fi
+if [ ! -e targ_henry.bhv  ]; then echo "no targ_henry.bhv "; exit; fi
+if [ ! -e targ_gilda.moos ]; then echo "no targ_gilda.moos"; exit; fi
+if [ ! -e targ_gilda.bhv  ]; then echo "no targ_gilda.bhv "; exit; fi
+if [ ! -e targ_shoreside.moos ]; then echo "no targ_shoreside.moos";  exit; fi
 
 if [ ${JUST_MAKE} = "yes" ] ; then
     exit 0
 fi
+
 
 #-------------------------------------------------------
 #  Part 3: Launch the processes
 #-------------------------------------------------------
 printf "Launching $SNAME MOOS Community (WARP=%s) \n"  $TIME_WARP
 pAntler targ_shoreside.moos >& /dev/null &
-sleep 0.25
 printf "Launching $VNAME1 MOOS Community (WARP=%s) \n" $TIME_WARP
 pAntler targ_henry.moos >& /dev/null &
-sleep 0.25
 printf "Launching $VNAME2 MOOS Community (WARP=%s) \n" $TIME_WARP
 pAntler targ_gilda.moos >& /dev/null &
 printf "Done \n"
@@ -78,7 +83,5 @@ printf "Done \n"
 uMAC targ_shoreside.moos
 
 printf "Killing all processes ... \n"
-kill %1 %2 %3
+mykill
 printf "Done killing processes.   \n"
-
-

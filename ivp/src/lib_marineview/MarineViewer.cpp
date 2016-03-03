@@ -4,20 +4,21 @@
 /*    FILE: MarineViewer.cpp                                     */
 /*    DATE: May 31st, 2005                                       */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #ifdef _WIN32
@@ -41,6 +42,7 @@
 #include "ColorParse.h"
 #include "Shape_Ship.h"
 #include "Shape_Kayak.h"
+#include "Shape_WAMV.h"
 #include "Shape_AUV.h"
 #include "Shape_Glider.h"
 #include "Shape_Gateway.h"
@@ -613,6 +615,23 @@ void MarineViewer::drawCommonVehicle(const NodeRecord& record,
       drawGLPoly(g_kayakBody, g_kayakBodySize, black, outer_line, factor_x);    
     drawGLPoly(g_kayakMidOpen, g_kayakMidOpenSize, gray, 0, factor_x);
     glTranslatef(cx, cy, 0);
+  }
+  else if(vehibody == "wamv"){
+    if(vlength > 0) {
+      factor_x *= (vlength / g_wamvLength);
+      factor_y *= (vlength / g_wamvLength);
+    }
+    ColorPack blue = colorParse("blue");
+    double cx = (g_wamvCtrX + g_wamvBase/2) * factor_x;
+    double cy = g_wamvCtrY * factor_y;
+    glTranslatef(-cx, -cy, 0);
+    drawGLPoly(g_wamvBody, g_wamvBodySize, body_color, 0, factor_x);
+    drawGLPoly(g_wamvpropUnit, g_wamvpropUnitSize, blue, 0, factor_x);
+    glTranslatef(2*cx, 0, 0);
+    drawGLPoly(g_wamvBody, g_wamvBodySize, body_color, 0, factor_x);
+    drawGLPoly(g_wamvpropUnit, g_wamvpropUnitSize, blue, 0, factor_x);
+    drawGLPoly(g_wamvPontoonConnector, g_pontoonConnectorSize, gray, 0, factor_x);
+    glTranslatef(-cx, cy, 0);
   }
   else if((vehibody == "auv") || (vehibody == "uuv")) {
     if(vlength > 0) {
@@ -1488,7 +1507,7 @@ void MarineViewer::drawVector(const XYVector& vect)
   double hx1, hx2, hy1, hy2;
   projectPoint(ovang+30, head_size, hx, hy, hx1, hy1);
   projectPoint(ovang-30, head_size, hx, hy, hx2, hy2);
-
+  
   points[0]   = vect.xpos() * pix_per_mtr_x;
   points[1]   = vect.ypos() * pix_per_mtr_y;
   points[2]   = hx * pix_per_mtr_x;
@@ -2311,6 +2330,9 @@ void MarineViewer::drawText(double px, double py, const string& text,
   glFlush();
   glPopMatrix();
 }
+
+
+
 
 
 

@@ -4,20 +4,23 @@
 /*    FILE: IO_Utilities.cpp                                     */
 /*    DATE: June 2nd, 2004                                       */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of IvP Helm Core Libs                       */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* IvP Helm Core Libs is free software: you can redistribute it  */
+/* and/or modify it under the terms of the Lesser GNU General    */
+/* Public License as published by the Free Software Foundation,  */
+/* either version 3 of the License, or (at your option) any      */
+/* later version.                                                */
+/*                                                               */
+/* IvP Helm Core Libs is distributed in the hope that it will    */
+/* be useful but WITHOUT ANY WARRANTY; without even the implied  */
 /* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* PURPOSE. See the Lesser GNU General Public License for more   */
+/* details.                                                      */
 /*                                                               */
-/* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* You should have received a copy of the Lesser GNU General     */
+/* Public License along with MOOS-IvP.  If not, see              */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iostream>
@@ -121,19 +124,21 @@ vector<IvPFunction*> readFunctions(const string& str)
 
   const int MAX_LINE_LENGTH = 1000;
 
-  int     dim, boxCount, degree;
-  float   pwt;
-  char    c, buff[MAX_LINE_LENGTH];
+  int     dim=0, boxCount=0, degree=0;
+  float   pwt=0;
+  char    c=0, buff[MAX_LINE_LENGTH];
   string  contextStr;
   string  domain_str;
 
   while(1) {
     // Handle the FUNCTION Line
-    fscanf(f, "%c", &c);
+    // Pretend we care about the fscanf result to avoid compiler warning
+    int result=0; 
+    result = fscanf(f, "%c", &c);
     if(c == 'F') {
       int buff_ix = 0;
       while(c != '\n') {
-	fscanf(f, "%c", &c);
+	result = fscanf(f, "%c", &c);
 	if(buff_ix < MAX_LINE_LENGTH-1)
 	  buff[buff_ix] = c;
 	buff_ix++;
@@ -169,11 +174,11 @@ vector<IvPFunction*> readFunctions(const string& str)
     }
     
     // Handle the AOF Line if any
-    fscanf(f, "%c", &c);
+    result = fscanf(f, "%c", &c);
     if(c == 'A') {
       int buff_ix = 0;
       while(c != '\n') {
-	fscanf(f, "%c", &c);
+	result = fscanf(f, "%c", &c);
 	if(buff_ix < MAX_LINE_LENGTH)
 	  buff[buff_ix] = c;
 	buff_ix++;
@@ -205,8 +210,10 @@ PDMap* readPDMap(FILE *f, int dim, int boxCount, IvPDomain domain, int deg)
 {
   if(f==0) return(0);
   
+  // Pretend we care about the fscanf result to avoid compiler warning
+  int result = 0;
   char c;
-  fscanf(f, "%c", &c);
+  result = fscanf(f, "%c", &c);
   if(c == 'B') 
     ungetc(c, f);
   else
@@ -221,20 +228,20 @@ PDMap* readPDMap(FILE *f, int dim, int boxCount, IvPDomain domain, int deg)
   IvPBox gelbox(dim);
   if(c == 'G') {
     for(d=0; d<dim; d++) {
-      fscanf(f, "%d ", &low);
-      fscanf(f, "%d ", &high);
+      result = fscanf(f, "%d ", &low);
+      result = fscanf(f, "%d ", &high);
       gelbox.setPTS(d, low, high);
     }
     pdmap->setGelBox(gelbox);
   }
 
   for(int i=0; i<boxCount; i++) {
-    fscanf(f, "%c ", &c);
-    fscanf(f, "%d ", &wtc);
+    result = fscanf(f, "%c ", &c);
+    result = fscanf(f, "%d ", &wtc);
     IvPBox *newbox = new IvPBox(dim, deg);
     for(d=0; d<dim; d++) {
-      fscanf(f, "%s ", lowBuff);
-      fscanf(f, "%s ", highBuff);
+      result = fscanf(f, "%s ", lowBuff);
+      result = fscanf(f, "%s ", highBuff);
       if(lowBuff[0]=='X') {         // Check for bound Xclusive
 	newbox->bd(d, 0) = 0;       // bound. If X is first char
 	lowBuff[0] = '+';           // set bound to exclusive (0)
@@ -248,7 +255,7 @@ PDMap* readPDMap(FILE *f, int dim, int boxCount, IvPDomain domain, int deg)
       newbox->setPTS(d, low, high);
     }
     for(d=0; d<wtc; d++) {
-      fscanf(f, "%s ", buff);
+      result = fscanf(f, "%s ", buff);
       newbox->wt(d) = atof(buff);
     }
     pdmap->bx(i) = newbox;
@@ -337,4 +344,7 @@ void printZAIC_PEAK(ZAIC_PEAK zaic)
     cout << "  Maxutil: "   << maxutil << endl;
   }
 }
+
+
+
 

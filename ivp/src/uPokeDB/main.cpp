@@ -4,20 +4,21 @@
 /*    FILE: main.cpp                                             */
 /*    DATE: May 9th 2008                                         */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iostream>
@@ -37,10 +38,8 @@ int main(int argc ,char * argv[])
   vector<string> varvalue;
   vector<string> vartype;
 
-  string server_host     = "localhost";
-  bool   server_host_set = false;
-  int    server_port     = 9000;
-  bool   server_port_set = false;
+  string server_host = "";  // localhost
+  int    server_port = 0;   // 9000
   
   for(int i=1; i<argc; i++) {
     string argi = argv[i];
@@ -52,6 +51,25 @@ int main(int argc ,char * argv[])
       showHelpAndExit();
     else if((argi == "-i") || (argi == "--interface"))
       showInterfaceAndExit();
+
+    else if(strBegins(argi, "--host="))       // recommended to user
+      server_host = argi.substr(7);
+    else if(strBegins(argi, "host="))
+      server_host = argi.substr(5);
+    else if(strBegins(argi, "serverhost="))
+      server_host = argi.substr(11);
+    else if(strBegins(argi, "server_host="))
+      server_host = argi.substr(12);
+
+    else if(strBegins(argi, "--port="))      // recommended to user
+      server_port = atoi(argi.substr(7).c_str());
+    else if(strBegins(argi, "port="))
+      server_port = atoi(argi.substr(5).c_str());
+    else if(strBegins(argi, "serverport="))
+      server_port = atoi(argi.substr(11).c_str());
+    else if(strBegins(argi, "server_port="))
+      server_port = atoi(argi.substr(12).c_str());
+
     else if(strEnds(argi, ".moos") || strEnds(argi, ".moos++"))
       mission_file = argv[i];
     else if(strContains(argi, ":=")) {
@@ -60,36 +78,21 @@ int main(int argc ,char * argv[])
 	showHelpAndExit();
       else {
 	varname.push_back(stripBlankEnds(svector[0]));
-	varvalue.push_back(svector[1]);
+	varvalue.push_back(stripBlankEnds(svector[1]));
 	vartype.push_back("string!");
       }
     }
     else if(strContains(argi, "=")) {
       string left  = biteStringX(argi, '=');
       string right = argi;
-      string lleft = tolower(left);
-      if((lleft == "server_host") || (lleft == "serverhost") ||
-	 (lleft == "host") || (left == "server")) {
-	server_host     = right;
-	server_host_set = true;
-      }
-      else if((lleft == "server_port") || (lleft=="serverport") ||
-	      (left == "port")) {
-	if(isNumber(right)) {
-	  server_port     = atoi(right.c_str());
-	  server_port_set = true;
-	}
+      varname.push_back(left);
+      if(isNumber(right)) {
+	varvalue.push_back(right);
+	vartype.push_back("double");
       }
       else {
-	varname.push_back(left);
-	if(isNumber(argi)) {
-	  varvalue.push_back(argi);
-	  vartype.push_back("double");
-	}
-	else {
-	  varvalue.push_back(argi);
-	  vartype.push_back("string");
-	}
+	varvalue.push_back(right);
+	vartype.push_back("string");
       }
     }
   }
@@ -99,21 +102,23 @@ int main(int argc ,char * argv[])
   if(mission_file == "") {
     char buff[1000];
     // If server_host info was not on the command line, prompt here.
-    if(!server_host_set) {
+    if(server_host == "") {
+      server_host = "localhost";
       cout << "Enter IP address:  [localhost] ";
-      fgets(buff, 999, stdin);
-      if(buff[0] != '\n') {
-	server_host     = buff;    
-	server_host_set = true;
+      if(fgets(buff, 999, stdin) != NULL) {
+	if(buff[0] != '\n') {
+	  server_host     = buff;    
+	}
       }
     }
     // If server_port info was not on the command line, prompt here.
-    if(!server_port_set) {
+    if(server_port == 0) {
       cout << "Enter Port number: [9000] ";
-      fgets(buff, 999, stdin);
-      if(buff[0] != '\n') {
-	server_port     = atoi(buff); 
-	server_port_set = true;
+      server_port = 9000;
+      if(fgets(buff, 999, stdin) != NULL) {
+	if(buff[0] != '\n') {
+	  server_port     = atoi(buff); 
+	}
       }
     }
   }
@@ -142,5 +147,8 @@ int main(int argc ,char * argv[])
 
   return(0);
 }
+
+
+
 
 

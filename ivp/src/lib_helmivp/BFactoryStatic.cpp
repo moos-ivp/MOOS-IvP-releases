@@ -4,20 +4,21 @@
 /*    FILE: BFactoryStatic.h                                     */
 /*    DATE: Feb 11th, 2010                                       */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include "BFactoryStatic.h"
@@ -29,6 +30,7 @@
 #include "BHV_Waypoint.h"
 #include "BHV_Loiter.h"
 #include "BHV_OpRegion.h"
+#include "BHV_MaxDepth.h"
 #include "BHV_ConstantDepth.h"
 #include "BHV_ConstantHeading.h"
 #include "BHV_MaintainHeading.h"
@@ -66,6 +68,7 @@ bool BFactoryStatic::isKnownBehavior(string bhv_name) const
      (bhv_name == "BHV_Waypoint")        || 
      (bhv_name == "BHV_ConstantSpeed")   || 
      (bhv_name == "BHV_Trail")           || 
+     (bhv_name == "BHV_MaxDepth")        || 
      (bhv_name == "BHV_ConstantDepth")   || 
      (bhv_name == "BHV_ConstantHeading") || 
      (bhv_name == "BHV_MaintainHeading") || 
@@ -113,6 +116,8 @@ IvPBehavior* BFactoryStatic::newBehavior(string bhv_name) const
     bhv = new BHV_ConstantSpeed(m_domain);
   else if(bhv_name == "BHV_Trail")      
     bhv = new BHV_Trail(m_domain);
+  else if(bhv_name == "BHV_MaxDepth")      
+    bhv = new BHV_MaxDepth(m_domain);
   else if(bhv_name == "BHV_ConstantDepth")      
     bhv = new BHV_ConstantDepth(m_domain);
   else if(bhv_name == "BHV_ConstantHeading")      
@@ -164,6 +169,9 @@ IvPBehavior* BFactoryStatic::newBehavior(string bhv_name) const
 
   return(bhv);
 }
+
+
+
 
 
 

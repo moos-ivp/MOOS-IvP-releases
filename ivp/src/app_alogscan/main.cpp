@@ -4,20 +4,21 @@
 /*    FILE: main.cpp                                             */
 /*    DATE: June 3rd, 2008                                       */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <string>
@@ -60,6 +61,7 @@ int main(int argc, char *argv[])
     cout << "                lines: sort by total lines for a var " << endl;
     cout << "                                                     " << endl;
     cout << "  --appstat     Output application statistics        " << endl;
+    cout << "  -l,--loglist  Output list of all logged vars       " << endl;
     cout << "  -r,--reverse  Reverse the sorting output           " << endl;
     cout << "  -n,--nocolors Turn off process/source color coding " << endl;
     cout << "  -h,--help     Displays this help message           " << endl;
@@ -71,6 +73,7 @@ int main(int argc, char *argv[])
 
   bool   reverse_requested  = false;
   bool   app_stat_requested = false;
+  bool   loglist_requested  = false;
   string proc_colors        = "true";
   string sort_style         = "bysrc_ascending";
 
@@ -83,6 +86,8 @@ int main(int argc, char *argv[])
       biteString(sarg, '=');
       sort = sarg;
     }
+
+    cout << "sarg:[" << sarg << "]" << endl;
 
     if(strContains(sarg, ".alog"))
       alogfile = orig;
@@ -100,9 +105,11 @@ int main(int argc, char *argv[])
       sort_style = "bysrc_ascending";
     else if(sarg == "--appstat")
       app_stat_requested = true;
+    else if((sarg == "--loglist") || (sarg == "-l"))
+      loglist_requested = true;
     else if((sarg == "--nocolors") || (sarg == "-n"))
       proc_colors = "false";
-    else if((sarg == "-r") || (sarg == "--reversed"))
+    else if((sarg == "-r") || (sarg == "--reversed") || (sarg == "--reverse"))
       reverse_requested = true;
   }
  
@@ -130,8 +137,12 @@ int main(int argc, char *argv[])
   
   if(app_stat_requested)
     handler.appStatReport();
-
+  if(loglist_requested) 
+    handler.loglistReport();
 }
+
+
+
 
 
 

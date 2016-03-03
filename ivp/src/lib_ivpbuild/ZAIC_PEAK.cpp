@@ -4,20 +4,23 @@
 /*    FILE: ZAIC_PEAK.cpp                                        */
 /*    DATE: Aug 17th 2006                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of IvP Helm Core Libs                       */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* IvP Helm Core Libs is free software: you can redistribute it  */
+/* and/or modify it under the terms of the Lesser GNU General    */
+/* Public License as published by the Free Software Foundation,  */
+/* either version 3 of the License, or (at your option) any      */
+/* later version.                                                */
+/*                                                               */
+/* IvP Helm Core Libs is distributed in the hope that it will    */
+/* be useful but WITHOUT ANY WARRANTY; without even the implied  */
 /* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* PURPOSE. See the Lesser GNU General Public License for more   */
+/* details.                                                      */
 /*                                                               */
-/* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* You should have received a copy of the Lesser GNU General     */
+/* Public License along with MOOS-IvP.  If not, see              */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <cmath>
@@ -263,7 +266,7 @@ IvPFunction *ZAIC_PEAK::extractOF(bool maxval)
   if((m_domain_ix == -1) || (m_state_ok == false))
     return(0);
 
-  unsigned int i;
+  unsigned int i; 
   for(i=0; i<m_domain_pts; i++)
     m_ptvals[i] = evalPoint(i, maxval);
 
@@ -411,8 +414,8 @@ void ZAIC_PEAK::insistSummit(unsigned int sx)
     return;
   }
   // Handle Case (3)
-  double min_delta;
-  int    min_delta_ix;
+  double min_delta = 0;
+  int    min_delta_ix = 0;
   for(i=0; i<m_domain_pts; i++) {
     double dval = (((double)(i)) * m_domain_delta) + m_domain_low;
     double delta = dval - summit;
@@ -438,8 +441,8 @@ PDMap *ZAIC_PEAK::setPDMap(double tolerance)
   double first_val = m_ptvals[0];
 
   bool   trend = false; // No trend to start
-  double s_m;
-  double s_b;
+  double s_m = 0;
+  double s_b = 0;
 
   vector<IvPBox*> pieces;
   for(i=1; i<m_domain_pts; i++) {
@@ -515,6 +518,9 @@ PDMap *ZAIC_PEAK::setPDMap(double tolerance)
 
   return(pdmap);
 }
+
+
+
 
 
 

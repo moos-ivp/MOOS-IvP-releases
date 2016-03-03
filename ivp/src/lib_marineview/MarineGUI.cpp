@@ -4,20 +4,21 @@
 /*    FILE: MarineGUI.cpp                                        */
 /*    DATE: November, 2004                                       */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iostream>
@@ -36,7 +37,7 @@ MarineGUI::MarineGUI(int g_w, int g_h, const char *g_l)
   m_menubar->menu(menu_);
     
   m_mviewer = 0;
-  augmentMenu();
+  //  addGeoAttrMenu();
 }
 
 //-------------------------------------------------------------------
@@ -86,16 +87,16 @@ Fl_Menu_Item MarineGUI::menu_[] = {
  {"hash_delta=1000", FL_ALT+'6', (Fl_Callback*)MarineGUI::cb_HashDelta,  (void*)1000, FL_MENU_RADIO|FL_MENU_DIVIDER},
  {0},
 
- {"GeoAttr", 0,  0, 0, 64, 0, 0, 14, 0},
- {0},
+ //{"GeoAttr", 0,  0, 0, 64, 0, 0, 14, 0},
+ //{0},
 
  {0}
 };
 
 //-------------------------------------------------------------------
-// Procedure: augmentMenu
+// Procedure: addGeoAttrMenu
 
-void MarineGUI::augmentMenu() 
+void MarineGUI::addGeoAttrMenu() 
 {
   m_menubar->add("GeoAttr/Polygons/polygon_viewable_all=true",  0, (Fl_Callback*)MarineGUI::cb_SetGeoAttr, (void*)150, FL_MENU_RADIO|FL_MENU_VALUE);
   m_menubar->add("GeoAttr/Polygons/polygon_viewable_all=false", 0, (Fl_Callback*)MarineGUI::cb_SetGeoAttr, (void*)151, FL_MENU_RADIO);
@@ -447,7 +448,6 @@ bool MarineGUI::setMenuAttrib(string menu, string attr, string value)
 
 //----------------------------------------- Zoom In
 inline void MarineGUI::cb_Zoom_i(int val) {
-  cout << "MarineGUI::cb_Zoom: " << val << endl;
   if(val < 0) 
     m_mviewer->setParam("zoom", 1.05);
   else if(val > 0) 
@@ -455,6 +455,7 @@ inline void MarineGUI::cb_Zoom_i(int val) {
   else 
     m_mviewer->setParam("zoom", "reset");
   m_mviewer->redraw();
+  cout << "MarineGUI::cb_Zoom: " << m_mviewer->getZoom() << endl;
 }
 void MarineGUI::cb_Zoom(Fl_Widget* o, int v) {
   ((MarineGUI*)(o->parent()->user_data()))->cb_Zoom_i(v);
@@ -685,6 +686,17 @@ inline void MarineGUI::cb_BackShade_i(int amt) {
 }
 void MarineGUI::cb_BackShade(Fl_Widget* o, int v) {
   ((MarineGUI*)(o->parent()->user_data()))->cb_BackShade_i(v);
+}
+
+bool MarineGUI::removeMenuItem(string item_str)
+{
+  //  int index = m_menubar->find_index(item_str.c_str());
+  int index = -1; // fixme
+  if(index != -1) {
+    m_menubar->remove(index);
+    return(true);
+  }
+  return(false);
 }
 
 //----------------------------------------- Quit

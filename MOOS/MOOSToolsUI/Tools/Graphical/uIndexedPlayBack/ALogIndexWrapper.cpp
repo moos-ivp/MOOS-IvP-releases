@@ -12,19 +12,15 @@ ALogIndexWrapper::~ALogIndexWrapper()
 { Close(); }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool ALogIndexWrapper::Open(const std::string & sfName)
+void ALogIndexWrapper::Open(const std::string & sfName)
 {
-    if( m_ALog.Init( sfName ) == false )
-    {
-        //printf("Initialisation of indexedAlogReader failed. Ensure that the alog path is correct:\n \t'%s'\n\n and that the corresponding index file exists:\n \t'%s'\n\nIf not, you can build an index file:\n \talogIndexWriter /path/to/file.alog\n\n",sfName.c_str(),(sfName+".idx").c_str());
-        return false;
-    }
+    // This could throw, but we'll pass exceptions on
+    m_ALog.Init( sfName );
 
     m_sFileName = sfName;
     m_nLineCount = m_ALog.GetNumRecords();
 
     m_bInitialized = true;
-    return true;
 }
 
 
@@ -75,13 +71,13 @@ int ALogIndexWrapper::GetLineCount()
 ////////////////////////////////////////////////////////////////////////////////
 int ALogIndexWrapper::SeekToFindTime(double dfT)
 {
-    aloglib::idxRec seekRec;
+    MOOS::AlogTools::idxRec seekRec;
 
     // dfT is global time, shift to be relative to log start
     seekRec.time = dfT - m_ALog.GetStartTime();
 
-    std::vector<aloglib::idxRec> recs = m_ALog.GetRecordList();
-    std::vector<aloglib::idxRec>::iterator result;
+    std::vector<MOOS::AlogTools::idxRec> recs = m_ALog.GetRecordList();
+    std::vector<MOOS::AlogTools::idxRec>::iterator result;
 
     // find first record which does not compare < seekRec.time
     result = std::lower_bound( recs.begin(), recs.end(), seekRec );

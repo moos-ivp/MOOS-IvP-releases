@@ -12,9 +12,10 @@
 //   email: pnewman@robots.ox.ac.uk. 
 //              
 //   This source code and the accompanying materials
-//   are made available under the terms of the GNU Lesser Public License v2.1
+//   are made available under the terms of the GNU Public License
 //   which accompanies this distribution, and is available at
-//   http://www.gnu.org/licenses/lgpl.txt distributed in the hope that it will be useful, 
+//   http://www.gnu.org/licenses/gpl.txt
+//   distributed in the hope that it will be useful,
 //   but WITHOUT ANY WARRANTY; without even the implied warranty of 
 //   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
 //
@@ -25,7 +26,7 @@
 
 #include "MOOS/libMOOS/MOOSLib.h"
 
-#include "MOOSDB.h"
+#include "MOOS/libMOOS/DB/MOOSDB.h"
 #include <iostream>
 #include <string>
 
@@ -38,9 +39,9 @@ int main(int argc , char * argv[])
 
     //nothing to do - all the threads in the DB object
     //do the work
-    while(1)
+    while( DB.IsRunning())
     {
-        MOOSPause(100000);
+        MOOSPause(1000);
     }
 
     return 0;

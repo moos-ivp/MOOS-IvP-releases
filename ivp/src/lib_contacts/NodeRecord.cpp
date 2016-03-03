@@ -4,20 +4,21 @@
 /*    FILE: NodeRecord.cpp                                       */
 /*    DATE: Feb 27th 2010                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include "NodeRecord.h"
@@ -169,8 +170,12 @@ string NodeRecord::getSpec() const
     str += ",GROUP=" + m_group;
   if(m_mode != "")
     str += ",MODE=" + m_mode;
+  if(m_mode_aux != "")
+    str += ",MODE_AUX=" + m_mode_aux;
   if(m_allstop != "")
     str += ",ALLSTOP=" + m_allstop;
+  if(m_load_warning != "")
+    str += ",LOAD_WARNING=" + m_load_warning;
 
   if(m_altitude_set)
     str += ",ALTITUDE=" + doubleToStringX(m_altitude,2);
@@ -241,6 +246,16 @@ string NodeRecord::getMode(string default_mode) const
 }
 
 //---------------------------------------------------------------
+// Procedure: getModeAux
+
+string NodeRecord::getModeAux(string default_mode_aux) const
+{
+  if(m_mode_aux == "")
+    return(default_mode_aux);
+  return(m_mode_aux);
+}
+
+//---------------------------------------------------------------
 // Procedure: getAllStop
 
 string NodeRecord::getAllStop(string default_allstop) const
@@ -248,6 +263,16 @@ string NodeRecord::getAllStop(string default_allstop) const
   if(m_allstop == "")
     return(default_allstop);
   return(m_allstop);
+}
+
+//---------------------------------------------------------------
+// Procedure: getLoadWarning
+
+string NodeRecord::getLoadWarning(string default_warning) const
+{
+  if(m_load_warning == "")
+    return(default_warning);
+  return(m_load_warning);
 }
 
 //---------------------------------------------------------------
@@ -288,8 +313,12 @@ bool NodeRecord::valid(string check, string& why) const
       missing += "type,";
     if((field == "mode") && (m_mode == "")) 
       missing += "mode,";
+    if((field == "mode_aux") && (m_mode_aux == "")) 
+      missing += "mode_aux,";
     if((field == "allstop") && (m_allstop == "")) 
       missing += "allstop,";
+    if((field == "load_warning") && (m_load_warning == "")) 
+      missing += "load_warning,";
     if((field == "x") && !m_x_set) 
       missing += "x,";
     if((field == "y") && !m_y_set) 
@@ -320,3 +349,6 @@ bool NodeRecord::valid(string check, string& why) const
 
   return(true);
 }
+
+
+

@@ -31,7 +31,13 @@
 
 namespace MOOS
 {
-class ActiveMailQueue;
+	//forward dec;aration
+	class ActiveMailQueue;
+
+	/** @brief A new comms client class introduced in V10 which offers minimal latency
+	* and asynchronous messaging.
+	* @ingroup Comms
+	*/
 
 	class MOOSAsyncCommClient : public CMOOSCommClient
 	{
@@ -92,7 +98,7 @@ class ActiveMailQueue;
 	    virtual bool OnCloseConnection();
 
 	    /**
-	     * start all the workr threads
+	     * start all the worker threads
 	     * @return true on success
 	     */
 		virtual bool StartThreads();
@@ -130,14 +136,15 @@ class ActiveMailQueue;
 	    CMOOSThread ReadingThread_; //handles reading
 
 	    double m_dfLastTimingMessage; //time last timing messae was sent
-	    double m_dfLastSendTime; 	//time last message was sent
-	    unsigned int m_nOverSpeedCount;
-	    double m_dfOutGoingDelay;
+	    double m_dfOutGoingDelay; //outgoing message delay as instructed by DB
+
+
 
 	    MOOS::SafeList<CMOOSMsg> OutGoingQueue_; //queue of outgoing mail
 
 
+
 	};
-};
+}
 
 #endif

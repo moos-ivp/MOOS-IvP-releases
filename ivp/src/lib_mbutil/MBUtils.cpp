@@ -4,20 +4,21 @@
 /*    FILE: MBUtils.cpp                                          */
 /*    DATE: (1996-2005)                                          */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <cmath>
@@ -303,6 +304,56 @@ vector<string> parseQuotedString(const string& string_str, char separator)
 }
 
 //----------------------------------------------------------------
+// Procedure: parseStringToWords
+//     Notes: Break up the string into a group of white space separated
+//            chunks
+
+vector<string> parseStringToWords(const string& str, char grouping_char)
+{
+  vector<string> rvector;
+  string word;
+
+  int grouping_char_count = 0;
+
+  char rgc = 0;  // right grouping char
+  if(grouping_char == '(')
+    rgc = ')';
+  else if(grouping_char == '{')
+    rgc = '}';
+  else if(grouping_char == '[')
+    rgc = ']';
+  else if(grouping_char == '\"')
+    rgc = '\"';
+    
+
+  unsigned int i, len = str.length();
+  for(i=0; i<len; i++) {
+    char c = str.at(i);
+    if((grouping_char != 0) && (c == grouping_char)) {
+      grouping_char_count++;
+      word.push_back(c);
+    }
+    else if((rgc != 0) && (c == rgc)) {
+      grouping_char_count--;
+      word.push_back(c);
+    }
+    else if(((c != '\t') && (c != ' ')) || (grouping_char_count > 0))
+      word.push_back(c);
+    else {
+      if(word.length() > 0) {
+	rvector.push_back(word);
+	word.clear();
+      }
+    }
+  }
+
+  if(word.length() != 0)
+    rvector.push_back(word);
+
+  return(rvector);
+}
+
+//----------------------------------------------------------------
 // Procedure: chompString(const string&, char)
 //   Example: svector = chompString("apples, pears, bananas", ',')
 //            svector[0] = "apples"
@@ -335,6 +386,18 @@ vector<string> chompString(const string& string_str, char separator)
   delete [] buff;
 
   return(rvector);
+}
+
+//----------------------------------------------------------------
+// Procedure: augmentSpec
+
+string augmentSpec(const string& orig, const string& new_part, char sep)
+{
+  string return_str = orig;
+  if(orig != "")
+    return_str += sep;
+
+  return(return_str + new_part);
 }
 
 //----------------------------------------------------------------
@@ -430,6 +493,44 @@ string biteString(string& str, char sep1, char sep2)
   }
 
   return(str_front);
+}
+
+//----------------------------------------------------------------
+// Procedure: rbiteString(const string&, char)
+//   Example: input_str = "apples, pears, bananas"
+//            str = rbiteString(input_str, ',')
+//            str = " bananas"
+//            input_str = "apples, pears"
+
+string rbiteString(string& str, char separator)
+{
+  string::size_type len = str.length();
+  if(len == 0)
+    return("");
+
+  bool found = false;
+  string::size_type ix=0;
+  string::size_type i=0;
+  for(i=len-1; (!found && i!=0); i--) {
+    if(str[i] == separator) {
+      found = true;
+      ix = i;
+    }
+  }
+
+  if(!found) {
+    string str_back = str;
+    str = "";
+    return(str_back);
+  }
+
+  string str_front(str.c_str(), ix);
+  string str_back;
+  if((ix+1) < len)
+    str_back = str.substr(ix+1);
+  str = str_front;
+
+  return(str_back);
 }
 
 //----------------------------------------------------------------
@@ -1077,7 +1178,7 @@ bool tokParse(const string& str, const string& left,
 	       char gsep, char lsep, string& rstr)
 {
   rstr = "error";
-  vector<string> svector1 = parseString(str, gsep);
+  vector<string> svector1 = parseStringQ(str, gsep);
   for(vector<string>::size_type i=0; i<svector1.size(); i++) {
     vector<string> svector2 = parseString(svector1[i], lsep);
     if(svector2.size() != 2)
@@ -1103,7 +1204,7 @@ bool tokParse(const string& str, const string& left,
 string tokStringParse(const string& str, const string& left, 
 		      char gsep, char lsep)
 {
-  vector<string> svector1 = parseString(str, gsep);
+  vector<string> svector1 = parseStringQ(str, gsep);
   for(vector<string>::size_type i=0; i<svector1.size(); i++) {
     vector<string> svector2 = parseString(svector1[i], lsep);
     if(svector2.size() != 2)
@@ -1259,11 +1360,11 @@ bool isAlphaNum(const string& str, const std::string& achars)
   for(i=0; (i<len)&&(ok); i++) {
     bool this_char_ok = false;
     char c = str.at(i);
-    if((c >= 48) && (c <= 57))
+    if((c >= 48) && (c <= 57))           // 0-9
       this_char_ok = true;
-    else if((c >= 65) && (c <= 90))
+    else if((c >= 65) && (c <= 90))      // A-Z
       this_char_ok = true;
-    else if((c >= 97) && (c <= 122))
+    else if((c >= 97) && (c <= 122))     // a-z
       this_char_ok = true;
     else {
       unsigned int j, alen = achars.length();
@@ -1562,24 +1663,26 @@ int validateArgs(int argc, char *argv[], string ms)
 //   Example: snapToStep(6.18, 0.5)   returns: 6.00
 //   Example: snapToStep(6.18, 5.0)   returns: 5.00
 
-float snapToStep(float gfloat, float step)
+double snapToStep(double orig_value, double step)
 { 
   if(step <= 0) 
-    return(gfloat);
-  float fval   = gfloat / step;    // Divide by step
-  long int   itemp;
-  if(fval < 0.0)
-    itemp = (long int)(fval-0.5);
+    return(orig_value);
+
+  double new_val = orig_value / step;    // Divide by step
+  long int itemp = 0;
+  if(new_val < 0.0)
+    itemp = (long int)(new_val-0.5);
   else
-    itemp  = (long int)(fval+0.5);      // round to nearest integer
-  fval = (float)itemp * step;      // multiply again by the step
-  return(fval);
+    itemp  = (long int)(new_val+0.5);      // round to nearest integer
+
+  new_val = (double)itemp * step;      // multiply again by the step
+  return(new_val);
 }
   
 
 //----------------------------------------------------------
 // Procedure: snapDownToStep
-//   Purpose: Round the given number (gfloat) to the next lowest
+//   Purpose: Round the given number (value) to the next lowest
 //            point on the number line containing intervals of
 //            size "step".
 //
@@ -1587,13 +1690,17 @@ float snapToStep(float gfloat, float step)
 //   Example: snapToStep(9.98, 0.50)  returns: 9.50
 //   Example: snapToStep(9.98, 5.00)  returns: 5.00
 
-float snapDownToStep(float gfloat, float step)
+double snapDownToStep(double value, double step)
 { 
-  if(step <= 0) return(gfloat);
-  float fval     = gfloat / step;    // Divide by step
-  long int itemp = (long int)(fval); // round to nearest integer
-  fval = (float)itemp * step;        // multiply again by the step
-  return(fval);
+  if(step <= 0) 
+    return(value);
+
+  double new_val = value / step;        // Divide by step
+  long int itemp = (long int)(new_val); // round to nearest integer
+
+  new_val = (double)itemp * step;       // multiply again by the step
+
+  return(new_val);
 }
   
 //-------------------------------------------------------------
@@ -1686,6 +1793,8 @@ bool setNonWhiteVarOnString(string& given_var, string str)
 
 bool okFileToWrite(string file)
 {
+  if(file == "")
+    return(false);
   string dir = "/";
   vector<string> svector = parseString(file, '/');
   for(vector<string>::size_type i=0; i<svector.size()-1; i++) {
@@ -1708,6 +1817,8 @@ bool okFileToWrite(string file)
 
 bool okFileToRead(string file)
 {
+  if(file == "")
+    return(false);
   FILE *f = fopen(file.c_str(), "r"); 
   if(f) {
     fclose(f);
@@ -1879,4 +1990,7 @@ unsigned int charCount(const std::string& str, char mychar)
   }
   return(count);
 }
+
+
+
 

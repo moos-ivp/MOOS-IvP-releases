@@ -1,5 +1,5 @@
-#include "MOOS/libAlogTools/indexReader.h"
-#include "MOOS/libAlogTools/FileNotFoundException.h"
+#include "MOOS/AlogTools/indexReader.h"
+#include "MOOS/AlogTools/exceptions.h"
 
 #include <vector>
 #include <string>
@@ -8,6 +8,9 @@
 #include <fstream>
 
 using namespace std;
+
+namespace MOOS {
+namespace AlogTools {
 
 ////////////////////////////////////////////////////////////////////////////////
 indexReader::indexReader():
@@ -47,7 +50,7 @@ void indexReader::ReadIndexFile( std::string alogIndexFilename )
 
     if(!idxFileStream.is_open())
     {
-      throw FileNotFoundException(alogIndexFilename);
+      throw exceptions::CannotOpenFileForReadingException(alogIndexFilename);
     }
 
     // Read in index file's header
@@ -64,7 +67,7 @@ void indexReader::ReadIndexFile( std::string alogIndexFilename )
     m_alogRecords.reserve(m_alogHeader.numRecs);
     for(int i = 0; i < m_alogHeader.numRecs; ++i)
     {
-        aloglib::idxRec alogRecord;
+        idxRec alogRecord;
         idxFileStream >> alogRecord;
 
         m_alogRecords.push_back( alogRecord );
@@ -73,7 +76,7 @@ void indexReader::ReadIndexFile( std::string alogIndexFilename )
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-const aloglib::idxRec& indexReader::GetLineRecord(unsigned int lineNum ) const
+const idxRec& indexReader::GetLineRecord(unsigned int lineNum ) const
 { 
     return m_alogRecords.at(lineNum);
 }
@@ -81,7 +84,7 @@ const aloglib::idxRec& indexReader::GetLineRecord(unsigned int lineNum ) const
 ////////////////////////////////////////////////////////////////////////////////
 double indexReader::GetTime( int i ) const
 {
-    const aloglib::idxRec &rec = GetLineRecord( i );
+    const idxRec &rec = GetLineRecord( i );
     return rec.time;
 }
 
@@ -98,20 +101,22 @@ int indexReader::GetNumRecords() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-const aloglib::idxMsgList& indexReader::GetMsgList() const
+const idxMsgList& indexReader::GetMsgList() const
 {
     return m_alogMsgList;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-const aloglib::idxSrcList& indexReader::GetSrcList() const
+const idxSrcList& indexReader::GetSrcList() const
 {
     return m_alogSrcList;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-const std::vector<aloglib::idxRec>& indexReader::GetRecordList() const
+const std::vector<idxRec>& indexReader::GetRecordList() const
 {
     return m_alogRecords;
 }
 
+}  // namespace AlogTools
+}  // namespace MOOS

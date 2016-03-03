@@ -4,20 +4,21 @@
 /*    FILE: BHV_Loiter.cpp                                       */
 /*    DATE: July 26th 2005 In Elba w/ M.Grund, P.Newman          */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #ifdef _WIN32
@@ -70,8 +71,15 @@ BHV_Loiter::BHV_Loiter(IvPDomain gdomain) :
   m_center_pending    = false;
   m_center_activate   = false;
 
-  m_hint_edge_size    = 1;
-  m_hint_vertex_size  = 1;
+
+  // Visual Hint Defaults
+  m_hint_vertex_size   = 1;
+  m_hint_edge_size     = 1;
+  m_hint_vertex_color  = "dodger_blue";
+  m_hint_edge_color    = "white";
+  m_hint_nextpt_color  = "yellow";
+  m_hint_nextpt_lcolor = "aqua";
+  m_hint_nextpt_vertex_size = 5;
 
   m_waypoint_engine.setPerpetual(true);
   m_waypoint_engine.setRepeatsEndless(true);
@@ -324,6 +332,10 @@ bool BHV_Loiter::updateInfoIn()
   // Calculating ETA to poly - should we base it on progress history?
   // Or simply distance and current speed?
 
+  m_eta_to_poly = 0;
+  if((m_dist_to_poly > 0) && (m_osh > 0.001))
+    m_eta_to_poly = (m_dist_to_poly / m_osv);
+
   return(true);
 }
 
@@ -480,8 +492,17 @@ void BHV_Loiter::postStatusReports()
   else
     postMessage(("LOITER_ACQUIRE" + m_var_suffix), 0);
   
-  string var = ("LOITER_DIST_TO_POLY" + m_var_suffix);
-  postIntMessage(var, m_dist_to_poly);
+  string dist_var = ("LOITER_DIST_TO_POLY" + m_var_suffix);
+  if(m_dist_to_poly > 10)
+    postIntMessage(dist_var, m_dist_to_poly);
+  else
+    postMessage(dist_var, m_dist_to_poly);
+
+  string eta_var = ("LOITER_ETA_TO_POLY" + m_var_suffix);
+  if((m_eta_to_poly > 10) || (m_eta_to_poly == 0))
+    postIntMessage(eta_var, m_eta_to_poly);
+  else
+    postMessage(eta_var, m_eta_to_poly);
 }
 
 //-----------------------------------------------------------
@@ -539,6 +560,7 @@ void BHV_Loiter::postViewablePoint()
   view_point.set_label(m_us_name + "_waypoint");
   view_point.set_color("label", m_hint_nextpt_lcolor);
   view_point.set_color("vertex", m_hint_nextpt_color);
+  view_point.set_vertex_size(m_hint_nextpt_vertex_size);
   postMessage("VIEW_POINT", view_point.get_spec());
 }
 
@@ -566,18 +588,20 @@ void BHV_Loiter::handleVisualHint(string hint)
   string param = tolower(stripBlankEnds(biteString(hint, '=')));
   string value = stripBlankEnds(hint);
   
-  if((param == "nextpt_color") && isColor(value))
-    m_hint_nextpt_color = value;
-  else if((param == "nextpt_lcolor") && isColor(value))
-    m_hint_nextpt_lcolor = value;
+  if((param == "vertex_size") && isNumber(value))
+    m_hint_vertex_size = atof(value.c_str());
+  else if((param == "edge_size") && isNumber(value))
+    m_hint_edge_size = atof(value.c_str());
   else if((param == "vertex_color") && isColor(value))
     m_hint_vertex_color = value;
   else if((param == "edge_color") && isColor(value))
     m_hint_edge_color = value;
-  else if((param == "edge_size") && isNumber(value))
-    m_hint_edge_size = atof(value.c_str());
-  else if((param == "vertex_size") && isNumber(value))
-    m_hint_vertex_size = atof(value.c_str());
+  else if((param == "nextpt_color") && isColor(value))
+    m_hint_nextpt_color = value;
+  else if((param == "nextpt_lcolor") && isColor(value))
+    m_hint_nextpt_lcolor = value;
+  else if((param == "nextpt_vertex_size") && isNumber(value))
+    m_hint_nextpt_vertex_size = atof(value.c_str());
   else if(param == "label")
     m_hint_poly_label = value;
 }
@@ -601,5 +625,8 @@ void BHV_Loiter::postConfigStatus()
 
   postRepeatableMessage("BHV_SETTINGS", str);
 }
+
+
+
 
 

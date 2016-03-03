@@ -4,20 +4,23 @@
 /*    FILE: OF_Reflector.h                                       */
 /*    DATE: Aug 29th 2005 (derived from OFR_AOF built long ago)  */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of IvP Helm Core Libs                       */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* IvP Helm Core Libs is free software: you can redistribute it  */
+/* and/or modify it under the terms of the Lesser GNU General    */
+/* Public License as published by the Free Software Foundation,  */
+/* either version 3 of the License, or (at your option) any      */
+/* later version.                                                */
+/*                                                               */
+/* IvP Helm Core Libs is distributed in the hope that it will    */
+/* be useful but WITHOUT ANY WARRANTY; without even the implied  */
 /* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* PURPOSE. See the Lesser GNU General Public License for more   */
+/* details.                                                      */
 /*                                                               */
-/* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* You should have received a copy of the Lesser GNU General     */
+/* Public License along with MOOS-IvP.  If not, see              */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #ifdef _WIN32
@@ -45,7 +48,7 @@ public:
   OF_Reflector(const AOF*, int degree=1);
   virtual ~OF_Reflector();
 
-public: 
+ public: 
   int    create(const std::string);
   int    create(int unif_amt=-1, int smart_amt=-1, double thresh=-1);
 
@@ -63,12 +66,17 @@ public:
   bool   setParam(std::string, double);
   bool   setParam(std::string, IvPBox);
     
+  // Added by mikerb May1614
+  unsigned int getMessageCnt() const;
+  std::string  getMessage(unsigned int) const;
+  
+
  protected:
   void   initializePDMap();
   void   clearPDMap();
   void   addWarning(std::string);
 
-protected:
+ protected:
   const AOF*   m_aof;
   IvPDomain    m_domain;
   PDMap*       m_pdmap;
@@ -98,6 +106,9 @@ protected:
   std::string m_warnings;
 };
 #endif
+
+
+
 
 
 

@@ -4,20 +4,21 @@
 /*    FILE: PokeDB_Info.cpp                                      */
 /*    DATE: Dec 25th 2011                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
  
 #include <cstdlib>
@@ -51,7 +52,7 @@ void showHelpAndExit()
 {
   blk("                                                                ");
   blu("=============================================================== ");
-  blu("Usage: uPokeDB file.moos [OPTIONS]                              ");
+  blu("Usage: uPokeDB [file.moos] [OPTIONS] [VAR-DATA Pair(s)]         ");
   blu("=============================================================== ");
   blk("                                                                ");
   showSynopsis();
@@ -65,10 +66,10 @@ void showHelpAndExit()
   blk("      Display MOOS publications and subscriptions.              ");
   mag("  --version,-v                                                  ");
   blk("      Display the release version of uPokeDB.                   ");
-  mag("  <host=val>                                                    ");
+  mag("  --host=val                                                    ");
   blk("      Provide MOOSDB IP address on the command line rather than ");
   blk("      from a .moos file.                                        ");
-  mag("  <port=val>                                                    ");
+  mag("  --port=val                                                    ");
   blk("      Provide MOOSDB port number on the command line rather than");
   blk("      from a .moos file.                                        ");
   mag("  <var=value>                                                   ");
@@ -80,7 +81,7 @@ void showHelpAndExit()
   blk("                                                                ");
   blk("Examples:                                                       ");
   blk("     $ uPokeDB alpha.moos DEPLOY=true RETURN_SPEED=2.0          ");
-  blk("     $ uPokeDB DEPLOY=true  host=localhost port=9000            ");
+  blk("     $ uPokeDB DEPLOY=true  --host=localhost --port=9000        ");
   blk("     $ uPokeDB STRING_SPEED:=2.3 alpha.moos                     ");
   exit(0);
 }
@@ -136,5 +137,8 @@ void showReleaseInfoAndExit()
   showReleaseInfo("uPokeDB", "gpl");
   exit(0);
 }
+
+
+
 
 

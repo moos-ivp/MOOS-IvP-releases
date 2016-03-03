@@ -64,8 +64,9 @@ void ShareHelp::PrintHelp()
 	std::cout<<YELLOW<<"\nGeneral Usage\n\n"<<NORMAL;
 	std::cout<<"pShare MissionFile [switches] \n\n"
 			"switches:\n"
-			"  -o, (--output) outputs: specify outputs from command line\n"
-			"  -in, (--input) inputs : specify inputs from command line\n";
+			"  -o=<outputs>: specify outputs from command line\n"
+			"  -i=<inputs> : specify inputs from command line\n"
+	        "  --verbose   : verbose operation\n";
 
 
 	std::cout<<YELLOW<<"\nExamples:\n\n"<<NORMAL;
@@ -80,25 +81,27 @@ void ShareHelp::PrintHelp()
 			" Outputs are specified as :\n\n"
 			"        'src_var->route & route & ....' \n\n"
 			" where a \"route\" is a string with any of the following formats\n\n"
-			"    dest_var:dest_host:dest_port:transport\n"
-			"    dest_host:dest_port:transport\n"
+			"    dest_var:dest_host:dest_port\n"
+			"    dest_host:dest_port\n"
 			"    dest_var:multicast_channel\n"
 			"    multicast_channel\n\n"
 			" This looks more complicated than it is so some examples are helpful\n\n"
 			" 1) sharing \"VAR1\" to port 10007 on 18.38.2.158 as udp and call it \"Var2\" \n"
-			"  ./pShare  -o 'VAR1->Var2:18.38.2.158:10007:udp' \n"
-			" 2) if you aren't bothered about renaming...\n"
-			"  ./pShare  -o 'VAR1->oceanai.mit.edu:10007:udp' \n"
-			" 3) if you want to use a predefined multicast channel, say 8,...\n"
-			"  ./pShare  -o 'VAR1->multicast_8' \n"
-			" 4) if you want to rename the variable\n"
-			"  ./pShare  -o 'VAR1->VAR3:multicast_8\n\n"
+			"  ./pShare  -o='VAR1->Var2:18.38.2.158:10007' \n"
+	        " 2) sharing as above but only at 4Hz \n"
+	                    "  ./pShare  -o='VAR1->Var2:18.38.2.158:10007@4.0' \n"
+			" 3) if you aren't bothered about renaming...\n"
+			"  ./pShare  -o='VAR1->oceanai.mit.edu:10007' \n"
+			" 4) if you want to use a predefined multicast channel, say 8,...\n"
+			"  ./pShare  -o='VAR1->multicast_8' \n"
+			" 5) if you want to rename the variable\n"
+			"  ./pShare  -o='VAR1->VAR3:multicast_8\n\n"
 			" Of course any variable can be sent to many routes. Here we send VAR1 to three places\n"
 			" multicast channel 8 as VAR3, multicast channel 2 as VAR1 (no renaming) and a machine\n"
 			" called oceanaias \"oranges\":\n\n"
-			" 5) ./pShare  -o 'VAR1->VAR3:multicast_8 & multicast_2 & oranges:oceanai.mit.edu:10007:udp' \n\n"
+			" 6) ./pShare  -o='VAR1->VAR3:multicast_8 & multicast_2 & oranges:oceanai.mit.edu:10007' \n\n"
 			" And finally you can specify many shares at once. Here we share VAR1 and VAR2\n\n"
-			" 6) ./pShare  -o 'VAR1->multicast_8' 'VAR2->oranges:oceanai.mit.edu:10007:udp' \n\n";
+			" 7) ./pShare  -o='VAR1->multicast_8,VAR2->oranges:oceanai.mit.edu:10007' \n\n";
 
 
 	std::cout<<YELLOW<<"\nSpecifying wildcard shares:\n\n"<<NORMAL<<
@@ -108,14 +111,14 @@ void ShareHelp::PrintHelp()
 			" are helpful.\n\n"
 			" 7) sharing anything from an app called MyApp to a port on ocean AI, no renaming and\n"
 			"    multicast 8:\n"
-			"   ./pShare -o '*:MyApp->oceanai.mit.edu:1007:udp & multicast_8' \n"
-			" 8) sharing any variable ending _WARNING from any three letter-named app beginning with ST \n"
-			"   ./pShare -o '*_WARNING:ST?->localhost:8009:udp\n\n"
-			" Renaming on wildcard shares is of coruse hard to specify (you don't know what is going to\n"
+			"   ./pShare -o='*:MyApp->oceanai.mit.edu:1007 & multicast_8' \n"
+			" 8) sharing any variable ending _WARNING from any three letter-named app beginning with ST at 10Hz max \n"
+			"   ./pShare -o='*_WARNING:ST?->localhost:8009@10.0\n\n"
+			" Renaming on wildcard shares is of course hard to specify (you don't know what is going to\n"
 			" fit the bill. So in the case of wildcarding the dest_name field, if specified is used as\n"
 			" a prefix:\n\n"
 			" 9) sharing any variable <V> beginning with X e from an app called GPS as shared_<V>\n"
-			"   ./pShare -o 'V*:GPS->shared_:localhost:8009:udp\n\n ";
+			"   ./pShare -o='V*:GPS->shared_:localhost:8009\n\n ";
 
 
 }
@@ -137,7 +140,7 @@ void ShareHelp::PrintInterface()
 			"be reference with the short hand multicast_N, where N<256. Forwarding data\n"
 			"to a multicast channel allows one send to be received by any number of receivers.\n\n"
 			"Of course pShare can also receive data on udp / multicast channel and forward it to\n"
-			"the local, connect MOOSDB. This is done using the input directive. \n"
+			"the local, connected MOOSDB. This is done using the input directive. \n"
 			"pShare supports dynamic sharing configuration by subscribing to PSHARE_CMD\n"
 			"or <AppName>_CMD if running under and alias.\n";
 
@@ -146,6 +149,9 @@ void ShareHelp::PrintInterface()
 	std::cout<<YELLOW<<"PSHARE_CMD\n"<<NORMAL;
 	std::cout<<"This variable can be used to dynamically configure sharing at run time\n"
 			"It has the following format:\n";
+	std::cout<<"     cmd=<IO directive>,<details>\n";
+	std::cout<<"where directive is either \"output\" or \"input\" for example \n";
+	std::cout<<"     cmd = output,src_name = P,dest_name = H,route=multicast_9,frequency=10.0 \n";
 
 
 
@@ -162,14 +168,14 @@ void ShareHelp::PrintInterface()
 	std::cout<<"where a route is a colon delimited tuple\n ";
 	std::cout<<"  dest_name:host_name:port:protocol \n";
 	std::cout<<"example:\n";
-	std::cout<<"  \"Output = X->Y:165.45.3.61:9000:udp & Z:165.45.3.61.2000:multicast_8,K->K:192.168.66.12:3000:udp\"\n";
+	std::cout<<"  \"Output = X->Y:165.45.3.61:9000& Z:165.45.3.61.2000:multicast_8,K->K:192.168.66.12:3000\"\n";
 	std::cout<<"\n\n";
 	std::cout<<YELLOW<<"PSHARE_INPUT_SUMMARY\n"<<NORMAL;
 	std::cout<<"This variable describes channels and ports on which pShare receives data.\n";
 	std::cout<<"\nIt has the following format:\n ";
 	std::cout<<"  Input = hostname:port:protocol,hostname:port:protocol...\n";
 	std::cout<<"example:\n";
-	std::cout<<"  \"input = localhost:9001:udp , 221.1.1.18:multicast_18\"\n";
+	std::cout<<"  \"input = localhost:9001 , 221.1.1.18:multicast_18\"\n";
 	std::cout<<"\n\n";
 
 }

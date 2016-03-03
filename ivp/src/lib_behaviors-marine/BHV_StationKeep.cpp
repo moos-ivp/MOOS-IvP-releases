@@ -4,20 +4,21 @@
 /*    FILE: BHV_StationKeep.cpp                                  */
 /*    DATE: Aug 25 2006                                          */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #ifdef _WIN32
@@ -66,6 +67,7 @@ BHV_StationKeep::BHV_StationKeep(IvPDomain gdomain) :
   // All visual hints initially turned off
   m_hint_vertex_color = "";
   m_hint_edge_color   = "light_blue";
+  m_hint_label_color  = "white";
   m_hint_vertex_size  = 1;
   m_hint_edge_size    = 1;
 
@@ -178,7 +180,6 @@ bool BHV_StationKeep::setParam(string param, string val)
   }
   return(false);
 }
-
 
 //-----------------------------------------------------------
 // Procedure: onIdleToRunState
@@ -391,6 +392,8 @@ void BHV_StationKeep::postStationMessage(bool post)
     poly_str += ",vertex_size=" + doubleToString(m_hint_vertex_size);
   if(m_hint_edge_color != "")
     poly_str += ",edge_color=" + m_hint_edge_color;
+  if(m_hint_label_color != "")
+    poly_str += ",label_color=" + m_hint_label_color;
   if(m_hint_vertex_color != "")
     poly_str += ",vertex_color=" + m_hint_vertex_color;
 
@@ -420,7 +423,7 @@ void BHV_StationKeep::postStationMessage(bool post)
 
   // No need to post both circles if the radii are collapsed, but if
   // we're trying to erase a circle, post anyway just ensure no 
-  // dangling artifacts from the radii being altered dynaically.
+  // dangling artifacts from the radii being altered dynamically.
   if((m_pskeep_radius > m_outer_radius) || (post==false))
     postMessage("VIEW_POLYGON", poly_str_hiber, "hiber");
 }
@@ -556,6 +559,8 @@ void BHV_StationKeep::handleVisualHint(string hint)
     m_hint_edge_size = atof(value.c_str());
   else if((param == "vertex_size") && isNumber(value))
     m_hint_vertex_size = atof(value.c_str());
+  else if((param == "label_color") && isColor(value))
+    m_hint_label_color = value;
 }
 
 //-----------------------------------------------------------
@@ -585,5 +590,8 @@ void BHV_StationKeep::postConfigStatus()
 
   postRepeatableMessage("BHV_SETTINGS", str);
 }
+
+
+
 
 

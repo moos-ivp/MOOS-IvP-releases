@@ -4,20 +4,21 @@
 /*    FILE: XYFormatUtilsPoly.cpp                                */
 /*    DATE: May 16, 2009 After bbq @ Hows                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 #ifdef _WIN32
    #define _USE_MATH_DEFINES
@@ -210,14 +211,14 @@ XYPolygon stringAbbreviated2Poly(string str)
   int vsize = mvector.size();
   for(int i=0; i<vsize; i++) {
     mvector[i] = stripBlankEnds(mvector[i]);
-    string left = tolower(stripBlankEnds(biteString(mvector[i], ',')));
-    string rest = stripBlankEnds(mvector[i]);
+    string left = tolower(biteStringX(mvector[i], ','));
+    string rest = mvector[i];
 
     bool handled = new_poly.set_param(left, rest);
     if(!handled) {
       string xstr = left;
-      string ystr = stripBlankEnds(biteString(rest, ','));
-      string zstr = stripBlankEnds(rest);
+      string ystr = biteStringX(rest, ',');
+      string zstr = rest;
       if((zstr != "") && !isNumber(zstr))
 	return(null_poly);
       if(!isNumber(xstr) || !isNumber(ystr))
@@ -258,8 +259,8 @@ XYPolygon stringEllipse2Poly(string str)
   bool radians_set = false;  // be specified.
   bool pts_set     = false;
 
-  double xpos, ypos, zval, major, minor, radians, degrees, snap=0;
-  int    pts;
+  double xpos=0, ypos=0, zval=0, major=0, minor=0, radians=0, degrees=0, snap=0;
+  int    pts = 0;
    
   str = stripBlankEnds(str);
   vector<string> mvector = parseStringQ(str, ',');
@@ -275,6 +276,10 @@ XYPolygon stringEllipse2Poly(string str)
     if(param == "format") {
       if(value != "ellipse")
 	return(null_poly);
+    }
+    else if((param == "active") && (tolower(value)=="false")) {
+      null_poly.set_active(false);
+      new_poly.set_active(false);
     }
     else if((param == "x") && (isNumber(value))) {
       xpos_set = true;
@@ -385,15 +390,19 @@ XYPolygon stringRadial2Poly(string str)
   bool radius_set = false;
   bool pts_set    = false;
 
-  double xpos = 0, ypos = 0, zval = 0, radius = 0, snap=0;
-  int    pts;
+  double xpos = 0;
+  double ypos = 0;
+  double zval = 0;
+  double radius = 0;
+  double snap = 0;
+  int    pts = 0;
   
   str = stripBlankEnds(str);
   vector<string> mvector = parseStringQ(str, ',');
   unsigned int i, vsize = mvector.size();
 
   for(i=0; i<vsize; i++) {
-    string param = tolower(stripBlankEnds(biteString(mvector[i], '=')));
+    string param = tolower(biteStringX(mvector[i], '='));
     string value = stripBlankEnds(mvector[i]);
     double dval  = atof(value.c_str());
     if(param == "format") {
@@ -411,6 +420,10 @@ XYPolygon stringRadial2Poly(string str)
     else if((param == "z") && (isNumber(value))) {
       //zval_set = true;
       zval = atof(value.c_str());
+    }
+    else if((param == "active") && (tolower(value)=="false")) {
+      null_poly.set_active(false);
+      new_poly.set_active(false);
     }
     else if((param == "radius") && (isNumber(value))) {
       double dval = atof(value.c_str());
@@ -548,7 +561,7 @@ XYPolygon stringPieWedge2Poly(string str)
   bool rang_set  = false;
   bool range_set = false;
   
-  double xpos, ypos, lang, rang, range, snap=0;
+  double xpos=0, ypos=0, lang=0, rang=0, range=0, snap=0;
   int    pts=0;
   
   str = stripBlankEnds(str);
@@ -669,7 +682,12 @@ XYPolygon stringRangeWedge2Poly(string str)
   bool range_set = false;
 
   double range_min = 0;
-  double xpos, ypos, lang, rang, range_max, snap=0;
+  double xpos = 0;
+  double ypos = 0;
+  double lang = 0;
+  double rang = 0;
+  double snap = 0;
+  double range_max = 0;
   int    pts=0;
   
   str = stripBlankEnds(str);
@@ -813,7 +831,7 @@ XYPolygon stringPylon2Poly(string str)
   bool axis_pad_set = false;
   bool perp_pad_set = false;  // Either degrees OR radians must
 
-  double x1, y1, x2, y2, zval, axis_pad, perp_pad, snap=0;
+  double x1=0, y1=0, x2=0, y2=0, zval=0, axis_pad=0, perp_pad=0, snap=0;
   
   str = stripBlankEnds(str);
   vector<string> mvector = parseStringQ(str, ',');
@@ -917,5 +935,8 @@ XYPolygon stringPylon2Poly(string str)
   else
     return(null_poly);
 }
+
+
+
 
 

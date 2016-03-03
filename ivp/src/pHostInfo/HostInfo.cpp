@@ -4,20 +4,21 @@
 /*    FILE: HostInfo.cpp                                         */
 /*    DATE: Dec 14th 2011                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <cstdlib>
@@ -205,67 +206,74 @@ void HostInfo::registerVariables()
 void HostInfo::generateIPInfoFiles()
 {
   // First the various OS X system calls
+  int result = 0;
   string sys_call;
   string name = m_host_community;
 
+  string bgd = "";
+
   sys_call = "mkdir " + m_tmp_file_dir;
-  system(sys_call.c_str());
+  result = system(sys_call.c_str());
 
   sys_call = "networksetup -getinfo Airport  > ";
-  sys_call += m_tmp_file_dir + "ipinfo_osx_airport_" + name + ".txt"; 
-  system(sys_call.c_str());
+  sys_call += m_tmp_file_dir + "ipinfo_osx_airport_" + name + ".txt" + bgd; 
+  result = system(sys_call.c_str());
 
   sys_call = "networksetup -getinfo Wi-Fi  > ";
-  sys_call += m_tmp_file_dir + "ipinfo_osx_wifi_" + name + ".txt"; 
-  system(sys_call.c_str());
+  sys_call += m_tmp_file_dir + "ipinfo_osx_wifi_" + name + ".txt" + bgd; 
+  result = system(sys_call.c_str());
 
   sys_call = "networksetup -getinfo Ethernet  > ";
-  sys_call += m_tmp_file_dir + "ipinfo_osx_ethernet_" + name + ".txt"; 
-  system(sys_call.c_str());
+  sys_call += m_tmp_file_dir + "ipinfo_osx_ethernet_" + name + ".txt" + bgd; 
+  result = system(sys_call.c_str());
+
+  sys_call = "networksetup -getinfo \"USB Ethernet\"  > ";
+  sys_call += m_tmp_file_dir + "ipinfo_osx_usb_ethernet_" + name + ".txt" + bgd; 
+  result = system(sys_call.c_str());
 
   sys_call = "networksetup -getinfo \"Ethernet 1\"  > ";
-  sys_call += m_tmp_file_dir + "ipinfo_osx_ethernet1_" + name + ".txt"; 
-  system(sys_call.c_str());
+  sys_call += m_tmp_file_dir + "ipinfo_osx_ethernet1_" + name + ".txt" + bgd; 
+  result = system(sys_call.c_str());
 
   sys_call = "networksetup -getinfo \"Ethernet 2\"  > ";
-  sys_call += m_tmp_file_dir + "ipinfo_osx_ethernet2_" + name + ".txt"; 
-  system(sys_call.c_str());
+  sys_call += m_tmp_file_dir + "ipinfo_osx_ethernet2_" + name + ".txt" + bgd; 
+  result = system(sys_call.c_str());
 
   // Next the various GNU/Linux system calls
   sys_call  = "ifconfig eth0 | grep 'inet addr:'| grep -v '127.0.0.1' ";
   sys_call += "| cut -d: -f2 | awk '{ print $1}' > ";
-  sys_call += m_tmp_file_dir + "ipinfo_linux_ethernet0_" + name + ".txt";
-  system(sys_call.c_str());
+  sys_call += m_tmp_file_dir + "ipinfo_linux_ethernet0_" + name + ".txt" + bgd;
+  result = system(sys_call.c_str());
 
   sys_call  = "ifconfig eth1 | grep 'inet addr:'| grep -v '127.0.0.1' ";
   sys_call += "| cut -d: -f2 | awk '{ print $1}' > ";
-  sys_call += m_tmp_file_dir + "ipinfo_linux_ethernet1_" + name + ".txt";
-  system(sys_call.c_str());
+  sys_call += m_tmp_file_dir + "ipinfo_linux_ethernet1_" + name + ".txt" + bgd;
+  result = system(sys_call.c_str());
 
   sys_call  = "ifconfig wlan0 | grep 'inet addr:'| grep -v '127.0.0.1' ";
   sys_call += "| cut -d: -f2 | awk '{ print $1}' > ";
-  sys_call += m_tmp_file_dir + "ipinfo_linux_wifi_" + name + ".txt";
-  system(sys_call.c_str());
+  sys_call += m_tmp_file_dir + "ipinfo_linux_wifi_" + name + ".txt" + bgd;
+  result = system(sys_call.c_str());
 
   sys_call  = "ifconfig usb0 | grep 'inet addr:'| grep -v '127.0.0.1' ";
   sys_call += "| cut -d: -f2 | awk '{ print $1}' > ";
-  sys_call += m_tmp_file_dir + "ipinfo_linux_usb0_" + name + ".txt";
-  system(sys_call.c_str());
+  sys_call += m_tmp_file_dir + "ipinfo_linux_usb0_" + name + ".txt" + bgd;
+  result = system(sys_call.c_str());
 
   sys_call  = "ifconfig usb1 | grep 'inet addr:'| grep -v '127.0.0.1' ";
   sys_call += "| cut -d: -f2 | awk '{ print $1}' > ";
-  sys_call += m_tmp_file_dir + "ipinfo_linux_usb1_" + name + ".txt";
-  system(sys_call.c_str());
+  sys_call += m_tmp_file_dir + "ipinfo_linux_usb1_" + name + ".txt" + bgd;
+  result = system(sys_call.c_str());
 
   sys_call  = "ifconfig usb2 | grep 'inet addr:'| grep -v '127.0.0.1' ";
   sys_call += "| cut -d: -f2 | awk '{ print $1}' > ";
-  sys_call += m_tmp_file_dir + "ipinfo_linux_usb2_" + name + ".txt";
-  system(sys_call.c_str());
+  sys_call += m_tmp_file_dir + "ipinfo_linux_usb2_" + name + ".txt" + bgd;
+  result = system(sys_call.c_str());
 
   sys_call  = "ifconfig | grep 'inet addr:'| grep -v '127.0.0.1' ";
   sys_call += "| cut -d: -f2 | awk '{ print $1}' > ";
-  sys_call += m_tmp_file_dir + "ipinfo_linux_any_" + name + ".txt";
-  system(sys_call.c_str());
+  sys_call += m_tmp_file_dir + "ipinfo_linux_any_" + name + ".txt" + bgd;
+  result = system(sys_call.c_str());
 
   m_ip_info_files_generated = true;
 }
@@ -285,6 +293,7 @@ void HostInfo::gatherIPInfoFromFiles()
   m_ip_osx_ethernet    = readOSXInfoIP("ipinfo_osx_ethernet_" + name + ".txt");
   m_ip_osx_ethernet1   = readOSXInfoIP("ipinfo_osx_ethernet1_" + name + ".txt");
   m_ip_osx_ethernet2   = readOSXInfoIP("ipinfo_osx_ethernet2_" + name + ".txt");
+  m_ip_osx_usb_ethernet = readOSXInfoIP("ipinfo_osx_usb_ethernet_" + name + ".txt");
   m_ip_linux_wifi      = readLinuxInfoIP("ipinfo_linux_wifi_" + name + ".txt");
   m_ip_linux_ethernet0 = readLinuxInfoIP("ipinfo_linux_ethernet0_" + name + ".txt");
   m_ip_linux_ethernet1 = readLinuxInfoIP("ipinfo_linux_ethernet1_" + name + ".txt");
@@ -327,6 +336,7 @@ void HostInfo::postIPInfo()
     addIPInfo(m_ip_linux_usb1, "LINUX_USB1");
     addIPInfo(m_ip_linux_usb2, "LINUX_USB2");
     addIPInfo(m_ip_osx_ethernet, "OSX_ETHERNET");
+    addIPInfo(m_ip_osx_usb_ethernet, "OSX_USB_ETHERNET");
     addIPInfo(m_ip_osx_ethernet1, "OSX_ETHERNET1");
     addIPInfo(m_ip_osx_ethernet2, "OSX_ETHERNET2");
     addIPInfo(m_ip_osx_wifi, "OSX_WIFI");
@@ -348,6 +358,11 @@ void HostInfo::postIPInfo()
   hrecord.setTimeWarp(doubleToStringX(m_time_warp,1));
   hrecord.setPShareIRoutes(m_pshare_iroutes);
   m_host_record_all = hrecord.getSpec();
+
+  if(strContains(m_host_record_all, "localhost") && (m_host_ip != ""))
+    m_host_record_all = findReplace(m_host_record_all, "localhost", m_host_ip);
+
+
   Notify("PHI_HOST_INFO", m_host_record_all);
   
   m_ip_info_posted = true;
@@ -439,17 +454,18 @@ string HostInfo::readLinuxInfoIP(string filename)
 
 void HostInfo::clearTempFiles()
 {
-  system("rm -f ~/.ipinfo_osx_airport.txt");     // OS X Snow Leopard
-  system("rm -f ~/.ipinfo_osx_wifi.txt");        // OS X Lion
-  system("rm -f ~/.ipinfo_osx_ethernet.txt");    // OS X 
-  system("rm -f ~/.ipinfo_osx_ethernet1.txt");   // OS X 
-  system("rm -f ~/.ipinfo_osx_ethernet2.txt");   // OS X 
-  system("rm -f ~/.ipinfo_linux_ethernet0.txt"); // Linux
-  system("rm -f ~/.ipinfo_linux_ethernet1.txt"); // Linux
-  system("rm -f ~/.ipinfo_linux_usb0.txt");      // Linux
-  system("rm -f ~/.ipinfo_linux_usb1.txt");      // Linux
-  system("rm -f ~/.ipinfo_linux_usb2.txt");      // Linux
-  system("rm -f ~/.ipinfo_linux_wifi.txt");      // Linux
+  int res = 0;
+  res = system("rm -f ~/.ipinfo_osx_airport.txt");     // OS X Snow Leopard
+  res = system("rm -f ~/.ipinfo_osx_wifi.txt");        // OS X Lion
+  res = system("rm -f ~/.ipinfo_osx_ethernet.txt");    // OS X 
+  res = system("rm -f ~/.ipinfo_osx_ethernet1.txt");   // OS X 
+  res = system("rm -f ~/.ipinfo_osx_ethernet2.txt");   // OS X 
+  res = system("rm -f ~/.ipinfo_linux_ethernet0.txt"); // Linux
+  res = system("rm -f ~/.ipinfo_linux_ethernet1.txt"); // Linux
+  res = system("rm -f ~/.ipinfo_linux_usb0.txt");      // Linux
+  res = system("rm -f ~/.ipinfo_linux_usb1.txt");      // Linux
+  res = system("rm -f ~/.ipinfo_linux_usb2.txt");      // Linux
+  res = system("rm -f ~/.ipinfo_linux_wifi.txt");      // Linux
 }
 
 //---------------------------------------------------------
@@ -472,10 +488,12 @@ bool HostInfo::handleMailPShareInput(const string& list_of_routes)
     vector<string> jvector = parseString(route, ':');
     unsigned int jsize = jvector.size();
     string new_route;
-    if(jsize == 3) {
+    if((jsize == 2) || (jsize == 3)) {
       string hostname  = jvector[0];
       string port      = jvector[1];
-      string protocol  = jvector[2];
+      string protocol  = "udp";
+      if(jsize == 3)
+	protocol  = jvector[2];
       if(isValidIPAddress(hostname) && isNumber(port) && (protocol=="udp")) 
 	new_route = hostname + ":" + port;
       else if(isValidIPAddress(hostname) && isNumber(port))
@@ -540,4 +558,7 @@ bool HostInfo::buildReport()
 
   return(true);
 }
+
+
+
 

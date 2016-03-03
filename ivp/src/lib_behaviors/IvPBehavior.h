@@ -1,40 +1,26 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin                                     */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
 /*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: IvPBehavior.h                                        */
 /*    DATE: Oct 20, 2003 4 days after Grady's Gaffe              */
 /*                                                               */
-/* (IvPHelm) The IvP autonomous control Helm is a set of         */
-/* classes and algorithms for a behavior-based autonomous        */
-/* control architecture with IvP action selection.               */
+/* This file is part of IvP Helm Core Libs                       */
 /*                                                               */
-/* The algorithms embodied in this software are protected under  */
-/* U.S. Pat. App. Ser. Nos. 10/631,527 and 10/911,765 and are    */
-/* the property of the United States Navy.                       */
+/* IvP Helm Core Libs is free software: you can redistribute it  */
+/* and/or modify it under the terms of the Lesser GNU General    */
+/* Public License as published by the Free Software Foundation,  */
+/* either version 3 of the License, or (at your option) any      */
+/* later version.                                                */
 /*                                                               */
-/* Permission to use, copy, modify and distribute this software  */
-/* and its documentation for any non-commercial purpose, without */
-/* fee, and without a written agreement is hereby granted        */
-/* provided that the above notice and this paragraph and the     */
-/* following three paragraphs appear in all copies.              */
+/* IvP Helm Core Libs is distributed in the hope that it will    */
+/* be useful but WITHOUT ANY WARRANTY; without even the implied  */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the Lesser GNU General Public License for more   */
+/* details.                                                      */
 /*                                                               */
-/* Commercial licences for this software may be obtained by      */
-/* contacting Patent Counsel, Naval Undersea Warfare Center      */
-/* Division Newport at 401-832-4736 or 1176 Howell Street,       */
-/* Newport, RI 02841.                                            */
-/*                                                               */
-/* In no event shall the US Navy be liable to any party for      */
-/* direct, indirect, special, incidental, or consequential       */
-/* damages, including lost profits, arising out of the use       */
-/* of this software and its documentation, even if the US Navy   */
-/* has been advised of the possibility of such damage.           */
-/*                                                               */
-/* The US Navy specifically disclaims any warranties, including, */
-/* but not limited to, the implied warranties of merchantability */
-/* and fitness for a particular purpose. The software provided   */
-/* hereunder is on an 'as-is' basis, and the US Navy has no      */
-/* obligations to provide maintenance, support, updates,         */
-/* enhancements or modifications.                                */
+/* You should have received a copy of the Lesser GNU General     */
+/* Public License along with MOOS-IvP.  If not, see              */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #ifdef _WIN32
@@ -65,11 +51,14 @@ public:
   virtual BehaviorReport onRunState(std::string);
   virtual bool setParam(std::string, std::string);
   virtual void onSetParamComplete() {postConfigStatus();};
+  virtual void onHelmStart() {};
   virtual void onIdleState() {};
   virtual void onCompleteState() {};
   virtual void onIdleToRunState() {};
   virtual void onRunToIdleState() {};
   virtual void postConfigStatus() {};
+  virtual std::string getInfo(std::string)  {return("");};
+  virtual double getDoubleInfo(std::string) {return(0);};
 
   bool   setParamCommon(std::string, std::string);
   void   setInfoBuffer(const InfoBuffer*);
@@ -89,6 +78,7 @@ public:
   void   clearMessages()                 {m_messages.clear();};
   void   resetStateOK()                  {m_bhv_state_ok=true;};
 
+  void    postMessage(std::string, std::string, std::string key="");
 protected:
   bool    setBehaviorName(std::string str);
   bool    augBehaviorName(std::string str);
@@ -99,7 +89,6 @@ protected:
   void    setComplete();
   void    postBadConfig(std::string);
   void    postMessage(std::string, double, std::string key="");
-  void    postMessage(std::string, std::string, std::string key="");
   void    postBoolMessage(std::string, bool, std::string key="");
   void    postIntMessage(std::string, double, std::string key="");
   void    postRepeatableMessage(std::string, double);
@@ -121,6 +110,7 @@ protected:
   double                   getBufferCurrTime();
   double                   getBufferTimeVal(std::string);
   double                   getBufferDoubleVal(std::string, bool&);
+  std::string              getBufferStringVal(std::string);
   std::string              getBufferStringVal(std::string, bool&);
   std::vector<double>      getBufferDoubleVector(std::string, bool&);
   std::vector<std::string> getBufferStringVector(std::string, bool&);
@@ -189,5 +179,8 @@ private:
 };
 
 #endif
+
+
+
 
 

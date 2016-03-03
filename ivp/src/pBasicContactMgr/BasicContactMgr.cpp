@@ -4,20 +4,21 @@
 /*    FILE: BasicContactMgr.cpp                                  */
 /*    DATE: Feb 24th 2010                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #ifdef _WIN32
@@ -35,6 +36,8 @@
 #include "NodeRecordUtils.h"
 #include "XYCircle.h"
 #include "ACTable.h"
+
+#define USE_UTM
 
 using namespace std;
 
@@ -97,6 +100,8 @@ bool BasicContactMgr::OnNewMail(MOOSMSG_LIST &NewMail)
       handleMailNodeReport(sval);
     else if(key == "BCM_DISPLAY_RADII")
       handleMailDisplayRadii(sval);      
+    else if(key == "BCM_ALERT_REQUEST")
+      handleMailAlertRequest(sval);      
     else if(key == "CONTACT_RESOLVED")
       handleMailResolved(sval);
 
@@ -287,6 +292,7 @@ void BasicContactMgr::registerVariables()
   m_Comms.Register("NODE_REPORT", 0);
   m_Comms.Register("CONTACT_RESOLVED", 0);
   m_Comms.Register("BCM_DISPLAY_RADII", 0);
+  m_Comms.Register("BCM_ALERT_REQUEST", 0);
   m_Comms.Register("NAV_X", 0);
   m_Comms.Register("NAV_Y", 0);
   m_Comms.Register("NAV_SPEED", 0);
@@ -429,6 +435,20 @@ void BasicContactMgr::handleMailDisplayRadii(const string& value)
 
   if(m_display_radii == false)
     postRadii(false);
+}
+
+//---------------------------------------------------------
+// Procedure: handleMailAlertRequest
+//    Format: BCM_ALERT_REQUEST = 
+//            var=CONTACT_INFO, val="name=avd_$[VNAME] # contact=$[VNAME]"
+//            alert_range=80, cpa_range=95
+
+                     
+void BasicContactMgr::handleMailAlertRequest(const string& value)
+{
+  bool ok = handleConfigAlert(value);
+  if(!ok)
+    reportRunWarning("Unhandled Alert Request: " + value);   
 }
 
 //---------------------------------------------------------
@@ -914,3 +934,6 @@ string BasicContactMgr::getAlertRangeCPAColor(const string& alert_id) const
   else
     return(p->second);
 }
+
+
+

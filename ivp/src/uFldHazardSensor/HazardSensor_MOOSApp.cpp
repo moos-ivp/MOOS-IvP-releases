@@ -4,20 +4,21 @@
 /*    FILE: HazardSensor_MOOSApp.cpp                             */
 /*    DATE: Jan 28th 2012                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iterator>
@@ -51,6 +52,8 @@ HazardSensor_MOOSApp::HazardSensor_MOOSApp()
   m_options_summary_interval = 10;   // in timewarped seconds
   m_min_queue_msg_interval   = 30;   // seconds
   m_sensor_max_turn_rate     = 1.5;  // degrees per second
+  m_ignore_resemblances      = false;
+  m_max_vehicle_speed        = 2.05;
 
   m_hazard_file_hazard_cnt = 0;
   m_hazard_file_benign_cnt = 0;
@@ -113,8 +116,8 @@ bool HazardSensor_MOOSApp::OnNewMail(MOOSMSG_LIST &NewMail)
       handled = true;
     }
   
-    //if(!handled) 
-    //  reportRunWarning("Unhandled mail: " + key);
+    if(!handled) 
+      reportRunWarning("Unhandled mail: " + key);
   }
   
   return(true);
@@ -159,6 +162,7 @@ bool HazardSensor_MOOSApp::Iterate()
     m_last_summary_time = m_curr_time;
   }
 
+  processSensorRequests();
   processClassifyQueue();
 
   AppCastingMOOSApp::PostReport();
@@ -204,6 +208,10 @@ bool HazardSensor_MOOSApp::OnStartUp()
       m_sensor_max_turn_rate = atof(value.c_str());
       handled = true;
     }
+    else if((param == "max_vehicle_speed") && isNumber(value)) {
+      m_max_vehicle_speed = atof(value.c_str());
+      handled = true;
+    }
     else if((param == "classify_period") || (param == "min_classify_interval")) {
       if(isNumber(value)) {
 	m_min_queue_msg_interval = atof(value.c_str());
@@ -224,6 +232,8 @@ bool HazardSensor_MOOSApp::OnStartUp()
     }
     else if(param == "show_hazards")
       handled = setBooleanOnString(m_show_hazards, value);
+    else if(param == "ignore_resemblances")
+      handled = setBooleanOnString(m_ignore_resemblances, value);
     else if(param == "show_pd")
       handled = setBooleanOnString(m_show_pd, value);
     else if(param == "show_pfa")
@@ -317,9 +327,6 @@ bool HazardSensor_MOOSApp::addHazard(string line)
     label = uintToString(m_map_hazards.size());    
     hazard.setLabel(label);
   }
-
-  if(!hazard.hasResemblance())
-    hazard.setResemblance(1);
 
   if(m_map_hazards.count(label) != 0) {
     reportConfigWarning("Duplicated hazard label detected:" + label);
@@ -445,14 +452,13 @@ bool HazardSensor_MOOSApp::handleNodeReport(const string& node_report_str)
 
 bool HazardSensor_MOOSApp::handleSensorRequest(const string& request)
 {
-  // Part 1: Parse the string request
   string vname;  
   vector<string> svector = parseString(request, ',');
   unsigned int i, vsize = svector.size();
   for(i=0; i<vsize; i++) {
-    string param = toupper(biteStringX(svector[i], '='));
+    string param = tolower(biteStringX(svector[i], '='));
     string value = svector[i];
-    if(param == "VNAME")
+    if(param == "vname")
       vname = value;
   }
 
@@ -462,7 +468,33 @@ bool HazardSensor_MOOSApp::handleSensorRequest(const string& request)
   }
 
   m_map_sensor_reqs[vname]++;
-  
+  m_map_last_sensor_request[vname] = MOOSTime();
+  return(true);
+}
+
+
+//---------------------------------------------------------
+// Procedure: processSensorRequests()
+
+bool HazardSensor_MOOSApp::processSensorRequests()
+{
+  map<string,double>::iterator p;
+  for(p=m_map_last_sensor_request.begin(); p!=m_map_last_sensor_request.end(); p++) {
+    string vname = p->first;
+    double tstamp = p->second;
+    double elapsed = MOOSTime() - tstamp;
+    if(elapsed < 600)
+      processSensorRequest(vname);
+  }
+  return(true);
+}
+
+
+//---------------------------------------------------------
+// Procedure: processSensorRequest(vname)
+
+bool HazardSensor_MOOSApp::processSensorRequest(string vname)
+{
   // Part 2: Determine requesting vehicle's index in the node_record vector
   unsigned int j, jsize = m_node_records.size();
   unsigned int vix = jsize;
@@ -470,6 +502,8 @@ bool HazardSensor_MOOSApp::handleSensorRequest(const string& request)
     if(vname == m_node_records[j].getName())
       vix = j;
   }
+
+  Notify("PSR", vname);
 
   // If nothing is known about this vehicle, we don't know its 
   // position, so just return false.
@@ -488,6 +522,10 @@ bool HazardSensor_MOOSApp::handleSensorRequest(const string& request)
   double turn_rate = m_node_hdg_hist[vix].getTurnRate(2);
   bool sensor_on = true;
   if(turn_rate > m_sensor_max_turn_rate)
+    sensor_on = false;
+
+  double vehicle_speed = m_node_records[vix].getSpeed();
+  if(vehicle_speed > m_max_vehicle_speed)
     sensor_on = false;
 
   // Part 5: Update the sensor region/polygon based on new position 
@@ -521,16 +559,29 @@ bool HazardSensor_MOOSApp::handleSensorRequest(const string& request)
   map<string, XYHazard>::iterator p;
   for(p=m_map_hazards.begin(); p!=m_map_hazards.end(); p++) {
     string hlabel = p->first;
+    XYHazard hazard = p->second;
+    bool is_hazard = (hazard.getType() == "hazard");
+
     bool dice_roll_needed = updateVehicleHazardStatus(vix, hlabel);
     if(dice_roll_needed) {
+      if(is_hazard)
+	m_map_haz_detect_chances[vname]++;
+      else
+	m_map_ben_detect_chances[vname]++;
+      
       int    rand_int  = rand() % 10000;
       double dice_roll = (double)(rand_int) / 10000;
 
       bool detect_result_normal = rollDetectionDiceNormal(vix, hlabel, dice_roll);
       bool detect_result_aspect = rollDetectionDiceAspect(vix, hlabel, dice_roll);
-      if(detect_result_normal)
+      if(detect_result_normal) {
+	if(is_hazard) 
+	  m_map_haz_detect_reports[vname]++;
+	else
+	  m_map_ben_detect_reports[vname]++;
 	postHazardDetectionReport(hlabel, vix); 
-      else if(detect_result_aspect)
+      }
+      else if(detect_result_aspect) 
 	postHazardDetectionAspect(hlabel);
     }
   }
@@ -624,7 +675,7 @@ bool HazardSensor_MOOSApp::handleClassifyRequest(const string& request)
   double prob_classify = m_map_prob_classify[vname];
   double pc_prime      = prob_classify;
 
-  if((!is_hazard) && true_hazard.hasResemblance()) {
+  if((!is_hazard) && true_hazard.hasResemblance() && !m_ignore_resemblances) {
     double resemblance = true_hazard.getResemblance();
     pc_prime += (1-prob_classify) * (1-resemblance);
   }
@@ -782,7 +833,7 @@ void HazardSensor_MOOSApp::processClassifyQueue()
     bool aspect_affected = entry.getAspectAffected();
 
     // Part 3: Build and post the vehicle specific hazard report
-    string spec = entry.getHazard().getSpec();
+    string spec = entry.getHazard().getSpec("hr");
     Notify("UHZ_HAZARD_REPORT_"+toupper(vname), spec);
     m_map_classify_answ[vname]++;
     
@@ -840,7 +891,7 @@ void HazardSensor_MOOSApp::postVisuals()
     string color = m_color_hazard;
     string shape = m_shape_hazard;
     double width = m_width_hazard;
-    double hr    = 0;
+    double hr    = 0.5;
     double hx    = hazard.getX();
     double hy    = hazard.getY();
     if(hazard.hasResemblance())
@@ -966,8 +1017,9 @@ bool HazardSensor_MOOSApp::rollDetectionDiceNormal(unsigned int vix,
   reportEvent(info);
 
   double dice_thresh = prob_falarm;
-  if(hazard.isSetHR()) 
+  if(!m_ignore_resemblances && hazard.isSetHR()) 
     dice_thresh = (prob_falarm + hazard.getResemblance()) / 2;
+  
   return(dice_roll < dice_thresh);
 }
 
@@ -1046,7 +1098,7 @@ bool HazardSensor_MOOSApp::rollDetectionDiceAspect(unsigned int vix,
     return(dice_roll < prob_detect);
   
   double dice_thresh = prob_falarm;
-  if(hazard.isSetHR()) 
+  if(!m_ignore_resemblances && hazard.isSetHR()) 
     dice_thresh = (prob_falarm + hazard.getResemblance()) / 2;
   return(dice_roll < dice_thresh);
 }
@@ -1356,7 +1408,7 @@ void HazardSensor_MOOSApp::sortSensorProperties()
 
   for(i=0; i<vsize; i++) {
     double min_width = -1;
-    unsigned int min_index;
+    unsigned int min_index = 0;
     for(j=0; j<vsize; j++) {
       double jwid = m_sensor_prop_width[j];
       if(!v_hit[j] && ((min_width == -1) || (jwid < min_width))) {
@@ -1628,9 +1680,9 @@ bool HazardSensor_MOOSApp::buildReport()
   }
   m_msgs << actab.getFormattedString() << endl << endl << endl;
 
-  actab = ACTable(5);
-  actab << "Vehicle | Sensor   |            | Classify | Classify ";
-  actab << "Name    | Requests | Detections | Requests | Answers  ";
+  actab = ACTable(7);
+  actab << "Vehicle | Sensor |            | FA   | Det  | Classify | Classify";
+  actab << "Name    | Reqs   | Detections | Rate | Rate | Requests | Answers ";
   actab.addHeaderLines();
 
   for(p=m_map_swath_width.begin(); p!=m_map_swath_width.end(); p++) {
@@ -1638,14 +1690,33 @@ bool HazardSensor_MOOSApp::buildReport()
 
     string sensor_reqs   = uintToString(m_map_sensor_reqs[vname]);
     string detects       = uintToString(m_map_detections[vname]);
+
+    string s_d_rate = "n/a";
+    string s_fa_rate = "n/a";
+    
+    if(m_map_haz_detect_chances[vname] > 0) {
+      double d_rate = ((double)(m_map_haz_detect_reports[vname])) /
+	((double)(m_map_haz_detect_chances[vname]));
+      s_d_rate = doubleToString(d_rate,2);
+    }
+    if(m_map_ben_detect_chances[vname] > 0) {
+      double fa_rate = ((double)(m_map_ben_detect_reports[vname])) /
+	((double)(m_map_ben_detect_chances[vname]));
+      s_fa_rate = doubleToString(fa_rate,2);
+    }
+
     string classify_reqs = uintToString(m_map_classify_reqs[vname]);
     string classify_answ = uintToString(m_map_classify_answ[vname]);
     
-    actab << vname << sensor_reqs << detects << classify_reqs << classify_answ;
+    actab << vname << sensor_reqs << detects << s_fa_rate << s_d_rate <<
+      classify_reqs << classify_answ;
   }
   m_msgs << actab.getFormattedString();
 
   return(true);
 }
+
+
+
 
 

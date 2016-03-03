@@ -64,7 +64,7 @@ CMOOSPlayBackIndex::~CMOOSPlayBackIndex()
 
 }
 
-bool CMOOSPlayBackIndex::Initialise(const string &sFileName)
+void CMOOSPlayBackIndex::Initialise(const string &sFileName)
 {
     if (m_ALog.IsOpen())
         m_ALog.Close();
@@ -73,7 +73,8 @@ bool CMOOSPlayBackIndex::Initialise(const string &sFileName)
     m_dfLastClientProcessedTime = -1;
     m_sFileName = sFileName;
 
-    return m_ALog.Open(sFileName);
+    // This could throw
+    m_ALog.Open(sFileName);
 }
 
 bool CMOOSPlayBackIndex::IsOpen()
@@ -263,9 +264,13 @@ bool CMOOSPlayBackIndex::MessageFromLine(const std::string & sLine,
     {
         Msg.m_dfVal = 0.0;
 
-        if (sData.find("<MOOS_BINARY>") != std::string::npos)
+        if (sData.find("<MOOS_BINARY>") != std::string::npos &&
+        		sData.find("</MOOS_BINARY>") != std::string::npos	)
         {
-            //Msg.MarkAsBinary();
+        	MOOSChomp(sData,"<MOOS_BINARY>");
+        	sData = MOOSChomp(sData,"</MOOS_BINARY>");
+
+        	//Msg.MarkAsBinary();
             long long nOffset;
             if (!MOOSValFromString(nOffset, sData, "Offset"))
                 return MOOSFail(

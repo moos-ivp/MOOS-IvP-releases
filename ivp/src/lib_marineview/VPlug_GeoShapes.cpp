@@ -4,20 +4,21 @@
 /*    FILE: VPlug_GeoShapes.cpp                                  */
 /*    DATE: July 9th, 2008                                       */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 #include <iostream>
 #include <iostream>
@@ -79,10 +80,8 @@ bool VPlug_GeoShapes::setParam(const string& param, string value)
     return(addPolygon(value));
   else if((param ==  "segl") || (param == "seglist"))
     return(addSegList(value));
-  else if((param ==  "marker") || (param == "view_marker")) {
-    cout << "adding marker%%%%%%%%%%: " << value << endl;
+  else if((param ==  "marker") || (param == "view_marker"))
     return(addMarker(value));
-  }
   else if((param ==  "grid") || (param == "xygrid"))
     return(addGrid(value));
   else if(param ==  "convex_grid")
@@ -118,8 +117,10 @@ bool VPlug_GeoShapes::setParam(const string& param, string value)
 
 void VPlug_GeoShapes::addPolygon(const XYPolygon& new_poly)
 {
-  updateBounds(new_poly.get_min_x(), new_poly.get_max_x(), 
-	       new_poly.get_min_y(), new_poly.get_max_y());
+  if(new_poly.size()) {
+    updateBounds(new_poly.get_min_x(), new_poly.get_max_x(), 
+		 new_poly.get_min_y(), new_poly.get_max_y());
+  }
 
   string new_label = new_poly.get_label();
   if(new_label == "") {
@@ -142,8 +143,11 @@ void VPlug_GeoShapes::addPolygon(const XYPolygon& new_poly)
 
 void VPlug_GeoShapes::addSegList(const XYSegList& new_segl)
 {
-  updateBounds(new_segl.get_min_x(), new_segl.get_max_x(), 
-	       new_segl.get_min_y(), new_segl.get_max_y());
+  if(new_segl.size() > 0) {
+    updateBounds(new_segl.get_min_x(), new_segl.get_max_x(), 
+		 new_segl.get_min_y(), new_segl.get_max_y());
+    
+  }
 
   string new_label = new_segl.get_label();
   if(new_label == "") {
@@ -404,8 +408,17 @@ void VPlug_GeoShapes::addPoint(const XYPoint& new_point)
 bool VPlug_GeoShapes::addPolygon(const string& poly_str)
 {
   XYPolygon new_poly = string2Poly(poly_str);
-  if(new_poly.size() == 0)
-    return(false);
+
+  // Handle the case where the poly has no vertices. No matter the 
+  // reason, it won't be added. But check if this may be just because
+  // the polygon is an inactive poly, meant to erase a prior one.
+  if(new_poly.size() == 0) {
+    if(new_poly.active()) 
+      return(false);
+    return(true);
+  }
+
+  // Otherwise add a new non-empty polygon.
   addPolygon(new_poly);
   return(true);
 }
@@ -471,9 +484,9 @@ bool VPlug_GeoShapes::addMarker(const string& marker_str)
 bool VPlug_GeoShapes::addSegList(const string& segl_str)
 {
   XYSegList new_segl = string2SegList(segl_str);
-  if(new_segl.size() == 0)
+  if((new_segl.size()==0) && new_segl.active())
     return(false);
-   addSegList(new_segl);
+  addSegList(new_segl);
   return(true);
 }
 
@@ -569,6 +582,9 @@ void VPlug_GeoShapes::updateBounds(double xl, double xh,
   if(yh > m_ymax)
     m_ymax = yh;
 }
+
+
+
 
 
 

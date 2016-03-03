@@ -4,6 +4,7 @@ SET(COMMS_SOURCES
     Comms/MOOSVariable.cpp
     Comms/MOOSCommClient.cpp
     Comms/MOOSAsyncCommClient.cpp
+	Comms/ClientCommsStatus.cpp
     Comms/MOOSCommObject.cpp
     Comms/MOOSCommPkt.cpp
     Comms/MOOSCommServer.cpp
@@ -17,6 +18,11 @@ SET(COMMS_SOURCES
     Comms/XPCUdpSocket.cpp
     Comms/ServerAudit.cpp
     Comms/ActiveMailQueue.cpp
+    Comms/MessageQueueAccumulator.cpp
+    Comms/SuicidalSleeper.cpp
+    Comms/MulticastNode.cpp
+    
+    
 )
 
 SET(APP_SOURCES
@@ -33,14 +39,17 @@ SET(UTILS_SOURCES
    Utils/ProcessConfigReader.cpp
    Utils/MOOSLinuxSerialPort.cpp
    Utils/MOOSSerialPort.cpp
-   Utils/MOOSPlaybackStatus.cpp
+#  Utils/MOOSPlaybackStatus.cpp
    Utils/IPV4Address.cpp
    Utils/KeyboardCapture.cpp
    Utils/ThreadPrint.cpp
    Utils/CommandLineParser.cpp
    Utils/ProcInfo.cpp
+   Utils/MemInfo.cpp
    Utils/ThreadPriority.cpp
-   
+   Utils/PeriodicEvent.cpp
+   Utils/ConsoleColours.cpp
+   Utils/CommsTools.cpp   
    )
 
 IF(WIN32)
@@ -66,13 +75,25 @@ set(THIRDPARTY_SOURCES
 )
 
 
-set(SOURCES ${THIRDPARTY_SOURCES} ${UTILS_SOURCES} ${COMMS_SOURCES} ${APP_SOURCES} ) 
+SET(DB_SOURCES
+    DB/MOOSDB.cpp
+    DB/MOOSDBVar.cpp
+    DB/MOOSRegisterInfo.cpp
+    DB/MsgFilter.cpp
+    DB/HTTPConnection.cpp
+    DB/MOOSDBHTTPServer.cpp
+    DB/MOOSDBLogger.cpp
+)
+
+
+
+set(SOURCES ${THIRDPARTY_SOURCES} ${UTILS_SOURCES} ${COMMS_SOURCES} ${APP_SOURCES} ${DB_SOURCES}) 
 
 include(PlatformDefines)
 
 ##############   FAST COMMS?   ################
 #do we want to use the new fast asynchronous client architecture?
-OPTION(USE_ASYNC_COMMS  "enable fast asynchronous comms architecture" OFF)
+OPTION(USE_ASYNC_COMMS  "enable fast asynchronous comms architecture" ON)
 IF (USE_ASYNC_COMMS)
     cache_internal_append_unique(PROJECT_EXPORT_DEFINES ASYNCHRONOUS_CLIENT)
     ADD_DEFINITIONS(-DASYNCHRONOUS_CLIENT)
@@ -84,27 +105,6 @@ ENDIF (USE_ASYNC_COMMS)
 
 
 
-############# COMPRESSED COMMS? ################
-SET(COMPRESSED_MOOS_PROTOCOL FALSE CACHE BOOL "Compressed comms protocol (experimental)")
-
-IF(COMPRESSED_MOOS_PROTOCOL)
-    FIND_PACKAGE(ZLIB QUIET)
-    IF (ZLIB_FOUND)
-        ADD_DEFINITIONS(-DZLIB_FOUND)
-            ADD_DEFINITIONS(-DCOMPRESSED_MOOS_PROTOCOL)
-    
-        MESSAGE(STATUS "Cmake FindZLIB: using ZLIB includes at: ${ZLIB_INCLUDE_DIR}")
-        MESSAGE(STATUS "Cmake FindZLIB: using ZLIB libraries: ${ZLIB_LIBRARIES}")
-
-        SET(PLATFORM_LIBS   ${PLATFORM_LIBS} ${ZLIB_LIBRARIES} )
-        INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIR})    
-    
-    ELSE(ZLIB_FOUND)
-        SET(ZLIB_LIBRARIES "")
-    ENDIF (ZLIB_FOUND)
-ENDIF(COMPRESSED_MOOS_PROTOCOL)
-
-
 
 #do we want to turn on the experimental clock skew detection?
 OPTION(DETECT_CLOCK_DRIFT  "MOOSCommClient<->MOOSDB Clock drift detection (experimental)" OFF)
@@ -113,12 +113,21 @@ IF (DETECT_CLOCK_DRIFT)
 ENDIF (DETECT_CLOCK_DRIFT)
 MARK_AS_ADVANCED(DETECT_CLOCK_DRIFT)
 
-# Removed the extra field that was added to the MOOS message protocol in October 2009.
+# Remove the extra field that was added to the MOOS message protocol in October 2009.
 OPTION(DISABLE_AUX_SOURCE "Disable the AUX_SRC field in MOOS messages.  Only change this if you know what it is!" OFF)
 IF (DISABLE_AUX_SOURCE)
   ADD_DEFINITIONS(-DDISABLE_AUX_SOURCE)
 ENDIF (DISABLE_AUX_SOURCE)
 MARK_AS_ADVANCED(DISABLE_AUX_SOURCE)
+
+
+set(TIME_WARP_AGGLOMERATION_CONSTANT  0.0 CACHE STRING "comms agglomeration scale factor for high time warps")
+IF (${TIME_WARP_AGGLOMERATION_CONSTANT} GREATER 0.0)
+  ADD_DEFINITIONS(-DTIME_WARP_AGGLOMERATION_CONSTANT=${TIME_WARP_AGGLOMERATION_CONSTANT})
+ENDIF ()
+MARK_AS_ADVANCED(TIME_WARP_AGGLOMERATION_CONSTANT)
+
+
 
 OPTION(ENABLE_V10_COMPATIBILITY  "Enable compatibility for source which includes pre V10 headers " OFF)
 OPTION(ENABLE_V10_IVP_COMPATIBILITY  "Enable compatibility for source which includes pre V10 headers as expected by IvP " OFF)
@@ -158,6 +167,7 @@ set(INCLUDE_ROOTS
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/App/include
     ${CMAKE_CURRENT_SOURCE_DIR}/Comms/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/DB/include
     ${CMAKE_CURRENT_SOURCE_DIR}/Utils/include
     ${CMAKE_CURRENT_SOURCE_DIR}/Thirdparty/PocoBits/include
     ${CMAKE_CURRENT_SOURCE_DIR}/Thirdparty/getpot/include
@@ -177,8 +187,8 @@ endif(UNIX)
 
 IF(WIN32)
   set(DEPENDENCIES wsock32 comctl32)
-  cache_internal_append_unique(PROJECT_EXPORT_DEFINES _WIN32_WINNT=0x500)
-  add_definitions(-D_WIN32_WINNT=0x500 )
+  cache_internal_append_unique(PROJECT_EXPORT_DEFINES _WIN32_WINNT=0x501)
+  add_definitions(-D_WIN32_WINNT=0x501 )
 ENDIF(WIN32)
     
 
@@ -226,6 +236,9 @@ include_directories(${${LIBNAME}_INCLUDE_DIRS} ${${LIBNAME}_DEPEND_INCLUDE_DIRS}
 add_library(${LIBNAME} STATIC ${SOURCES} ${PUBLIC_HEADERS})
 target_link_libraries(${LIBNAME} ${${LIBNAME}_DEPEND_LIBRARIES})
 
+
+
+
 #######################################
 # install headers
 install(DIRECTORY ${INCLUDE_ROOTS} DESTINATION ${CMAKE_INSTALL_PREFIX} FILES_MATCHING PATTERN "*.h")
@@ -238,4 +251,5 @@ INSTALL(TARGETS ${LIBNAME}
 )
 
 
+add_subdirectory(testing)
 

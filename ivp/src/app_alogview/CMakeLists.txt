@@ -38,7 +38,6 @@ TARGET_LINK_LIBRARIES(alogview
    geometry
    logutils
    ${MOOSGeodesy_LIBRARIES}
-   MOOS
    contacts
    navplot
    ipfview

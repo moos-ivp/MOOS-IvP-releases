@@ -4,26 +4,28 @@
 /*    FILE: TS_MOOSApp.h                                         */
 /*    DATE: May 21st 2009                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #ifndef TIMER_SCRIPT_MOOS_APP_HEADER
 #define TIMER_SCRIPT_MOOS_APP_HEADER
 
 #include <vector>
+#include <set>
 #include <string>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
 #include "VarDataPair.h"
@@ -64,6 +66,8 @@ class TS_MOOSApp : public AppCastingMOOSApp
   void   seedRandom();
   bool   handleMathExpr(std::string&);
   void   addLogEvent(std::string, std::string, double);
+  bool   addBlockApps(std::string);
+  void   checkBlockApps(std::string);
 
  protected: // Functions in support of logic conditions
   bool updateInfoBuffer(CMOOSMsg&);
@@ -80,6 +84,7 @@ class TS_MOOSApp : public AppCastingMOOSApp
   std::vector<bool>         m_poked;
 
   std::string               m_script_name;
+  bool                      m_time_zero_connect;
   bool                      m_verbose;
   bool                      m_shuffle;
   bool                      m_atomic;
@@ -122,9 +127,13 @@ class TS_MOOSApp : public AppCastingMOOSApp
 
   InfoBuffer *m_info_buffer;
 
-  std::list<std::string> m_event_log;
+  std::list<std::string>   m_event_log;
+  std::set<std::string>    m_block_apps;
 };
 
 #endif 
+
+
+
 
 

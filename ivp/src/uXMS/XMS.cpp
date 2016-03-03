@@ -4,20 +4,21 @@
 /*    FILE: XMS.cpp                                              */
 /*    DATE: May 27th 2007                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iostream>
@@ -64,6 +65,7 @@ XMS::XMS()
   m_history_length    = 40;
   
   m_display_all       = false;
+  m_display_all_requested = false;
   m_last_all_refresh  = 0;
 
   m_max_proc_name_len  = 12;
@@ -114,7 +116,7 @@ bool XMS::ConfigureComms()
 // Procedure: OnNewMail()
 
 bool XMS::OnNewMail(MOOSMSG_LIST &NewMail)
-{    
+{ 
   AppCastingMOOSApp::OnNewMail(NewMail);
 
   MOOSMSG_LIST::iterator p;
@@ -137,7 +139,7 @@ bool XMS::OnNewMail(MOOSMSG_LIST &NewMail)
   // type locally, just so we can put quotes around string values.
 
   for(p = NewMail.begin(); p!=NewMail.end(); p++) {
-    //    p->Trace();
+    //p->Trace();
     CMOOSMsg &msg = *p;
     string key = msg.GetKey();
     if((key.length() >= 7) && (key.substr(key.length()-7,7) == "_STATUS")) {
@@ -156,6 +158,9 @@ bool XMS::OnNewMail(MOOSMSG_LIST &NewMail)
     
     // A check is made in updateVariable() to ensure the given variable
     // is indeed on the scope list.
+    if(m_display_all && !strEnds(key, "_STATUS"))
+      addVariable(key);
+
     updateVariable(msg);
   }
   return(true);
@@ -169,18 +174,9 @@ bool XMS::Iterate()
 {
   AppCastingMOOSApp::Iterate();
 
-  // Part 2: If in the show-all mode, perhaps update new variables
-  // Don't want to do this too often. And want to consider the timewarp.
-  if(m_display_all) {
-    double time_since_last_all_refresh = m_curr_time - m_last_all_refresh;
-    if(m_time_warp > 0)
-      time_since_last_all_refresh = time_since_last_all_refresh / m_time_warp;
-    
-    if(time_since_last_all_refresh > ALL_BLACKOUT) {
-      refreshAllVarsList();
-      cacheColorMap();
-      m_last_all_refresh = m_curr_time;
-    }
+  if(m_display_all && !m_display_all_requested) {
+    m_Comms.Register("*","*",0);
+    m_display_all_requested = true;
   }
   
   refreshProcVarsList();
@@ -222,8 +218,8 @@ bool XMS::OnStartUp()
   if(app_name == "")
     app_name = GetAppName();
 
-  string directives  = "must_have_moosblock=false";
-  directives += "must_have_community=false";
+  string directives  = "must_have_moosblock=false,";
+  directives += "must_have_community=false,";
   directives += "alt_config_block_name=" + app_name;
   AppCastingMOOSApp::OnStartUpDirectives(directives);
 
@@ -320,10 +316,13 @@ bool XMS::OnStartUp()
   }
   
   // setup for display all
-  if(m_display_all)
-    refreshAllVarsList();
+  if(m_display_all) {
+    m_Comms.Register("*","*",0);
+    m_display_all_requested = true;
+  }
+  else
+    registerVariables();
 
-  registerVariables();
   m_time_warp = GetMOOSTimeWarp();
   cacheColorMap();
   return(true);
@@ -542,7 +541,7 @@ bool XMS::addVariable(string varname, bool histvar)
   
   // Simply return true if the variable has already been added.
   if(m_map_var_entries.count(varname) != 0)
-    return(false);
+    return(true);
   
   ScopeEntry entry;
   entry.setValue("n/a");
@@ -814,10 +813,6 @@ void XMS::registerVariables()
 
   if(m_history_var != "")
     m_Comms.Register(m_history_var, 0);
-
-  //m_Comms.Register("DB_UPTIME", 0);
-  //m_Comms.Register("DB_CLIENTS", 0);
-  //m_Comms.Register("PROC_WATCH_SUMMARY", 0);
 }
 
 //------------------------------------------------------------
@@ -1378,43 +1373,6 @@ void XMS::updateVariable(CMOOSMsg &msg)
 }
 
 //------------------------------------------------------------
-// Procedure: refreshAllVarsList
-// tes 2.23.08
-//
-// finds all variables in the MOOS database and adds the ones we do
-// not yet know about the mechanism and code for fetching all moos
-// vars is closely related to that used for wildcard logging in
-// pLogger
-
-void XMS::refreshAllVarsList()
-{
-  MOOSMSG_LIST mail;
-  if(m_Comms.ServerRequest("VAR_SUMMARY",mail)) {
-    string ss(mail.begin()->GetString());
-
-    while(!ss.empty()) {
-      string sVar = MOOSChomp(ss);
-      
-      bool discard = false;
-      
-      // we assert here that we do not want _STATUS variables
-      // displayed as part of all
-      // perhaps we should make this a configuration option
-      if(sVar.length() > 7) {
-	if(MOOSStrCmp(sVar.substr(sVar.length()-7, 7), "_STATUS"))
-	  discard = true;
-      }
-      
-      if(!discard) {
-	addVariable(sVar);
-	//	cout << "Registering for +++" << sVar << endl;
-	m_Comms.Register(sVar, 0);
-      }   
-    }
-  }
-}
-
-//------------------------------------------------------------
 // Procedure: refreshProcVarsList
 //      Note: Examines the list of sources-to-scope, and for a given
 //            source pFooBar, it looks for PFOOBAR_STATUS and parses
@@ -1553,4 +1511,7 @@ void XMS::handleSelectMaskAddSources()
     }
   }
 }
+
+
+
 

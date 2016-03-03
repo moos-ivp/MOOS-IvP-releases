@@ -4,20 +4,21 @@
 /*    FILE: Populator_LogPlots.h                                 */
 /*    DATE: June 5th, 2005 (Sun in Kenmorre)                     */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #ifndef POPULATOR_LOGPLOTS_HEADER
@@ -26,6 +27,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <string>
 #include "LogPlot.h"
 #include "ALogEntry.h"
 
@@ -45,14 +47,22 @@ public:
   void        setVName(const std::string& s) {m_vname=s;};
   std::string getVName() const               {return(m_vname);};
 
+  void    addVarFieldExtra(std::string moosvar, std::string field);
+
+ protected:
+  void    augmentLogPlot(const std::string& var, double tstamp, double val);
+
 protected:
   std::string               m_vname;
   std::vector<LogPlot>      m_logplots;
   double                    m_logstart_utc;
 
+  std::map<std::string, std::vector<std::string> > m_map_var_field_extras;
+
   // Mapping from logplot variable to index in m_loplots vector
   std::map<std::string, unsigned int> m_logplot_var_map;
 };
 #endif 
+
 
 

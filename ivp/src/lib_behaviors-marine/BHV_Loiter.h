@@ -4,20 +4,21 @@
 /*    FILE: BHV_Loiter.h                                         */
 /*    DATE: July 26th 2005 In Elba w/ M.Grunde, P.Newman         */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
  
 #ifndef BHV_LOITER_HEADER
@@ -63,13 +64,16 @@ private:  // Configuration Parameters
 
   std::string  m_var_suffix;
 
-  std::string  m_hint_nextpt_color;
-  std::string  m_hint_nextpt_lcolor;
-  std::string  m_hint_vertex_color;
-  std::string  m_hint_edge_color;
-  std::string  m_hint_poly_label;
+  // Visual Hint Defaults
   double       m_hint_vertex_size;
   double       m_hint_edge_size;
+  std::string  m_hint_vertex_color;
+  std::string  m_hint_edge_color;
+  std::string  m_hint_nextpt_color;
+  std::string  m_hint_nextpt_lcolor;
+  double       m_hint_nextpt_vertex_size;
+  std::string  m_hint_poly_label;
+
   std::string  m_loiter_mode;
 
 private:  // State Structures
@@ -91,6 +95,9 @@ private:  // State Variables
   std::string  m_center_assign;
 };
 #endif
+
+
+
 
 
 

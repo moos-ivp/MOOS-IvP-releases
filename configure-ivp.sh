@@ -10,7 +10,8 @@ if [ $# -ne 1 ]; then
    print_usage_and_exit
 fi
 
-BUILD_TYPE=${1}
+#BUILD_TYPE=${1}
+BUILD_TYPE="Release"
 
 echo BUILD_TYPE=${BUILD_TYPE}
 
@@ -112,17 +113,22 @@ else
    os_arch="(Unknown architecture)"
 fi
 
-# For the time being, just assume the compiler is '/usr/bin/gcc'.  Later on we can get more
-# robust if, we needed, to ensure we report the same compiler that CMake is planning to use.
+# For the time being, just assume the compiler is '/usr/bin/gcc'.
+# Later on we can get more robust if, we needed, to ensure we report
+# the same compiler that CMake is planning to use.
+
 gcc_version=`/usr/bin/gcc --version | head -1`
 
 DASHBOARD_BUILDNAME="${os_name} - ${os_arch} - ${gcc_version}"
 
-################################################################################
+####################################################################
 
 echo ""
 echo "Invoking cmake..."
 echo ""
+
+#PROJ4_INCLUDE_DIR="${SCRIPT_ABS_DIR}/MOOS/proj-4.8.0/include"
+#PROJ4_LIB_DIR="${SCRIPT_ABS_DIR}/MOOS/proj-4.8.0/lib"
 
 cmake -DIVP_BUILD_GUI_CODE=${CLEANED_IVP_BUILD_GUI_CODE} \
       -DIVP_LIB_DIRECTORY="${LIBRARIES_ABS_DIR}"         \
@@ -132,3 +138,8 @@ cmake -DIVP_BUILD_GUI_CODE=${CLEANED_IVP_BUILD_GUI_CODE} \
       ${IVP_CMAKE_FLAGS}                                 \
       -DCMAKE_BUILD_TYPE=${BUILD_TYPE}                   \
       "${SRC_ABS_DIR}"
+
+#      -DPROJ4_INCLUDE_DIRS=${PROJ4_INCLUDE_DIR}          \
+#      -DPROJ4_LIB_PATH=${PROJ4_LIB_DIR}                  \
+
+

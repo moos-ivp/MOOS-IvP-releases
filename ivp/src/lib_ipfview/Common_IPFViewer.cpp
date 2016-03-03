@@ -4,20 +4,21 @@
 /*    FILE: Common_IPFViewer.cpp                                 */
 /*    DATE: Feb 13, 2007                                         */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iostream>
@@ -489,12 +490,12 @@ void Common_IPFViewer::drawQuad(Quad3D q, double rad_extra_extra)
 //-------------------------------------------------------------
 // Procedure: drawFrame
 
-void Common_IPFViewer::drawFrame()
+void Common_IPFViewer::drawFrame(bool full)
 {
   double w = 250;
 
-  double b = -250;
-  double t = -250 + (m_frame_height);
+  double b = -150;
+  double t = -350 + (m_frame_height);
 
   double frame_red = m_frame_color.red();
   double frame_grn = m_frame_color.grn();
@@ -529,34 +530,36 @@ void Common_IPFViewer::drawFrame()
     glEnd();
   }
 
-  //glColor3f(0.8f, 0.3f, 0.8f);
-  glBegin(GL_LINE_STRIP);
-  glVertex3f(-w,-w, t);  
-  glVertex3f(w, -w, t);  
-  glVertex3f(w,  w, t);
-  glVertex3f(-w, w, t);  
-  glVertex3f(-w,-w, t);
-  glEnd();
-
-  glBegin(GL_LINE_STRIP);
-  glVertex3f(-w,-w, b);  
-  glVertex3f(-w,-w, t);
-  glEnd();
-
-  glBegin(GL_LINE_STRIP);
-  glVertex3f(-w, w, b);  
-  glVertex3f(-w, w, t);
-  glEnd();
-
-  glBegin(GL_LINE_STRIP);
-  glVertex3f(w, w, b);     
-  glVertex3f(w, w, t);
-  glEnd();
-
-  glBegin(GL_LINE_STRIP);
-  glVertex3f(w, -w, b);  
-  glVertex3f(w, -w, t);
-  glEnd();
+  if(full) {
+    //glColor3f(0.8f, 0.3f, 0.8f);
+    glBegin(GL_LINE_STRIP);
+    glVertex3f(-w,-w, t);  
+    glVertex3f(w, -w, t);  
+    glVertex3f(w,  w, t);
+    glVertex3f(-w, w, t);  
+    glVertex3f(-w,-w, t);
+    glEnd();
+    
+    glBegin(GL_LINE_STRIP);
+    glVertex3f(-w,-w, b);  
+    glVertex3f(-w,-w, t);
+    glEnd();
+    
+    glBegin(GL_LINE_STRIP);
+    glVertex3f(-w, w, b);  
+    glVertex3f(-w, w, t);
+    glEnd();
+    
+    glBegin(GL_LINE_STRIP);
+    glVertex3f(w, w, b);     
+    glVertex3f(w, w, t);
+    glEnd();
+    
+    glBegin(GL_LINE_STRIP);
+    glVertex3f(w, -w, b);  
+    glVertex3f(w, -w, t);
+    glEnd();
+  }
 
   glFlush();
 }
@@ -952,4 +955,7 @@ void Common_IPFViewer::drawText(int x, int y, string str)
   glPopMatrix();
 
 }
+
+
+
 

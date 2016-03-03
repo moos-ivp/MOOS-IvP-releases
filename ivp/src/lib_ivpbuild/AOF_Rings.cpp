@@ -4,20 +4,23 @@
 /*    FILE: AOF_Rings.cpp                                        */
 /*    DATE: Very old - modernized Jan 21 2006                    */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of IvP Helm Core Libs                       */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* IvP Helm Core Libs is free software: you can redistribute it  */
+/* and/or modify it under the terms of the Lesser GNU General    */
+/* Public License as published by the Free Software Foundation,  */
+/* either version 3 of the License, or (at your option) any      */
+/* later version.                                                */
+/*                                                               */
+/* IvP Helm Core Libs is distributed in the hope that it will    */
+/* be useful but WITHOUT ANY WARRANTY; without even the implied  */
 /* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* PURPOSE. See the Lesser GNU General Public License for more   */
+/* details.                                                      */
 /*                                                               */
-/* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* You should have received a copy of the Lesser GNU General     */
+/* Public License along with MOOS-IvP.  If not, see              */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iostream>
@@ -38,14 +41,14 @@ AOF_Rings::AOF_Rings(IvPDomain g_domain) : AOF(g_domain)
 }
 
 //----------------------------------------------------------------
-// Procedure: evalPoint
+// Procedure: evalBox
 
-double AOF_Rings::evalPoint(const IvPBox *gbox) const
+double AOF_Rings::evalBox(const IvPBox *gbox) const
 {
   double totval=0;
   int rsize = m_rings.size();
   for(int i=0; i<rsize; i++)
-    totval += m_rings[i].evalPoint(gbox);
+    totval += m_rings[i].evalBox(gbox);
   
   double weight = (totval / rsize);    
   
@@ -128,6 +131,9 @@ string AOF_Rings::latexSTR(int full) const
   if(full) retstr += " \\end{tabular}} \\normalsize";
   return(retstr);
 }
+
+
+
 
 
 

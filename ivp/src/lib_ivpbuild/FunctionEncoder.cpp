@@ -4,20 +4,23 @@
 /*    FILE: FunctionEncoder.h                                    */
 /*    DATE: April 17th 2006 (Patriots Day)                       */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of IvP Helm Core Libs                       */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* IvP Helm Core Libs is free software: you can redistribute it  */
+/* and/or modify it under the terms of the Lesser GNU General    */
+/* Public License as published by the Free Software Foundation,  */
+/* either version 3 of the License, or (at your option) any      */
+/* later version.                                                */
+/*                                                               */
+/* IvP Helm Core Libs is distributed in the hope that it will    */
+/* be useful but WITHOUT ANY WARRANTY; without even the implied  */
 /* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* PURPOSE. See the Lesser GNU General Public License for more   */
+/* details.                                                      */
 /*                                                               */
-/* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* You should have received a copy of the Lesser GNU General     */
+/* Public License along with MOOS-IvP.  If not, see              */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iostream>
@@ -382,6 +385,12 @@ IvPFunction *StringToIvPFunction(const string& str)
 
   IvPDomain domain = stringToDomain(buff);
 
+#if 0
+  cout << "==============" << endl;
+  domain.print();
+  cout << "==============" << endl;
+#endif
+
   // Determine the gridbox
   cix += 2;
   IvPBox gelbox(dim,0);
@@ -471,6 +480,10 @@ IvPFunction *StringToIvPFunction(const string& str)
     pdmap->bx(i) = newbox;
   }
 
+  if(!pdmap)
+    return(0);
+  
+  
   pdmap->setGelBox(gelbox);
   pdmap->updateGrid(1,1);
   IvPFunction *new_of = new IvPFunction(pdmap);
@@ -547,5 +560,8 @@ IvPDomain IPFStringToIvPDomain(const string& str)
     
   return(ivp_domain);
 }
+
+
+
 
 

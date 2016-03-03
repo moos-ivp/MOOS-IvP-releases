@@ -7,8 +7,6 @@ set( SOURCES
     indexWriter.cpp
     recordTypes.cpp
     utils.cpp
-    FileNotFoundException.cpp
-    VersionException.cpp
 )
 
 

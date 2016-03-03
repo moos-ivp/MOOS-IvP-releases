@@ -4,20 +4,21 @@
 /*    FILE: XYSegList.cpp                                        */
 /*    DATE: Apr 20th, 2005                                       */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <cmath>
@@ -184,8 +185,8 @@ void XYSegList::shift_vert(double shift_val)
 
 void XYSegList::grow_by_pct(double pct)
 {
-  double cx = get_center_x();
-  double cy = get_center_y();
+  double cx = get_centroid_x();
+  double cy = get_centroid_y();
 
   unsigned int i, vsize = m_vy.size();
   for(i=0; i<vsize; i++)
@@ -197,8 +198,8 @@ void XYSegList::grow_by_pct(double pct)
 
 void XYSegList::grow_by_amt(double amt)
 {
-  double cx = get_center_x();
-  double cy = get_center_y();
+  double cx = get_centroid_x();
+  double cy = get_centroid_y();
 
   unsigned int i, vsize = m_vy.size();
   for(i=0; i<vsize; i++)
@@ -210,8 +211,8 @@ void XYSegList::grow_by_amt(double amt)
 
 void XYSegList::rotate(double degval)
 {
-  double cx = get_center_x();
-  double cy = get_center_y();
+  double cx = get_centroid_x();
+  double cy = get_centroid_y();
 
   unsigned int i, vsize = m_vy.size();
   for(i=0; i<vsize; i++)
@@ -266,11 +267,23 @@ void XYSegList::new_center(double new_cx, double new_cy)
 }
 
 //---------------------------------------------------------------
+// Procedure: new_centroid
+
+void XYSegList::new_centroid(double new_cx, double new_cy)
+{
+  double diff_x = new_cx - get_centroid_x();
+  double diff_y = new_cy - get_centroid_y();
+  
+  shift_horz(diff_x);
+  shift_vert(diff_y);
+}
+
+//---------------------------------------------------------------
 // Procedure: valid
 
 bool XYSegList::valid() const
 {
-  if(m_vx.size() == 0)
+  if((m_vx.size() == 0) && active())
     return(false);
   return(true);
 }
@@ -363,6 +376,40 @@ double XYSegList::get_center_y() const
 }
 
 //---------------------------------------------------------------
+// Procedure: get_centroid_x
+//   Purpose: Return the x center of mass of all points
+
+double XYSegList::get_centroid_x() const
+{
+  unsigned int i, vsize = m_vx.size();
+  if(vsize == 0) 
+    return(0);
+
+  double total = 0;
+  for(i=0; i<vsize; i++) 
+    total += m_vx[i];
+  
+  return(total / ((double)(vsize)));
+}
+
+//---------------------------------------------------------------
+// Procedure: get_centroid_y
+//   Purpose: Return the y center of mass of all points
+
+double XYSegList::get_centroid_y() const
+{
+  unsigned int i, vsize = m_vy.size();
+  if(vsize == 0) 
+    return(0);
+
+  double total = 0;
+  for(i=0; i<vsize; i++) 
+    total += m_vy[i];
+  
+  return(total / ((double)(vsize)));
+}
+
+//---------------------------------------------------------------
 // Procedure: get_min_x
 //   Purpose: Return the min of the x values
 
@@ -370,7 +417,7 @@ double XYSegList::get_min_x() const
 {
   unsigned int i, vsize = m_vx.size();
   if(vsize == 0) 
-    return(0.0);
+    return(0);
 
   double x_min = m_vx[0];
   for(i=1; i<vsize; i++)
@@ -387,7 +434,7 @@ double XYSegList::get_max_x() const
 {
   unsigned int i, vsize = m_vx.size();
   if(vsize == 0) 
-    return(0.0);
+    return(0);
 
   double x_max = m_vx[0];
   for(i=1; i<vsize; i++)
@@ -628,9 +675,12 @@ string XYSegList::get_spec(unsigned int precision, string param) const
       spec += "}";
   }
   string obj_spec = XYObject::get_spec(param);
-  if(obj_spec != "")
-    spec += ("," + obj_spec);
-  
+  if(obj_spec != "") {
+    if(spec != "")
+      spec += ",";
+    spec += obj_spec;
+  }
+
   return(spec);
 }
 
@@ -797,6 +847,9 @@ void XYSegList::rotate_pt(double deg, double cx, double cy,
   px = nx; 
   py = ny;
 }
+
+
+
 
 
 

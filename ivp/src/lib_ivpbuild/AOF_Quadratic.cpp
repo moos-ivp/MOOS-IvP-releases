@@ -4,20 +4,23 @@
 /*    FILE: AOF_Quadratic.cpp                                    */
 /*    DATE: Feb 2rd, 2008                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of IvP Helm Core Libs                       */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* IvP Helm Core Libs is free software: you can redistribute it  */
+/* and/or modify it under the terms of the Lesser GNU General    */
+/* Public License as published by the Free Software Foundation,  */
+/* either version 3 of the License, or (at your option) any      */
+/* later version.                                                */
+/*                                                               */
+/* IvP Helm Core Libs is distributed in the hope that it will    */
+/* be useful but WITHOUT ANY WARRANTY; without even the implied  */
 /* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* PURPOSE. See the Lesser GNU General Public License for more   */
+/* details.                                                      */
 /*                                                               */
-/* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* You should have received a copy of the Lesser GNU General     */
+/* Public License along with MOOS-IvP.  If not, see              */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include "AOF_Quadratic.h"
@@ -53,7 +56,7 @@ bool AOF_Quadratic::setParam(const std::string& param, double val)
   else
     return(false);
   return(true);
-};
+}
 
 //----------------------------------------------------------------
 // Procedure: initialize
@@ -63,12 +66,12 @@ bool AOF_Quadratic::initialize()
   if((x_index != -1) && (y_index != -1))
     return(true);
   return(false);
-};
+}
 
 //----------------------------------------------------------------
-// Procedure: evalPoint
+// Procedure: evalBox
 
-double AOF_Quadratic::evalPoint(const IvPBox *ptbox) const
+double AOF_Quadratic::evalBox(const IvPBox *ptbox) const
 {
   double x_val = m_domain.getVal(x_index, ptbox->pt(x_index));
   double y_val = m_domain.getVal(y_index, ptbox->pt(y_index));
@@ -76,5 +79,8 @@ double AOF_Quadratic::evalPoint(const IvPBox *ptbox) const
   return((m_coeff * (x_val - x_center) * (x_val - x_center)) + 
 	 (n_coeff * (y_val - y_center) * (y_val - y_center)));
 }
+
+
+
 
 

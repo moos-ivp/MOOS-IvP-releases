@@ -1,40 +1,26 @@
 /*****************************************************************/
-/*    NAME: Michael Benjamin                                     */
+/*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
 /*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
 /*    FILE: IvPBehavior.cpp                                      */
 /*    DATE: Oct 21, 2003 5 days after Grady's Gaffe              */
 /*                                                               */
-/* (IvPHelm) The IvP autonomous control Helm is a set of         */
-/* classes and algorithms for a behavior-based autonomous        */
-/* control architecture with IvP action selection.               */
+/* This file is part of IvP Helm Core Libs                       */
 /*                                                               */
-/* The algorithms embodied in this software are protected under  */
-/* U.S. Pat. App. Ser. Nos. 10/631,527 and 10/911,765 and are    */
-/* the property of the United States Navy.                       */
+/* IvP Helm Core Libs is free software: you can redistribute it  */
+/* and/or modify it under the terms of the Lesser GNU General    */
+/* Public License as published by the Free Software Foundation,  */
+/* either version 3 of the License, or (at your option) any      */
+/* later version.                                                */
 /*                                                               */
-/* Permission to use, copy, modify and distribute this software  */
-/* and its documentation for any non-commercial purpose, without */
-/* fee, and without a written agreement is hereby granted        */
-/* provided that the above notice and this paragraph and the     */
-/* following three paragraphs appear in all copies.              */
+/* IvP Helm Core Libs is distributed in the hope that it will    */
+/* be useful but WITHOUT ANY WARRANTY; without even the implied  */
+/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
+/* PURPOSE. See the Lesser GNU General Public License for more   */
+/* details.                                                      */
 /*                                                               */
-/* Commercial licences for this software may be obtained by      */
-/* contacting Patent Counsel, Naval Undersea Warfare Center      */
-/* Division Newport at 401-832-4736 or 1176 Howell Street,       */
-/* Newport, RI 02841.                                            */
-/*                                                               */
-/* In no event shall the US Navy be liable to any party for      */
-/* direct, indirect, special, incidental, or consequential       */
-/* damages, including lost profits, arising out of the use       */
-/* of this software and its documentation, even if the US Navy   */
-/* has been advised of the possibility of such damage.           */
-/*                                                               */
-/* The US Navy specifically disclaims any warranties, including, */
-/* but not limited to, the implied warranties of merchantability */
-/* and fitness for a particular purpose. The software provided   */
-/* hereunder is on an 'as-is' basis, and the US Navy has no      */
-/* obligations to provide maintenance, support, updates,         */
-/* enhancements or modifications.                                */
+/* You should have received a copy of the Lesser GNU General     */
+/* Public License along with MOOS-IvP.  If not, see              */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #ifdef _WIN32
@@ -42,11 +28,13 @@
 #pragma warning(disable : 4503)
 #endif
 
+#include <iostream>
 #include <vector>
 #include <cstdlib>
 #include "IvPBehavior.h"
 #include "MBUtils.h"
 #include "BuildUtils.h"
+#include "BehaviorReport.h"
 
 using namespace std;
 
@@ -309,6 +297,14 @@ bool IvPBehavior::setParam(string g_param, string g_val)
 
 string IvPBehavior::isRunnable()
 {
+#if 0
+  if(!m_duration_started) {
+    double curr_time = m_info_buffer->getCurrTime();
+    m_duration_started = true;
+    m_duration_start_time = curr_time;
+  }
+#endif
+
   if(m_completed)
     return("completed");
 
@@ -455,7 +451,8 @@ void IvPBehavior::postRepeatableMessage(string var, double ddata)
 void IvPBehavior::setComplete()
 {
   postFlags("endflags");
-  postFlags("inactiveflags");
+  // Removed by mikerb jun2213 to prevent double posting
+  // postFlags("inactiveflags");  
   if(!m_perpetual)
     m_completed = true;
 }
@@ -722,7 +719,9 @@ bool IvPBehavior::checkUpdates()
   for(i=0; i<vsize; i++) {
     string new_update_str = new_update_strs[i];
     
-    if((new_update_str != "") && (new_update_str != m_prev_update_str)) {
+    // Added Mar 7th 2014, allow successive duplicate updates with word toggle in it.
+    if(strContains(tolower(new_update_str), "toggle") ||
+       ((new_update_str != "") && (new_update_str != m_prev_update_str))) {
     
       vector<string> uvector = parseString(new_update_str, '#');
       unsigned int j, usize = uvector.size();
@@ -735,8 +734,8 @@ bool IvPBehavior::checkUpdates()
       bool name_mismatch = false;
       for(j=0; j<usize; j++) {
 	string pair  = uvector[j];
-	string param = stripBlankEnds(biteString(pair, '='));
-	string value = stripBlankEnds(pair);
+	string param = biteStringX(pair, '=');
+	string value = pair;
 	if((param=="name") && (value!=m_descriptor))
 	  name_mismatch = true;
       }
@@ -746,8 +745,8 @@ bool IvPBehavior::checkUpdates()
 	bool ok_params = true;
 	for(j=0; j<usize; j++) {
 	  string pair  = uvector[j];
-	  string param = stripBlankEnds(biteString(pair, '='));
-	  string value = stripBlankEnds(pair);
+	  string param = biteStringX(pair, '=');
+	  string value = pair;
 	  bool  result = setParam(param, value);
 	  if(!result)
 	    result = IvPBehavior::setParam(param, value);
@@ -797,21 +796,34 @@ bool IvPBehavior::durationExceeded()
     return(false);
 
   double curr_time = m_info_buffer->getCurrTime();
-
+  double elapsed_time = 0;
+  // If we're starting the duration clock we don't give credit for 
+  // time spent in the idle state.
   if(!m_duration_started) {
     m_duration_started = true;
     m_duration_start_time = curr_time;
+    m_duration_idle_time = 0;
   }
-
-  double elapsed_time = (curr_time - m_duration_start_time);
+  else
+    elapsed_time = (curr_time - m_duration_start_time);
 
   // If time spent in the idle state is not counted toward the 
   // duration timer, ADD it back here.
   if(!m_duration_idle_decay)
     elapsed_time -= m_duration_idle_time;
   
-#if 1
   double remaining_time = m_duration - elapsed_time;
+
+#if 0
+  string msg1 = "ELAPSED_" + toupper(m_descriptor);
+  postMessage(msg1, elapsed_time);
+
+  string msg2 = "DUR_IDLE_TIME_" + toupper(m_descriptor);
+  postMessage(msg2, m_duration_idle_time);
+
+  string msg3 = "REMAINING_TIME_" + toupper(m_descriptor);
+  postMessage(msg3, remaining_time);
+#endif
 
   if(remaining_time < 0)
     remaining_time = 0;
@@ -821,7 +833,6 @@ bool IvPBehavior::durationExceeded()
     else
       postIntMessage(m_duration_status, remaining_time);
   }
-#endif
 
   if(elapsed_time >= m_duration)
     return(true);
@@ -909,6 +920,7 @@ void IvPBehavior::postFlags(const string& str, bool repeatable)
     flags = m_active_flags;
   else if(str == "inactiveflags")
     flags = m_inactive_flags;
+  
 
   // The endflags are treated as a special case in that they are 
   // posted as "repeatable" - that is they will be posted to the 
@@ -995,7 +1007,7 @@ string IvPBehavior::getBufferStringVal(string varname, bool& ok)
 {
   if(!m_info_buffer) {
     ok = false;
-    return(0);
+    return("");
   }
 
   string value = m_info_buffer->sQuery(varname, ok);
@@ -1009,6 +1021,32 @@ string IvPBehavior::getBufferStringVal(string varname, bool& ok)
   }
   if((!ok) && !vectorContains(m_info_vars_no_warning, varname)) 
     postWMessage(varname+" info not found in helm info_buffer");
+  return(value);
+}
+
+
+//-----------------------------------------------------------
+// Procedure: getBufferStringVal()
+//      Note: Same as the other getBufferStringVal but we don't bother
+//            returing a status indicator.
+
+string IvPBehavior::getBufferStringVal(string varname)
+{
+  if(!m_info_buffer) 
+    return("");
+
+  bool ok = false;
+  string value = m_info_buffer->sQuery(varname, ok);
+  if(!ok) {
+    bool result;
+    double dval = m_info_buffer->dQuery(varname, result);
+    if(result) {
+      value = doubleToString(dval, 6);
+      ok = true;
+    }
+  }
+  if((!ok) && !vectorContains(m_info_vars_no_warning, varname)) 
+    postWMessage(varname + " info not found in helm info_buffer");
   return(value);
 }
 
@@ -1076,9 +1114,6 @@ vector<string> IvPBehavior::getStateSpaceVars()
   
   return(rvector);
 }
-
-
-
 
 
 

@@ -4,20 +4,21 @@
 /*    FILE: MarinePID_Info.cpp                                   */
 /*    DATE: July 6th 2011                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
  
 #include <cstdlib>
@@ -106,14 +107,14 @@ void showExampleConfigAndExit()
   blk("  yaw_pid_ki  = 0.012                                           ");
   blk("  yaw_pid_integral_limit = 0.07                                 ");
   blk("  yaw_pid_ki_limit       = 0.2                                  ");
-  blk("  max_rudder  = 100                                             ");
+  blk("  maxrudder   = 100                                             ");
   blk("                                                                ");
   blk("  // Speed control configuration                                ");
   blk("  speed_pid_kp = 0.8                                            ");
   blk("  speed_pid_kd = 0.1                                            ");
   blk("  speed_pid_ki = 0.11                                           ");
   blk("  speed_pid_ki_limit = 0.07                                     ");
-  blk("  max_thrust   = 100                                            ");
+  blk("  maxthrust    = 100                                            ");
   blk("                                                                ");
   blk("  // Depth control configuration                                ");
   blk("  depth_control      = true  "," // or {false}                  ");
@@ -121,14 +122,14 @@ void showExampleConfigAndExit()
   blk("  z_to_pitch_pid_kd  = 1.0                                      ");
   blk("  z_to_pitch_pid_ki  = 0.004                                    ");
   blk("  z_to_pitch_pid_integral_limit = 0.05                          ");
-  blk("  max_pitch          = 15                                       ");
+  blk("  maxpitch           = 15                                       ");
   blk("                                                                ");
   blk("  // Depth control configuration                                ");
   blk("  pitch_pid_kp       = 0.5                                      ");
   blk("  pitch_pid_kd       = 1.0                                      ");
   blk("  pitch_pid_ki       = 0                                        ");
   blk("  pitch_pid_integral_limit = 0                                  ");
-  blk("  max_elevator       = 13                                       ");
+  blk("  maxelevator        = 13                                       ");
   blk("}                                                               ");
   blk("                                                                ");
   exit(0);
@@ -180,5 +181,8 @@ void showReleaseInfoAndExit()
   showReleaseInfo("pMarinePID", "gpl");
   exit(0);
 }
+
+
+
 
 

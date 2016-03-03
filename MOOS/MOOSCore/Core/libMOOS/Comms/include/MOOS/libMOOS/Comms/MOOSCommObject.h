@@ -48,6 +48,7 @@ public:
 protected:
     bool SendPkt(XPCTcpSocket* pSocket,CMOOSCommPkt & PktTx);
     bool ReadPkt(XPCTcpSocket* pSocket,CMOOSCommPkt & PktRx,int nSecondsTimeOut = -1);
+    bool ReadPktV2(XPCTcpSocket* pSocket,CMOOSCommPkt & PktRx,int nSecondsTimeOut = -1);
     bool SendMsg(XPCTcpSocket* pSocket,CMOOSMsg & Msg);
     bool ReadMsg(XPCTcpSocket* pSocket,CMOOSMsg & Msg, int nSecondsTimeOut = -1);
 
@@ -74,6 +75,12 @@ public:
      */
     void BoostIOPriority(bool bBoost);
 
+    /*enable or don't the NAGLE algorithm for sockets */
+    void SetTCPNoDelay(bool bTCPNoDelay);
+
+    /** return a string of the host machines's IP adress*/
+    static std::string GetLocalIPAddress();
+
 
 protected:
 
@@ -97,6 +104,8 @@ protected:
     unsigned int m_nSendBufferSizeKB;
     //should we boost the priority of all IO threads?
 	bool m_bBoostIOThreads;
+
+	bool m_bDisableNagle;
 
 
 private:

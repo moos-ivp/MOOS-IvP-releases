@@ -3,9 +3,10 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include "MOOS/libAlogTools/indexWriter.h"
+#include "MOOS/AlogTools/indexWriter.h"
 
 using namespace std;
+using namespace MOOS::AlogTools;
 
 ////////////////////////////////////////////////////////////////////////////////
 void processAlogFile( std::string alogFileName )

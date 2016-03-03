@@ -4,22 +4,24 @@
 /*    FILE: XYFormatUtilsSegl.cpp                                */
 /*    DATE: May 18th, 2009 (Reworked from XYBuildUtils.h)        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
+#include <iostream>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -86,11 +88,10 @@ XYSegList stringStandard2SegList(string str)
   XYSegList null_segl;
   XYSegList new_seglist;
 
-  string rest = stripBlankEnds(str);
+  string rest = str;
 
   while(rest != "") {
-    string left = stripBlankEnds(biteString(rest, '='));
-    rest = stripBlankEnds(rest);
+    string left = biteStringX(rest, '=');
     
     if(left == "pts") {
       string pstr = biteStringX(rest, '}');
@@ -143,8 +144,7 @@ XYSegList stringStandard2SegList(string str)
       }
     }
     else {
-      string right = stripBlankEnds(biteString(rest, ','));
-      rest = stripBlankEnds(rest);
+      string right = biteStringX(rest, ',');
       new_seglist.set_param(left, right);
     }
   }	  				  
@@ -294,8 +294,6 @@ XYSegList stringLawnmower2SegList(string str)
   bool width_set   = false;
   bool height_set  = false;
   bool swath_set   = false;
-  //bool startx_set  = false;
-  //bool starty_set  = false;
 
   string xpos, ypos, vertex_color, edge_color, label, label_color;
   string start, source, msg, edge_size, vertex_size, rows="ew";  
@@ -338,14 +336,10 @@ XYSegList stringLawnmower2SegList(string str)
       swath = dval;
       swath_set = true;
     }
-    else if((param == "startx") && isNumber(value)) {
+    else if((param == "startx") && isNumber(value))
       startx = dval;
-      //startx_set = true;
-    }
-    else if((param == "starty") && isNumber(value)) {
+    else if((param == "starty") && isNumber(value)) 
       starty = dval;
-      //starty_set = true;
-    }
     else if((param == "snap") && isNumber(value) && (dval >= 0))
       snapval = dval;
     else if(param == "active") 
@@ -607,4 +601,7 @@ XYSegList stringBowTie2SegList(string str)
 
   return(new_seglist);
 }
+
+
+
 

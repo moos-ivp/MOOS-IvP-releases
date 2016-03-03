@@ -4,20 +4,21 @@
 /*    FILE: BehaviorSet.cpp                                      */
 /*    DATE: Oct 27th 2004 Sox up 3-0 in the Series               */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iostream>
@@ -165,6 +166,9 @@ bool BehaviorSet::buildBehaviorsFromSpecs()
       spec_builds.push_back(sbuild);
     }
     else {
+      vector<VarDataPair> msgs = sbuild.getHelmStartMessages();
+      m_helm_start_msgs.insert(m_helm_start_msgs.end(), msgs.begin(), msgs.end());
+
       if(spec.getTemplatingType() == "spawn")
 	sbuild.deleteBehavior();
       else {
@@ -175,6 +179,7 @@ bool BehaviorSet::buildBehaviorsFromSpecs()
 	   !uniqueNameX(bhv_name, m_bhv_names)) {
 	  cerr << "Duplicate behavior name found: " << bhv_name << endl;
 	  all_builds_ok = false;
+	  addWarning("Duplicate behavior name found: " + bhv_name);
 	}
 	else
 	  bhv_names.insert(bhv_name);
@@ -255,6 +260,7 @@ SpecBuild BehaviorSet::buildBehaviorFromSpec(BehaviorSpec spec,
       return(sbuild);
     }
   }
+  
   bhv->setBehaviorType(bhv_kind);
 
   // First apply all the behavior specs from the original specification
@@ -315,10 +321,17 @@ SpecBuild BehaviorSet::buildBehaviorFromSpec(BehaviorSpec spec,
 
     specs_valid = specs_valid && valid;
   }
-  if(specs_valid) 
+  if(specs_valid) {
     sbuild.setIvPBehavior(bhv);
-  else
+    // Added Oct 1313 mikerb - allow template behaviors to make an initial
+    // posting on helm startup, even if no instance made on startup (or ever).
+    bhv->onHelmStart();
+    // The behavior may now have some messages (var-data pairs) ready for 
+    // retrieval
+  }
+  else {
     delete(bhv);
+  }
 
   return(sbuild);
 }
@@ -379,97 +392,120 @@ IvPFunction* BehaviorSet::produceOF(unsigned int ix,
 				    unsigned int iteration, 
 				    string& new_activity_state)
 {
+  // Quick index sanity check
+  if(ix >= m_bhv_entry.size())
+    return(0);
+  
+  // =========================================================================
+  // Part 1: Prepare and update the behavior, determine its new activity state
+  // =========================================================================
   IvPFunction *ipf = 0;
-  double pwt = 0;
-  int    pcs = 0;
+  IvPBehavior *bhv = m_bhv_entry[ix].getBehavior();
 
-  if(ix < m_bhv_entry.size()) {
-    IvPBehavior *bhv = m_bhv_entry[ix].getBehavior();
-    string old_activity_state = m_bhv_entry[ix].getState();
-    if(old_activity_state == "")
-      old_activity_state = "idle";
+  // possible vals: "", "idle", "running", "active"
+  string old_activity_state = m_bhv_entry[ix].getState();
 
-    // Look for possible dynamic updates to the behavior parameters
-    bool update_made = bhv->checkUpdates();
-    if(update_made)
-      bhv->onSetParamComplete();
-
-    // Check if the behavior duration is to be reset
-    bhv->checkForDurationReset();
-
-    new_activity_state = bhv->isRunnable();
-
-    // Now that the new_activity_state is set, act appropriately for
-    // each behavior.
-    if(new_activity_state == "completed")
-      bhv->onCompleteState();
-
-    if(new_activity_state == "idle") {
-      bool repeatable = (old_activity_state != "idle");
-      bhv->postFlags("idleflags", repeatable);
-      bhv->postFlags("inactiveflags", repeatable);
-      if((old_activity_state == "running") ||
-	 (old_activity_state == "active"))
-	bhv->onRunToIdleState();
-      bhv->onIdleState();
-      bhv->updateStateDurations("idle");
+  // Look for possible dynamic updates to the behavior parameters
+  bool update_made = bhv->checkUpdates();
+  if(update_made)
+    bhv->onSetParamComplete();
+  
+  // Check if the behavior duration is to be reset
+  bhv->checkForDurationReset();
+  
+  // Possible vals: "completed", "idle", "running"
+  new_activity_state = bhv->isRunnable();
+  
+  // =========================================================================
+  // Part 2: With new_activity_state set, act appropriately for each behavior.
+  // =========================================================================
+  // Part 2A: Handle completed behaviors
+  if(new_activity_state == "completed")
+    bhv->onCompleteState();
+  
+  // Part 2B: Handle idle behaviors
+  if(new_activity_state == "idle") {
+    if(old_activity_state != "idle") {
+      bhv->postFlags("idleflags", true);
+      bhv->postFlags("inactiveflags", true);
     }
-    
-    if(new_activity_state == "running") {
-      bool repeatable = (old_activity_state == "idle");
-      bhv->postDurationStatus();
-      bhv->postFlags("runflags", repeatable);
-      if(old_activity_state == "idle")
-	bhv->onIdleToRunState();
-      ipf = bhv->onRunState();
-      if(ipf && !ipf->freeOfNan()) {
-	bhv->postEMessage("NaN detected in IvP Function");
+    if((old_activity_state == "running") || (old_activity_state == "active"))
+      bhv->onRunToIdleState();
+    bhv->onIdleState();
+    bhv->updateStateDurations("idle");
+  }
+  
+  // Part 2C: Handle running behaviors
+  if(new_activity_state == "running") {
+    double pwt = 0;
+    int    pcs = 0;
+    if((old_activity_state == "idle") || (old_activity_state == ""))
+      bhv->postFlags("runflags", true); // true means repeatable
+    bhv->postDurationStatus();
+    if(old_activity_state == "idle")
+      bhv->onIdleToRunState();
+
+    // Step 1: Ask the behavior to build a IvP function
+    ipf = bhv->onRunState();
+    // Step 2: If IvP function contains NaN components, report and abort
+    if(ipf && !ipf->freeOfNan()) {
+      bhv->postEMessage("NaN detected in IvP Function");
+      delete(ipf);
+      ipf = 0;
+    }
+    // Step 3: If IvP function has non-positive priority, abort
+    if(ipf) {
+      pwt = ipf->getPWT();
+      pcs = ipf->getPDMap()->size();
+      if(pwt <= 0) {
 	delete(ipf);
 	ipf = 0;
+	pcs = 0;
       }
-      if(ipf) {
-	pwt = ipf->getPWT();
-	pcs = ipf->getPDMap()->size();
-	if(pwt <= 0) {
-	  delete(ipf);
-	  ipf = 0;
-	  pcs = 0;
-	}
-      }
-      if(ipf && m_report_ipf) {
-	string desc_str = bhv->getDescriptor();
-	string iter_str = uintToString(iteration);
-	string ctxt_str = iter_str + ":" + desc_str;
-	ipf->setContextStr(ctxt_str);
-	string ipf_str = IvPFunctionToString(ipf);
-	bhv->postMessage("BHV_IPF", ipf_str);
-      }
-      if(ipf) {
-	bool repeatable = (old_activity_state != "active");
-	new_activity_state = "active";
-	bhv->postFlags("activeflags", repeatable);
-	bhv->statusInfoAdd("pwt", doubleToString(pwt));
-	bhv->statusInfoAdd("pcs", intToString(pcs));
-      }
-      else {
-	bool repeatable = (old_activity_state == "active");
-	bhv->postFlags("inactiveflags", repeatable);
-      }
-      bhv->updateStateDurations("running");
     }
-    bhv->statusInfoAdd("state", new_activity_state);
-    bhv->statusInfoPost();
-
-    // If this represents a change in states from the previous
-    // iteration, note the time at which the state changed.
-    if(old_activity_state != new_activity_state)
-      m_bhv_entry[ix].setStateTimeEntered(m_curr_time);
-    
-    m_bhv_entry[ix].setState(new_activity_state);
-    double state_time_entered = m_bhv_entry[ix].getStateTimeEntered();
-    double elapsed = (m_curr_time - state_time_entered);
-    m_bhv_entry[ix].setStateTimeElapsed(elapsed);
+    // Step 4: If we're serializing and posting IvP functions, do here
+    if(ipf && m_report_ipf) {
+      string desc_str = bhv->getDescriptor();
+      string iter_str = uintToString(iteration);
+      string ctxt_str = iter_str + ":" + desc_str;
+      ipf->setContextStr(ctxt_str);
+      string ipf_str = IvPFunctionToString(ipf);
+      bhv->postMessage("BHV_IPF", ipf_str);
+    }
+    // Step 5: Handle normal case of healthy IvP function returned
+    if(ipf) {
+      if(old_activity_state != "active")
+	bhv->postFlags("activeflags", true); // true means repeatable
+      new_activity_state = "active";
+      bhv->statusInfoAdd("pwt", doubleToString(pwt));
+      bhv->statusInfoAdd("pcs", intToString(pcs));
+    }
+    // Step 6: Handle where behavior decided not to product an IPF
+    else {
+      if(old_activity_state == "active")
+	bhv->postFlags("inactiveflags", true); // true means repeatable
+    }
+    bhv->updateStateDurations("running");
   }
+
+  
+  // =========================================================================
+  // Part 3: Update all the bookkeeping structures 
+  // =========================================================================
+  bhv->statusInfoAdd("state", new_activity_state);
+  bhv->statusInfoPost();
+  
+  // If this represents a change in states from the previous
+  // iteration, note the time at which the state changed.
+  if(old_activity_state != new_activity_state)
+    m_bhv_entry[ix].setStateTimeEntered(m_curr_time);
+  
+  m_bhv_entry[ix].setState(new_activity_state);
+  double state_time_entered = m_bhv_entry[ix].getStateTimeEntered();
+  double elapsed = (m_curr_time - state_time_entered);
+  m_bhv_entry[ix].setStateTimeElapsed(elapsed);
+
+  // Return either the IvP function or NULL
   return(ipf);
 }
 
@@ -864,6 +900,9 @@ void BehaviorSet::print()
     cout << "-------" << endl;
   }
 }
+
+
+
 
 
 

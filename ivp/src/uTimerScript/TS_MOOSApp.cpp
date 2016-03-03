@@ -4,20 +4,21 @@
 /*    FILE: TS_MOOSApp.cpp                                       */
 /*    DATE: May 21st 2009                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <cstdlib>
@@ -29,7 +30,6 @@
 
 #ifdef _WIN32
 #include <process.h>
-//    #include "MOOSAppRunnerThread.h"
 #define getpid _getpid
 #endif
 
@@ -37,7 +37,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #endif
-
 
 using namespace std;
 
@@ -76,6 +75,8 @@ TS_MOOSApp::TS_MOOSApp()
   m_var_pause      = "UTS_PAUSE";
   m_var_status     = "UTS_STATUS";
   m_var_reset      = "UTS_RESET";
+
+  m_time_zero_connect = true;   // if false: timezero is MOOSDB start time
 
   m_info_buffer    = new InfoBuffer;
 
@@ -124,6 +125,8 @@ bool TS_MOOSApp::OnNewMail(MOOSMSG_LIST &NewMail)
       if(m_connect_tstamp == 0) 
 	m_connect_tstamp = (MOOSTime() - dval);
     }
+    else if(key == "DB_CLIENTS")
+      checkBlockApps(sval);
     else if(key == "EXITED_NORMALLY") {
       if((sval == GetAppName()) && (msrc == GetAppName()) && m_exit_ready)
 	m_exit_confirmed = true;
@@ -179,13 +182,16 @@ bool TS_MOOSApp::Iterate()
     m_status_needed = true;
   // Now apply the results of the new conditions state
   m_conditions_ok = new_conditions_ok;
-
+  
   if(m_script_start_time == 0) {
-    m_script_start_time = m_curr_time;
+    if(m_time_zero_connect)
+      m_script_start_time = m_curr_time;
+    else 
+      m_script_start_time = m_connect_tstamp;
     scheduleEvents(m_shuffle);
   }
 
-  if(m_paused || !m_conditions_ok) {
+  if(m_paused || !m_conditions_ok || (m_block_apps.size() > 0)) {
     double delta_time = 0;
     if(m_previous_time != -1)
       delta_time = m_curr_time - m_previous_time;
@@ -200,7 +206,7 @@ bool TS_MOOSApp::Iterate()
     m_status_needed = true;
   
   bool all_posted = false;
-  if(m_conditions_ok) 
+  if(!m_paused && m_conditions_ok && (m_block_apps.size()==0)) 
     all_posted = checkForReadyPostings();
 
   // Do the reset only if all events are posted AND the reset_time is 
@@ -280,6 +286,15 @@ bool TS_MOOSApp::OnStartUp()
       else
 	reportConfigWarning("Invalid upon_awake parameter value: " + value);
     }
+    else if(param == "time_zero") {
+      string lvalue = tolower(value);
+      if(lvalue=="script_start")
+	m_time_zero_connect = true;
+      if(lvalue=="db_start")
+	m_time_zero_connect = false;
+      else
+	reportConfigWarning("Invalid time_zero parameter value: " + value);
+    }
     else if(param == "reset_max") {
       string str = tolower(value);
       if((str == "any") || (str == "unlimited") || (str == "nolimit"))
@@ -316,6 +331,11 @@ bool TS_MOOSApp::OnStartUp()
 	else
 	  reportConfigWarning("The reset_var parameter given var with whitespace");
     }
+    else if(param == "block_on") {
+      bool ok_block_app = addBlockApps(value);
+      if(!ok_block_app) 
+	reportConfigWarning("Unhandled or duplicate block_on app: " + value);
+    }
     else if((param == "pause_var") || (param == "pause_variable")) {
       if(!strContainsWhite(value))
 	m_var_pause = value;
@@ -349,10 +369,10 @@ bool TS_MOOSApp::OnStartUp()
       string right = value;
       if(!isNumber(left) || ((right != "") && !isNumber(right)))
 	reportConfigWarning("Invalid delay_start provided: " + orig);
+      if(right == "") 
+	right = left;
       double lval  = atof(left.c_str());
       double rval  = atof(right.c_str());
-      if(right == "")
-	right = left;
       if(isNumber(left) && isNumber(right) && (lval >= 0) && (lval <= rval)) {
 	m_delay_start.setParam("min", lval);
 	m_delay_start.setParam("max", rval);
@@ -364,10 +384,10 @@ bool TS_MOOSApp::OnStartUp()
       string right = value;
       if(!isNumber(left) || ((right != "") && !isNumber(right)))
 	reportConfigWarning("Invalid delay_start provided:" + orig);
-      double lval  = atof(left.c_str());
-      double rval  = atof(right.c_str());
       if(right == "")
 	right = left;
+      double lval  = atof(left.c_str());
+      double rval  = atof(right.c_str());
       if(isNumber(left) && isNumber(right) && (lval >= 0) && (lval <= rval)) {
 	m_delay_reset.setParam("min", lval);
 	m_delay_reset.setParam("max", rval);
@@ -423,11 +443,12 @@ void TS_MOOSApp::registerVariables()
 {
   AppCastingMOOSApp::RegisterVariables();
 
-  m_Comms.Register(m_var_forward, 0);
-  m_Comms.Register(m_var_pause, 0);
-  m_Comms.Register(m_var_reset, 0);
-  m_Comms.Register("DB_UPTIME", 0);
-  m_Comms.Register("EXITED_NORMALLY", 0);
+  Register(m_var_forward, 0);
+  Register(m_var_pause, 0);
+  Register(m_var_reset, 0);
+  Register("DB_UPTIME",  0);
+  Register("DB_CLIENTS", 0);
+  Register("EXITED_NORMALLY", 0);
 
   // Get all the variable names from all present conditions.
   vector<string> all_vars;
@@ -441,7 +462,7 @@ void TS_MOOSApp::registerVariables()
   // Register for all variables found in all conditions.
   unsigned int all_size = all_vars.size();
   for(i=0; i<all_size; i++)
-    m_Comms.Register(all_vars[i], 0);
+    Register(all_vars[i], 0);
  
 }
 
@@ -455,6 +476,8 @@ void TS_MOOSApp::addNewEvent(const string& event_str)
   string new_val;
   double new_ptime_min = 0;
   double new_ptime_max = 0;
+  
+  unsigned int amt = 1;
 
   vector<string> svector = parseStringQ(event_str, ',');
   unsigned int i, vsize = svector.size();
@@ -472,13 +495,22 @@ void TS_MOOSApp::addNewEvent(const string& event_str)
 	reportConfigWarning("Event variable has white-space: " + value);
     }
     else if(param == "val") {
+#if 0
       string idx_string = uintToString(m_pairs.size());
       idx_string = padString(idx_string, 3);
       idx_string = findReplace(idx_string, ' ', '0');
       value = findReplace(value, "$$IDX",  idx_string);
       value = findReplace(value, "$(IDX)", idx_string);
       value = findReplace(value, "$[IDX]", idx_string);
+#endif
       new_val = value;
+    }
+    else if(param == "amt") {
+      unsigned int this_amt = atoi(value.c_str());
+      if(this_amt == 0)
+	reportConfigWarning("Event amt must be > 0: " + value);
+      else
+	amt = this_amt;
     }
     else if(param == "time") {
       if(isNumber(value)) {
@@ -518,12 +550,26 @@ void TS_MOOSApp::addNewEvent(const string& event_str)
     return;
   }
 
-  VarDataPair new_pair(new_var, new_val, "auto");
-  m_pairs.push_back(new_pair);
-  m_ptime.push_back(-1);
-  m_ptime_min.push_back(new_ptime_min);
-  m_ptime_max.push_back(new_ptime_max);
-  m_poked.push_back(false);
+  string new_val_orig = new_val;
+  for(unsigned int k=0; k<amt; k++) {
+    new_val = new_val_orig;
+
+    // Begin expand IDX macro
+    string idx_string = uintToString(m_pairs.size());
+    idx_string = padString(idx_string, 3);
+    idx_string = findReplace(idx_string, ' ', '0');
+    new_val = findReplace(new_val, "$$IDX",  idx_string);
+    new_val = findReplace(new_val, "$(IDX)", idx_string);
+    new_val = findReplace(new_val, "$[IDX]", idx_string);
+    // End expand IDX macro
+
+    VarDataPair new_pair(new_var, new_val, "auto");
+    m_pairs.push_back(new_pair);
+    m_ptime.push_back(-1);
+    m_ptime_min.push_back(new_ptime_min);
+    m_ptime_max.push_back(new_ptime_max);
+    m_poked.push_back(false);
+  }
 }
 
 //------------------------------------------------------------
@@ -777,6 +823,44 @@ void TS_MOOSApp::addLogEvent(string var, string sval, double db_uptime)
 }
 
 //----------------------------------------------------------------
+// Procedure: addBlockApps
+
+bool TS_MOOSApp::addBlockApps(string block_apps)
+{
+  vector<string> svector = parseString(block_apps, ',');
+  for(unsigned int i=0; i<svector.size(); i++) {
+    string block_app = stripBlankEnds(svector[i]);
+    if(strContainsWhite(block_app))
+      return(false);
+    if(m_block_apps.count(block_app) > 0)
+      return(false);
+    m_block_apps.insert(block_app);
+  }
+  return(true);
+}
+
+//----------------------------------------------------------------
+// Procedure: checkBlockApps
+//   Purpose: go through the current list of MOOSDB clients and if any
+//            app is on the block list, remove it from the block list.
+//            The uTimerScript will be "unblocked" when the block list
+//            is empty.
+
+void TS_MOOSApp::checkBlockApps(string db_clients)
+{
+  if(m_block_apps.size() == 0)
+    return;
+
+  vector<string> svector = parseString(db_clients, ',');
+  for(unsigned int i=0; i<svector.size(); i++) {
+    if(m_block_apps.count(svector[i])) {
+      m_block_apps.erase(svector[i]);
+    }
+  }
+}
+
+
+//----------------------------------------------------------------
 // Procedure: jumpToNextPosting()
 //   Purpose: Go through the list of events and find the next un-poked
 //            var-data pair and jump forward in time to the time at 
@@ -990,7 +1074,8 @@ bool TS_MOOSApp::handleMathExpr(string& str)
   unsigned int len = str.length();
 
   // Part 1: Ensure that all the left/right braces are well matched
-  unsigned int i, depth=0;
+  unsigned int i; 
+  int depth=0;
   bool braces_detected = false;
   for(i=0; i<len; i++) {
     char c = str.at(i);
@@ -1011,7 +1096,8 @@ bool TS_MOOSApp::handleMathExpr(string& str)
   // Part 2: find the deepest '{' and matching '}' occurance
   unsigned int max_lix = 0;
   unsigned int max_rix = 0;
-  unsigned int max_depth = 0;
+
+  int max_depth = 0;
   depth = 0;
   for(i=0; i<len; i++) {
     char c = str.at(i);
@@ -1164,14 +1250,42 @@ bool TS_MOOSApp::buildReport()
     s_delay_start += "," + doubleToStringX(m_delay_start.getMaxVal(),1) + "]";
   }
 
+  string s_reset_max = uintToString(m_reset_max);
+
+  string s_script_start = "At uTimerScript launch time (not MOOSDB start time)";
+  if(!m_time_zero_connect)
+    s_script_start = "At MOOSDB start time (not uTimerScript launch time)";
+
+  string block_apps;
+  set<string>::iterator q;
+  for(q=m_block_apps.begin(); q!=m_block_apps.end(); q++) {
+    if(block_apps != "")
+      block_apps += ",";
+    block_apps += *q;
+  }
+  if(block_apps == "")
+    block_apps = "(ok) no blocking apps";
+
+  string s_paused = "(ok) Not paused";
+  if(m_paused)
+    s_paused = "true";
+
+  string s_conditions = "(ok) No un-met conditions";
+  if(!m_conditions_ok)
+    s_conditions = "false - there are un-met conditions";
+
   m_msgs << "Current Script Information: \n";
-  m_msgs << "    Elements: " << m_pairs.size() << "(" << step << ")" << endl;
-  m_msgs << "     Reinits: " << m_reset_count                  << endl;
-  m_msgs << "   Time Warp: " << s_uts_time_warp                << endl;
-  m_msgs << " Delay Start: " << s_delay_start                  << endl;
-  m_msgs << " Delay Reset: " << s_delay_reset                  << endl;
-  m_msgs << "      Paused: " << boolToString(m_paused)         << endl;
-  m_msgs << "ConditionsOK: " << boolToString(m_conditions_ok)  << endl << endl;
+  m_msgs << "     Elements: " << m_pairs.size() << "(" << step << ")" << endl;
+  m_msgs << "      Reinits: " << m_reset_count                  << endl;
+  m_msgs << "    Time Warp: " << s_uts_time_warp                << endl;
+  m_msgs << " Time Zero is: " << s_script_start                 << endl;
+  m_msgs << "  Delay Start: " << s_delay_start                  << endl;
+  m_msgs << "  Delay Reset: " << s_delay_reset                  << endl;
+  m_msgs << "    Reset Max: " << s_reset_max                    << endl << endl;
+  m_msgs << "Run criteria:" << endl;
+  m_msgs << "   Block Apps: " << block_apps                     << endl;
+  m_msgs << "       Paused: " << s_paused                       << endl;
+  m_msgs << " ConditionsOK: " << s_conditions                   << endl << endl;
 
   // Part 2: Random Variable information
   ACTable actab(5,2); // 5 columns, 2 space separators
@@ -1204,5 +1318,6 @@ bool TS_MOOSApp::buildReport()
 
   return(true);
 }
+
 
 

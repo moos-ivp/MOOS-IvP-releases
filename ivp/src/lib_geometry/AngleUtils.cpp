@@ -4,20 +4,21 @@
 /*    FILE: AngleUtils.cpp                                       */
 /*    DATE: Nov 26, 2000                                         */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <cstdlib>
@@ -208,7 +209,7 @@ double radToDegrees(double radval)
 
 double headingToRadians(double degval) 
 {
-  return( radAngleWrap( (90.0-degval)*M_PI/180.0 ) );
+  return(radAngleWrap( (90.0-degval)*M_PI/180.0));
 }
 
 
@@ -219,7 +220,39 @@ double headingToRadians(double degval)
 
 double radToHeading(double radval)
 {
-  return( angle360( 90.0-(radval / M_PI) * 180) );
+  return(angle360( 90.0-(radval / M_PI) * 180));
+}
+
+
+//---------------------------------------------------------------
+// Procedure: speedInHeading
+//   Purpose: Given a heading and speed of a vehicle, and another heading,
+//            determine the speed of the vehicle in that heading.
+
+double speedInHeading(double osh, double osv, double heading)
+{
+  // Part 0: handle simple special case
+  if(osv == 0)
+    return(0);
+
+  // Part 1: determine the delta heading [0, 180]
+  double delta = angle180(osh - heading);
+  if(delta < 0)
+    delta *= -1;
+  
+  // Part 2: Handle easy special cases
+  if(delta == 0)
+    return(osv);
+  if(delta == 180)
+    return(-osv);
+  if(delta == 90)
+    return(0);
+
+  // Part 3: Handle the general case
+  double radians = degToRadians(delta);
+  double answer  = cos(radians) * osv;
+  
+  return(answer);
 }
 
 
@@ -242,9 +275,9 @@ double angle180(double degval)
 
 double angle360(double degval)
 {
-  while(degval >= 360)
+  while(degval >= 360.0)
     degval -= 360.0;
-  while(degval < 0)
+  while(degval < 0.0)
     degval += 360.0;
   return(degval);
 }
@@ -314,13 +347,89 @@ bool containsAngle(double aval, double bval, double qval)
     return((qval >= aval) && (qval <= bval));
 }
 
+//---------------------------------------------------------------
+// Procedure: relBearing
+//   Purpose: returns the relative bearing of a contact at position cnx,cny to
+//            ownship positioned as osx,osy at a heading of osh.
+//   Returns: Value in the range [0,360).
+
+double  relBearing(double osx, double osy, double osh, double cnx, double cny)
+{
+  double angle_os_to_cn = relAng(osx, osy, cnx, cny);
+  
+  double raw_rel_bearing = angle_os_to_cn - osh;  
+
+  return(angle360(raw_rel_bearing));
+}
+
+//---------------------------------------------------------------
+// Procedure: absRelBearing
+//   Purpose: returns the absolute relative bearing, for example:
+//            359 becomes 1
+//            270 becomes 90
+//            181 becomes 179
+//            180 becomes 180
+//   Returns: Value in the range [0,180].
 
 
+double absRelBearing(double osx, double osy, double osh, double cnx, double cny)
+{
+  double rel_bearing = relBearing(osx, osy, osh, cnx, cny);
+  
+  double abs_relative_bearing = angle180(rel_bearing);
+  if(abs_relative_bearing < 0)
+    abs_relative_bearing *= -1;
+  
+  return(abs_relative_bearing);
+}
+
+//---------------------------------------------------------------
+// Procedure: totAbsRelBearing
+//   Returns: Value in the range [0,360].
 
 
+double totAbsRelBearing(double osx, double osy, double osh, 
+			double cnx, double cny, double cnh)
+{
+  double abs_rel_bearing_os_cn = absRelBearing(osx, osy, osh, cnx, cny);
+  double abs_rel_bearing_cn_os = absRelBearing(cnx, cny, cnh, osx, osy);
+
+  return(abs_rel_bearing_os_cn + abs_rel_bearing_cn_os);
+}
 
 
+//---------------------------------------------------------------
+// Procedure: polyAft
+//   Returns: true if the convex polygon is entirely aft of the vehicle
+//            given its present position and heading
 
+
+bool polyAft(double osx, double osy, double osh, XYPolygon poly, double xbng)
+
+{
+  // The xbng parameter generalizes this function. Normally a point is "aft" of
+  // ownship its relative bearing is in the range (90,270). With the xbng 
+  // parameter, "aft" can be generalized, e.g., xbng=10 means the polygon must
+  // be at least 10 degrees abaft of beam.
+
+  if(xbng < -90)
+    xbng = -90;
+  else if(xbng > 90)
+    xbng = 90;
+
+  unsigned int i, psize = poly.size();
+  for(i=0; i<psize; i++) {
+    double vx = poly.get_vx(i);
+    double vy = poly.get_vy(i);
+    
+    double relbng = relBearing(osx, osy, osh, vx, vy);
+    if(relbng <= (90+xbng)) 
+      return(false);
+    if(relbng >= (270-xbng)) 
+      return(false);
+  }
+  return(true);
+}
 
 
 

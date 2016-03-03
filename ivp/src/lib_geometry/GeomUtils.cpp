@@ -4,22 +4,24 @@
 /*    FILE: GeomUtils.cpp                                        */
 /*    DATE: May 8, 2005 Sunday Morning at Bruegger's             */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
+#include <iostream>
 #include <cmath>
 #include <cstdlib>
 #include "GeomUtils.h"
@@ -175,7 +177,7 @@ bool linesCross(double x1, double y1, double x2, double y2,
       return(false);
   }
 
-  // Case 3 - line1 horizontal line1 vertical
+  // Case 3 - line1 horizontal line2 vertical
   if(line1_horz && line2_vert) {
     iy = y1; ix = x3;
     return(true);
@@ -244,6 +246,7 @@ bool linesCross(double x1, double y1, double x2, double y2,
 
   // Then plug ix into one of the line equations.
   iy = (slope_a * ix) + inter_a;
+
   return(true);
 }
 
@@ -587,7 +590,9 @@ void perpLineIntPt(double x1, double y1, double x2, double y2,
 
 //---------------------------------------------------------------
 // Procedure: projectPoint
-//   Purpose: 
+//      Note: We special-case the axis angles to help ensure that
+//            vertical and horizontal line segments aren't tripped
+//            up by rounding errors.
 
 void projectPoint(double degval, double dist, double cx, 
 		  double cy, double &rx, double &ry)
@@ -595,12 +600,29 @@ void projectPoint(double degval, double dist, double cx,
   if((degval < 0) || (degval >= 360))
     degval = angle360(degval);
 
-  double radang  = degToRadians(degval);
-  double delta_x = sin(radang) * dist;
-  double delta_y = cos(radang) * dist;
-
-  rx = cx + delta_x;
-  ry = cy + delta_y;
+  if(degval == 0) {
+    rx = cx;
+    ry = cy + dist;
+  }
+  else if(degval == 90) {
+    rx = cx + dist;
+    ry = cy;
+  }
+  else if(degval == 180) {
+    rx = cx;
+    ry = cy - dist;
+  }
+  else if(degval == 270) {
+    rx = cx - dist;
+    ry = cy;
+  }
+  else {
+    double radang  = degToRadians(degval);
+    double delta_x = sin(radang) * dist;
+    double delta_y = cos(radang) * dist;
+    rx = cx + delta_x;
+    ry = cy + delta_y;
+  }
 }
 
 
@@ -646,6 +668,9 @@ void addVectors(double deg1, double mag1, double deg2,
   rdeg = relAng(x0, y0, x2, y2);
   rmag = distPointToPoint(x0, y0, x2, y2);
 }
+
+
+
 
 
 

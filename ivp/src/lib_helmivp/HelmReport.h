@@ -4,20 +4,21 @@
 /*    FILE: HelmReport.h                                         */
 /*    DATE: Sep 26th, 2006                                       */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #ifndef HELM_REPORT_HEADER
@@ -26,13 +27,17 @@
 #include <map>
 #include <vector>
 #include <list>
+#include <deque>
 #include <string>
 #include "IvPDomain.h"
 
 class HelmReport {
 public:
   HelmReport();
+  ~HelmReport() {};
 
+  void  initialize();
+  void  clear(bool clear_completed=false);
   void  addMsg(const std::string& str)     {m_messages.push_back(str);};
   void  setHaltMsg(const std::string& str) {m_halt_message = str;};
   
@@ -86,22 +91,24 @@ public:
   double       getDecision(const std::string&) const;
   bool         hasDecision(const std::string&) const;
 
+  bool         changedBehaviors(const HelmReport&) const;
+
   std::string  getModeSummary()      const {return(m_modes);};
   std::string  getHaltMsg()          const {return(m_halt_message);};
   std::vector<std::string> getMsgs() const {return(m_messages);};
 
   // Serialization Helper Methods
   std::string  getDecisionSummary()    const;
-  std::string  getActiveBehaviors()    const;
-  std::string  getRunningBehaviors()   const;
-  std::string  getIdleBehaviors()      const;
-  std::string  getCompletedBehaviors() const;
+  std::string  getActiveBehaviors(bool full=true)    const;
+  std::string  getRunningBehaviors(bool full=true)   const;
+  std::string  getIdleBehaviors(bool full=true)      const;
+  std::string  getCompletedBehaviors(bool full=true) const;
   std::string  getDomainString()       const;
   std::string  timeInState(double, double) const;
 
   // Serialization Methods
   std::string  getReportAsString() const;
-  std::string  getReportAsString(const HelmReport&) const;
+  std::string  getReportAsString(const HelmReport&, bool full=false) const;
 
   // Formatted Summary
   std::list<std::string> formattedSummary(double, bool=false) const;
@@ -119,9 +126,9 @@ protected:
   std::vector<double>       m_bhvs_idle_time;
   std::vector<std::string>  m_bhvs_idle_upds;
   
-  std::vector<std::string>  m_bhvs_completed_desc; // Completed Behaviors
-  std::vector<double>       m_bhvs_completed_time;
-  std::vector<std::string>  m_bhvs_completed_upds;
+  std::deque<std::string>   m_bhvs_completed_desc; // Completed Behaviors
+  std::deque<double>        m_bhvs_completed_time;
+  std::deque<std::string>   m_bhvs_completed_upds;
   
   std::vector<std::string>  m_bhvs_active_desc;    // Active Behaviors
   std::vector<double>       m_bhvs_active_time;
@@ -130,7 +137,7 @@ protected:
   std::vector<double>       m_bhvs_active_cpu;
   std::vector<int>          m_bhvs_active_pcs;
   std::vector<unsigned int> m_bhvs_active_ipfs;
-  
+
 
   std::vector<std::string>      m_messages;
   std::map<std::string, double> m_decisions;  // +
@@ -154,6 +161,9 @@ protected:
 };
 
 #endif
+
+
+
 
 
 

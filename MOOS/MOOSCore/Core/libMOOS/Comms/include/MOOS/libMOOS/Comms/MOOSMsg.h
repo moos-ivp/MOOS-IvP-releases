@@ -41,6 +41,7 @@
 #define MOOS_REGISTER 'R'
 #define MOOS_UNREGISTER 'U'
 #define MOOS_WILDCARD_REGISTER '*'
+#define MOOS_WILDCARD_UNREGISTER '/' //opposite of * is /
 #define MOOS_NOT_SET '~'
 #define MOOS_COMMAND 'C'
 #define MOOS_ANONYMOUS 'A'
@@ -61,8 +62,12 @@
 //5 seconds time difference between client clock and MOOSDB clock will be allowed
 #define SKEW_TOLERANCE 5
 
-/// MOOS Comms Messaging class. This is a class encapsulating the data which the MOOS Comms API shuttles
-/// between the MOOSDB and other clients 
+/** @brief MOOS Comms Messaging class.
+This is a class encapsulating the data which the MOOS Comms API shuttles
+between the MOOSDB and other clients. It is the fundamental datatype of
+the communications architecture.
+@ingroup Comms
+*/
 class CMOOSMsg  
 {
 public:
@@ -77,6 +82,12 @@ public:
 
     /** specialised construction*/
     CMOOSMsg(char cMsgType,const std::string &sKey,const std::string & sVal,double dfTime=-1);
+
+    /** specialised construction for binary data*/
+    CMOOSMsg(char cMsgType,const std::string &sKey,  unsigned int nDataSize,const void* Data,double dfTime=-1);
+
+    /** equality operator */
+    bool operator ==(const CMOOSMsg & M) const;
 	
 	/** Mark string payload as binary*/
 	void MarkAsBinary();
@@ -99,6 +110,10 @@ public:
 
     /** simply access binary data, return NULL if message is not binary*/
     unsigned char * GetBinaryData();
+
+    /** return (copy) binary data from message*/
+    std::vector<unsigned char >  GetBinaryDataAsVector();
+
 
 
     /** get size of binary message - 0 if not binary type */
@@ -137,6 +152,8 @@ public:
     /**return the name of the process (as registered with the DB) which
     posted this notification*/
     std::string GetSource()const {return m_sSrc;};
+    void SetSource(const std::string & sSrc) { m_sSrc=sSrc;};
+
     std::string GetSourceAux()const {return m_sSrcAux;};
 	void SetSourceAux(const std::string & sSrcAux){m_sSrcAux = sSrcAux;}
 

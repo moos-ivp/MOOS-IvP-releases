@@ -4,20 +4,21 @@
 /*    FILE: USM_MOOSApp.cpp                                      */
 /*    DATE: Oct 25th 2004                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iostream>
@@ -114,7 +115,7 @@ bool USM_MOOSApp::OnNewMail(MOOSMSG_LIST &NewMail)
       m_model.magDriftVector(dval);
     }
 
-    else if((key == "USM_WATER_DEPTH") ||    // Dprecated
+    else if((key == "USM_WATER_DEPTH") ||    // Deprecated
 	    (key == "WATER_DEPTH"))
       m_model.setParam("water_depth", dval);
 
@@ -322,7 +323,8 @@ void USM_MOOSApp::cacheStartingInfo()
   double nav_depth = record.getDepth();
   double nav_alt = depth - nav_depth;
 
-  double nav_lat, nav_lon;
+  double nav_lat = 0;
+  double nav_lon = 0;
  if(m_geo_ok) {
 #ifdef USE_UTM
     m_geodesy.UTM2LatLong(nav_x, nav_y, nav_lat, nav_lon);
@@ -384,7 +386,7 @@ void USM_MOOSApp::registerVariables()
   m_Comms.Register("USM_FORCE_THETA", 0); // Deprecated
   m_Comms.Register("ROTATE_SPEED", 0);
 
-  m_Comms.Register("USM_PAUSE", 0); 
+  m_Comms.Register("USM_SIM_PAUSED", 0); 
   m_Comms.Register("USM_RESET", 0);
 
   // Added buoyancy and trim control and sonar handshake
@@ -645,7 +647,10 @@ bool USM_MOOSApp::buildReport()
 
   bool dual_state = m_model.usingDualState();
 
-  double nav_lat, nav_lon, nav_lat_gt, nav_lon_gt;
+  double nav_lat = 0;
+  double nav_lon = 0;
+  double nav_lat_gt = 0;
+  double nav_lon_gt = 0;
   if(m_geo_ok) {
 #ifdef USE_UTM
     m_geodesy.UTM2LatLong(nav_x, nav_y, nav_lat, nav_lon);
@@ -797,5 +802,8 @@ bool USM_MOOSApp::buildReport()
 
   return(true);
 }
+
+
+
 
 

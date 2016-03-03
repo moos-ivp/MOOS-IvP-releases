@@ -4,20 +4,21 @@
 /*    FILE: HazardSensor_MOOSApp.h                               */
 /*    DATE: Jan 28th, 2012                                       */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #ifndef UFLD_HAZARD_SENSOR_MOOSAPP_HEADER
@@ -88,6 +89,9 @@ class HazardSensor_MOOSApp : public AppCastingMOOSApp
   void    calcSwathGeometry(double, double&, double&);
   void    postConfigurationAck(std::string vname);
 
+  bool    processSensorRequests();
+  bool    processSensorRequest(std::string vname);
+
   unsigned int sensorSwathCount(double, std::string vname);
 
  protected: // State variables
@@ -125,6 +129,13 @@ class HazardSensor_MOOSApp : public AppCastingMOOSApp
   std::map<std::string, double>       m_map_reset_pd_time;
   std::map<std::string, unsigned int> m_map_reset_pd_total;  
 
+  std::map<std::string, double>       m_map_last_sensor_request;
+
+  std::map<std::string, unsigned int> m_map_haz_detect_chances;  
+  std::map<std::string, unsigned int> m_map_ben_detect_chances;  
+  std::map<std::string, unsigned int> m_map_haz_detect_reports;  
+  std::map<std::string, unsigned int> m_map_ben_detect_reports;  
+
   std::map<std::string, unsigned int> m_map_sensor_reqs;  
   std::map<std::string, unsigned int> m_map_detections;
   std::map<std::string, unsigned int> m_map_classify_reqs;  
@@ -141,6 +152,8 @@ class HazardSensor_MOOSApp : public AppCastingMOOSApp
   double      m_swath_len;  // Same for everyone, all settings.
   double      m_min_queue_msg_interval;
   double      m_sensor_max_turn_rate;
+  bool        m_ignore_resemblances;
+  double      m_max_vehicle_speed; // above which, sensor is off
 
   // Absolute sensor characteristics. User may choose one of the
   // available widths. ROC curve and classification accuracy follow.
@@ -170,5 +183,8 @@ class HazardSensor_MOOSApp : public AppCastingMOOSApp
 };
 
 #endif 
+
+
+
 
 

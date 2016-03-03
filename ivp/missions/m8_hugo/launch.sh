@@ -80,21 +80,9 @@ printf "Launching $SNAME MOOS Community (WARP=%s) \n"  $TIME_WARP
 pAntler targ_shoreside.moos >& /dev/null &
 printf "Done \n"
 
-#-------------------------------------------------------
-#  Part 4: Exiting and/or killing the simulation
-#-------------------------------------------------------
-ANSWER="0"
-while [ "${ANSWER}" != "2" -a "${ANSWER}" != "q" ]; do
-    printf "Hit (q) to Exit and Kill Simulation \n"
-    printf "> "
-    read ANSWER
-done
+uMAC targ_shoreside.moos
 
-# %1, %2, %3 matches the PID of the first three jobs in the active
-# jobs list, namely the three pAntler jobs launched in Part 3.
-if [ "${ANSWER}" = "q"  -o "${ANSWER}" = "2" ]; then
-    printf "Killing all processes ... \n"
-    kill %1 %2 %3 %4
-    printf "Done killing processes.   \n"
-fi
+printf "Killing all processes ... \n"
+kill %1 %2 %3 %4
+printf "Done killing processes.   \n"
 

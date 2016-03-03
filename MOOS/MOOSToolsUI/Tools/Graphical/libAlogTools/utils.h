@@ -4,8 +4,14 @@
 #include <vector>
 #include <string>
 
-  void Tokenize(const std::string& str,
-                std::vector<std::string>& tokens,
-                const std::string& delimiters = " ");
+namespace MOOS {
+namespace AlogTools {
+
+void Tokenize(const std::string& str,
+        std::vector<std::string>& tokens,
+        const std::string& delimiters = " ");
+
+}  // namespace AlogTools
+}  // namespace MOOS
 
 #endif // __UTILS_H

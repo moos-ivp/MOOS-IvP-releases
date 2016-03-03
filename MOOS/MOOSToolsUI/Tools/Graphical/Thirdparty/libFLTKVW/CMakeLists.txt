@@ -62,3 +62,11 @@ add_library(${LIBNAME} ${SOURCES} ${PUBLIC_HEADERS})
 target_link_libraries(${LIBNAME} ${${LIBNAME}_DEPEND_LIBRARIES})
 
 
+
+# install libraries
+INSTALL(TARGETS ${LIBNAME}
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+)
+
+

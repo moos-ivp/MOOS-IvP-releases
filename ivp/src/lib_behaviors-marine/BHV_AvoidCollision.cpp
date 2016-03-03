@@ -4,20 +4,21 @@
 /*    FILE: BHV_AvoidCollision.cpp                               */
 /*    DATE: Nov 18th 2006                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #ifdef _WIN32
@@ -68,8 +69,14 @@ BHV_AvoidCollision::BHV_AvoidCollision(IvPDomain gdomain) :
   m_roc_max_heighten  = 2.0; 
   m_bearing_line_show = false;
   m_time_on_leg       = 120;  // Overriding the superclass default=60
+
+  m_no_alert_request  = false;
+
+  // Initialize state variables
+  m_curr_closing_spd = 0;
+  m_avoiding = false;
   
-  addInfoVars("NAV_X, NAV_Y, NAV_SPEED, NAV_HEADING");
+  addInfoVars("NAV_X, NAV_Y, NAV_SPEED, NAV_HEADING, AVOIDING");
 }
 
 //-----------------------------------------------------------
@@ -77,8 +84,6 @@ BHV_AvoidCollision::BHV_AvoidCollision(IvPDomain gdomain) :
 
 bool BHV_AvoidCollision::setParam(string param, string param_val) 
 {
-  if(IvPBehavior::setParam(param, param_val))
-    return(true);
   if(IvPContactBehavior::setParam(param, param_val))
     return(true);
 
@@ -161,9 +166,32 @@ bool BHV_AvoidCollision::setParam(string param, string param_val)
       m_roc_max_heighten = m_roc_max_dampen;
     return(true);
   }  
+  else if(param == "no_alert_request") {
+    return(setBooleanOnString(m_no_alert_request, param_val));
+  }  
   return(false);
 }
 
+
+//-----------------------------------------------------------
+// Procedure: onHelmStart()
+
+void BHV_AvoidCollision::onHelmStart()
+{
+  if(m_no_alert_request || (m_update_var == ""))
+    return;
+
+  string s_alert_range = doubleToStringX(m_pwt_outer_dist,1);
+  string s_cpa_range   = doubleToStringX(m_completed_dist,1);
+  string s_alert_templ = "name=avd_$[VNAME] # contact=$[VNAME]";
+
+  string alert_request = "id=avd, var=" + m_update_var;
+  alert_request += ", val=" + s_alert_templ;
+  alert_request += ", alert_range=" + s_alert_range;
+  alert_request += ", cpa_range=" + s_cpa_range;
+
+  postMessage("BCM_ALERT_REQUEST", alert_request);
+}
 
 //-----------------------------------------------------------
 // Procedure: onRunToIdleState()
@@ -216,20 +244,20 @@ IvPFunction *BHV_AvoidCollision::onRunState()
     return(0);
   }
 
+  double min_util_cpa_dist = m_min_util_cpa_dist;
+  if(m_contact_range <= m_min_util_cpa_dist)
+    min_util_cpa_dist = (m_contact_range / 2);
+    
   bool ok = true;
   IvPFunction *ipf = 0;
   if(m_collision_depth == 0) {
     AOF_AvoidCollision aof(m_domain);
-    ok = ok && aof.setParam("osy", m_osy);
-    ok = ok && aof.setParam("osx", m_osx);
-    ok = ok && aof.setParam("cny", m_cny);
-    ok = ok && aof.setParam("cnx", m_cnx);
-    ok = ok && aof.setParam("cnh", m_cnh);
-    ok = ok && aof.setParam("cnv", m_cnv);
-    ok = ok && aof.setParam("tol", m_time_on_leg);
-    ok = ok && aof.setParam("collision_distance", m_min_util_cpa_dist);
-    ok = ok && aof.setParam("all_clear_distance", m_max_util_cpa_dist);
-    ok = ok && aof.initialize();
+    aof.setOwnshipParams(m_osx, m_osy);
+    aof.setContactParams(m_cnx, m_cny, m_cnh, m_cnv);
+    aof.setParam("tol", m_time_on_leg);
+    aof.setParam("collision_distance", min_util_cpa_dist);
+    aof.setParam("all_clear_distance", m_max_util_cpa_dist);
+    bool ok = aof.initialize();
     
     if(!ok) {
       postEMessage("Unable to init AOF_AvoidCollision.");
@@ -421,6 +449,23 @@ void BHV_AvoidCollision::postRange(bool ok)
     else
       postIntMessage(("RANGE_AVD_"+m_contact), m_contact_range);
   }
+}
+
+
+//-----------------------------------------------------------
+// Procedure: updatePlatformInfo
+
+bool BHV_AvoidCollision::updatePlatformInfo()
+{
+#if 0
+  bool ok = true;
+  string avoiding = getBufferStringVal("AVOIDING", ok);
+  if(ok && (tolower(avoiding) == "true"))
+    m_avoiding = true;
+  else
+    m_avoiding = false;
+#endif
+  return(IvPContactBehavior::updatePlatformInfo());
 }
 
 

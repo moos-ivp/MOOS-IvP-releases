@@ -59,6 +59,7 @@ public:
 	void OnPrintInterfaceAndExit();
 
 
+
 protected:
 
 	bool ApplyRoutes(CMOOSMsg & msg);
@@ -80,11 +81,13 @@ protected:
 	bool AddRoute(const std::string & src_name,
 				const std::string & dest_name,
 				MOOS::IPV4Address address,
-				bool multicast);
+				bool multicast,
+				double frequency);
 
 	bool  AddMulticastAliasRoute(const std::string & src_name,
 					const std::string & dest_name,
-					unsigned int channel_num);
+					unsigned int channel_num,
+					double frequency);
 
 	MOOS::IPV4Address GetAddressFromChannelAlias(unsigned int channel_number) const;
 
@@ -118,6 +121,8 @@ private:
 
 	//teh address form which we count
 	MOOS::IPV4Address base_address_;
+
+	bool verbose_;
 
 
 };
@@ -197,6 +202,10 @@ bool Share::Impl::OnProcessCommandLine()
 	base_address_.set_host  (DEFAULT_MULTICAST_GROUP_ADDRESS);
 	base_address_.set_port (DEFAULT_MULTICAST_GROUP_PORT);
 
+	//verbose_ = m_CommandLineParser.GetFlag("--verbose");
+
+	verbose_ = GetFlagFromCommandLineOrConfigurationFile("verbose");
+
 	std::string sVar;
 	if(m_CommandLineParser.GetVariable("-o",sVar))
 	{
@@ -233,6 +242,9 @@ bool Share::Impl::OnStartUp()
 	//return true;
 	EnableCommandMessageFiltering(true);
 
+	SetIterateMode(REGULAR_ITERATE_AND_COMMS_DRIVEN_MAIL);
+	SetAppFreq(40,0);
+
 	try
 	{
 /*
@@ -248,11 +260,16 @@ bool Share::Impl::OnStartUp()
 		ProcessIOConfigurationString("src_name =X,dest_name=Z,route=161.4.5.6:9000&multicast_21&localhost:9832",true);
 		ProcessIOConfigurationString("route=multicast_21&localhost:9833&multicast_3",false);
 		*/
+
+
 		std::string multicast_base;
 		if(m_MissionReader.GetValue("multicast_base",multicast_base))
 		{
 			base_address_=IPV4Address(multicast_base);
 		}
+
+
+		verbose_ = GetFlagFromCommandLineOrConfigurationFile("verbose");
 
 		std::vector<std::string> outputs = GetRepeatedConfigurations("Output");
 		for(std::vector<std::string>::iterator q=outputs.begin();
@@ -294,6 +311,7 @@ bool Share::Impl::OnStartUp()
 	return true;
 }
 
+
 bool Share::Impl::ProcessShortHandIOConfigurationString(std::string configuration_string, bool is_output)
 {
 
@@ -304,23 +322,49 @@ bool Share::Impl::ProcessShortHandIOConfigurationString(std::string configuratio
 
 	if(is_output)
 	{
-		//X->Y:165.45.3.61:9000:udp & Z:multicast_8
+		//X->Y:165.45.3.61:9000 & Z:multicast_8
 		std::string src_name = MOOS::Chomp(configuration_string,"->");
 		while(!configuration_string.empty())
 		{
-			std::string route_description = trim(MOOS::Chomp(configuration_string,"&"));
+			std::string whole_route_description = trim(MOOS::Chomp(configuration_string,"&"));
+
+            //look for a @frequency
+			std::string route_description = MOOS::Chomp(whole_route_description,"@");
+			std::string sFrequency = whole_route_description;
+            if(sFrequency.empty() || !MOOSIsNumeric(sFrequency) )
+                sFrequency="0.0";
+
+
 			std::list<std::string> parts;
 
+			if(route_description.find(":")==std::string ::npos)
+			{
+				std::cerr<<RED<<"error: short hand failed to parse "<<copy_config
+													<<" not enough parts in route\n"<<NORMAL;
+				return false;
+			}
 			while(!route_description.empty())
 			{
 				parts.push_back(MOOS::Chomp(route_description,":"));
 			}
 
+
+
 			std::string dest_name = src_name;
 
-			if(parts.back().find("udp")==0)
+
+
+			if(parts.back().find("multicast_")!=0)
 			{
-				if(parts.size()==4)
+
+				if(parts.size()>3)
+				{
+					std::cerr<<RED<<"short hand failed to parse "<<copy_config
+									<<" too many parts to the route\n";
+					return false;
+				}
+
+				if(parts.size()==3)
 				{
 					dest_name = parts.front();parts.pop_front();
 				}
@@ -332,6 +376,8 @@ bool Share::Impl::ProcessShortHandIOConfigurationString(std::string configuratio
 				MOOSAddValToString(io,"src_name",src_name);
 				MOOSAddValToString(io,"dest_name",dest_name);
 				MOOSAddValToString(io,"route",destination);
+				MOOSAddValToString(io,"frequency",sFrequency);
+
 				try
 				{
 					ProcessIOConfigurationString(io,true);
@@ -344,22 +390,20 @@ bool Share::Impl::ProcessShortHandIOConfigurationString(std::string configuratio
 
 
 			}
-			else if(parts.back().find("multicast")==0)
+			else
 			{
-				std::string host_name;
-				std::string host_port;
+
+				if(parts.size()>2)
+				{
+					std::cerr<<RED<<"short hand failed to parse "<<copy_config
+									<<" too many parts to the route\n";
+					return false;
+				}
+
+				//this is a multicast route
 				std::string multicast_channel;
 				switch(parts.size())
 				{
-				case 4:
-					//X:212.1.1.3:80453:multicast
-					dest_name = parts.front();parts.pop_front();
-				case 3:
-					//212.1.1.3:80453:multicast
-					host_name = parts.front();parts.pop_front();
-					host_port = parts.front();parts.pop_front();
-					multicast_channel = host_name+":"+host_port;
-					break;
 				case 2:
 					//X:multicast_8
 					dest_name = parts.front();parts.pop_front();
@@ -373,6 +417,7 @@ bool Share::Impl::ProcessShortHandIOConfigurationString(std::string configuratio
 				MOOSAddValToString(io,"src_name",src_name);
 				MOOSAddValToString(io,"dest_name",dest_name);
 				MOOSAddValToString(io,"route",multicast_channel);
+                MOOSAddValToString(io,"frequency",sFrequency);
 
 				try
 				{
@@ -384,18 +429,7 @@ bool Share::Impl::ProcessShortHandIOConfigurationString(std::string configuratio
 							<<copy_config<<" \n"
 							<<io<<" \n"<<e.what()<<std::endl<<NORMAL;
 				}
-
-
-
 			}
-			else
-			{
-				std::cerr<<RED<<"short hand failed to understand protocol name \""<<parts.back()
-							<<"\": expecting udp or multicast_n "
-							<< std::endl<<NORMAL;
-			}
-
-
 		}
 	}
 	else
@@ -433,46 +467,54 @@ bool Share::Impl::ProcessIOConfigurationString(std::string  configuration_string
 
 	MOOSRemoveChars(configuration_string, " ");
 
-	if(is_output)
-	{
-		if(!MOOSValFromString(src_name,configuration_string,"src_name"))
-			throw std::runtime_error("ProcessIOConfigurationString \"src_name\" is a required field");
+	if (is_output) {
+		if (!MOOSValFromString(src_name, configuration_string, "src_name"))
+			throw std::runtime_error(
+					"ProcessIOConfigurationString \"src_name\" is a required field");
 
 		//default no change in name
 		dest_name = src_name;
-		MOOSValFromString(dest_name,configuration_string,"dest_name");
+		MOOSValFromString(dest_name, configuration_string, "dest_name");
 	}
 
 	//we do need a route....
-	if(!MOOSValFromString(routes,configuration_string,"route"))
-		throw std::runtime_error("ProcessIOConfigurationString \"route\" is a required field");
+	if (!MOOSValFromString(routes, configuration_string, "route"))
+		throw std::runtime_error(
+				"ProcessIOConfigurationString \"route\" is a required field");
 
+	//are we being asked to delete the route?
+	//bDelete=false;
+	//MOOSValFromString(bDelete,configuration_string,"delete");
 
-	while(!routes.empty())
-	{
+	double frequency = 0.0;
+	MOOSValFromString(frequency,configuration_string,"frequency");
+
+	while (!routes.empty()) {
 		//look for a space separated list of routes...
-		std::string route = MOOSChomp(routes,"&");
+		std::string route = MOOSChomp(routes, "&");
 
-		if(route.find("multicast_")==0)
+		if (route.find("multicast_") == 0)
 		{
 			//is this a special multicast one?
-			std::stringstream ss(std::string(route,10));
-			unsigned int channel_num=0;
-			ss>>channel_num;
-			if(!ss)
-			{
-				std::cerr<<RED<<"cannot parse "<<route<<channel_num<<std::endl;
+			std::stringstream ss(std::string(route, 10));
+			unsigned int channel_num = 0;
+			ss >> channel_num;
+			if (!ss) {
+				std::cerr << RED << "cannot parse " << route << channel_num
+						<< std::endl;
 				continue;
 			}
 
-			if(is_output)
+			if (is_output)
 			{
-				if(!AddMulticastAliasRoute(src_name,dest_name,channel_num))
+				if (!AddMulticastAliasRoute(src_name, dest_name,
+						channel_num,frequency))
 					return false;
 			}
 			else
 			{
-				if(!AddInputRoute(GetAddressFromChannelAlias(channel_num),true))
+				if (!AddInputRoute(GetAddressFromChannelAlias(channel_num),
+						true))
 					return false;
 			}
 
@@ -481,14 +523,14 @@ bool Share::Impl::ProcessIOConfigurationString(std::string  configuration_string
 		{
 			MOOS::IPV4Address route_address(route);
 
-			if(is_output)
+			if (is_output)
 			{
-				if(!AddRoute(src_name,dest_name,route_address,false))
+				if (!AddRoute(src_name, dest_name, route_address, false,frequency))
 					return false;
 			}
 			else
 			{
-				if(!AddInputRoute(route_address,false))
+				if (!AddInputRoute(route_address, false))
 				{
 					return false;
 				}
@@ -498,6 +540,7 @@ bool Share::Impl::ProcessIOConfigurationString(std::string  configuration_string
 	}
 
 	return true;
+
 }
 
 bool Share::Impl::Iterate()
@@ -511,6 +554,15 @@ bool Share::Impl::Iterate()
 			if(!m_Comms.IsRegisteredFor(new_msg.GetKey()))
 			{
 				m_Comms.Post(new_msg,true);
+				if(verbose_)
+				{
+                    std::cout<<std::setprecision(1);
+                    std::cout<<MOOS::ConsoleColours::green()<<std::setw(10)<<std::fixed<<(MOOS::Time()-CMOOSApp::GetAppStartTime())
+                    <<": "<<MOOS::ConsoleColours::reset();
+				    std::cout<<"forwarding share of \""<<new_msg.GetName()<<"\" from "<<new_msg.m_sSrc<<std::endl;
+				}
+
+
 			}
 		}
 	}
@@ -548,7 +600,7 @@ bool Share::Impl::PublishSharingStatus()
 			}
 			else
 			{
-				sso<<":udp";
+				//sso<<":udp";
 			}
 		}
 	}
@@ -567,7 +619,7 @@ bool Share::Impl::PublishSharingStatus()
 		}
 		else
 		{
-			ssi<<":udp";
+			//ssi<<":udp";
 		}
 	}
 
@@ -615,16 +667,18 @@ bool Share::Impl::OnNewMail(MOOSMSG_LIST & new_mail)
 
 bool  Share::Impl::AddMulticastAliasRoute(const std::string & src_name,
 				const std::string & dest_name,
-				unsigned int channel_num)
+				unsigned int channel_num,
+				double frequency)
 {
 	MOOS::IPV4Address alias_address = GetAddressFromChannelAlias(channel_num);
-	return AddRoute(src_name,dest_name,alias_address,true);
+	return AddRoute(src_name,dest_name,alias_address,true,frequency);
 }
 
 bool  Share::Impl::AddRoute(const std::string & src_name,
 				const std::string & dest_name,
 				MOOS::IPV4Address address,
-				bool multicast)
+				bool multicast,
+				double frequency)
 {
 
 	SocketMap::iterator mcg = socket_map_.find(address);
@@ -648,6 +702,7 @@ bool  Share::Impl::AddRoute(const std::string & src_name,
 		route.src_name = trimed_src_name;
 		route.dest_address = address;
 		route.multicast = multicast;
+		route.frequency = frequency;
 
 		std::list<Route> & rlist = routing_table_[trimed_src_name];
 
@@ -663,8 +718,13 @@ bool  Share::Impl::AddRoute(const std::string & src_name,
 	}
 	else
 	{
-
+		//this is a wildcard route
 		Route route;
+		if(trimed_dest_name.find_last_of("*?")!=std::string::npos)
+		{
+			//looks like we have no desire to rename
+			trimed_dest_name = "";
+		}
 		route.dest_name = trimed_dest_name;
 		route.dest_address = address;
 		route.multicast = multicast;
@@ -740,6 +800,7 @@ bool Share::Impl::OnCommandMsg(CMOOSMsg  Msg)
 
 	try
 	{
+
 		if(MOOSStrCmp("output",cmd))
 		{
 			if(!ProcessIOConfigurationString(Msg.GetString(),true))
@@ -753,6 +814,10 @@ bool Share::Impl::OnCommandMsg(CMOOSMsg  Msg)
 				return false;
 
 			PrintRoutes();
+		}
+		else
+		{
+			throw std::runtime_error("cmd=X - X was neither \"output\" or \"input\"\n");
 		}
 	}
 	catch(const std::exception & e)
@@ -797,6 +862,12 @@ void Share::Impl::PrintRoutes()
 				std::cout<<" ["<<GetChannelAliasFromMutlicastAddress(route.dest_address)<<"]";
 			else
 				std::cout<<" [udp]";
+
+			if(route.frequency==0.0)
+			    std::cout<<" every notification ";
+			else
+			    std::cout<<" @ " <<route.frequency <<"Hz";
+
 			std::cout<<std::endl;
 		}
 
@@ -822,7 +893,17 @@ void Share::Impl::PrintRoutes()
 		{
 			Route & route = *p;
 			std::cout<<"  --> "<<std::setw(20)<<route.dest_address.to_string()
-					<<" as "<<std::setw(10)<<route.dest_name+"*";
+					<<" as ";
+
+			if(std::count(var_pattern.begin(), var_pattern.end(), '*')==1 &&
+									route.dest_name=="^")
+			{
+				std::cout<<std::setw(10)<<" <-wildcard-match-> ";
+			}
+			else
+			{
+				std::cout<<std::setw(10)<<route.dest_name+"<src_name>";
+			}
 			if(route.multicast)
 				std::cout<<" ["<<GetChannelAliasFromMutlicastAddress(route.dest_address)<<"]";
 			else
@@ -885,10 +966,52 @@ bool Share::Impl::ApplyWildcardRoutes( CMOOSMsg& msg)
 					msg.GetKey(),
 					msg.GetSource()))
 			{
+
 				Route new_route = route;
-				new_route.dest_name+=msg.GetKey();
 				new_route.src_name = msg.GetKey();
-				std::cout<<"dynamically creating route for "<<msg.GetKey()<<std::endl;
+
+				if(std::count(var_pattern.begin(), var_pattern.end(), '*')==1 &&
+						route.dest_name=="^")
+				{
+					//here we check for a special case if we are presented with a pattern
+					//like *_X->^ we will simply forward as the bit that matched * in *_X
+					//so concretely A_X will be forwarded as X
+
+					std::string t = msg.m_sKey;
+					std::string bit_that_matches;
+					if(*var_pattern.begin()=='*')
+					{
+						//we have *X
+						std::string tok = var_pattern.substr(1);
+						//we want everything before tok as that matched the wild card...
+						bit_that_matches = MOOS::Chomp(t,tok);
+					}
+					else if(*var_pattern.rbegin()=='*')
+					{
+						//we have X*
+						std::string tok = var_pattern.substr(0,var_pattern.length()-1);
+						//we want everything after tok as that matches the wild card...
+						MOOS::Chomp(t,tok);
+						bit_that_matches = t;
+					}
+					new_route.dest_name = bit_that_matches;
+				}
+				else
+				{
+					//standard thing to do is simply use message name as a suffix
+					new_route.dest_name+=msg.GetKey();
+				}
+
+				std::cout<<"dynamically creating outgoing route : "<<msg.GetKey()<<"->"<<new_route.dest_name <<" on ";
+				if(new_route.multicast)
+				{
+					std::cout<< GetChannelAliasFromMutlicastAddress(new_route.dest_address)<<"\n";
+				}
+				else
+				{
+					std::cout<<new_route.dest_address.to_string()<<"\n";
+				}
+
 				routing_table_[msg.GetKey()].push_back(new_route);
 				ApplyRoutes(msg);
 			}
@@ -908,11 +1031,17 @@ bool Share::Impl::ApplyRoutes(CMOOSMsg & msg)
 	//we need to find the socket to send via
 	std::list<Route> & route_list = g->second;
 
+	double now = MOOS::Time();
+
 	std::list<Route>::iterator q;
 	for(q = route_list.begin();q!=route_list.end();q++)
 	{
 		//process every route
 		Route & route = *q;
+
+		if(route.frequency>0.0 && now-route.last_time_sent<(1.0/route.frequency))
+		    continue;
+
 		SocketMap::iterator mcg = socket_map_.find(route.dest_address);
 		if (mcg == socket_map_.end()) {
 			std::stringstream ss;
@@ -923,6 +1052,16 @@ bool Share::Impl::ApplyRoutes(CMOOSMsg & msg)
 		}
 
 		Socket & relevant_socket = mcg->second;
+
+
+        if(verbose_)
+        {
+            std::cout<<std::setprecision(1);
+            std::cout<<MOOS::ConsoleColours::green()<<std::setw(10)<<std::fixed<<(MOOS::Time()-CMOOSApp::GetAppStartTime())
+            <<": "<<MOOS::ConsoleColours::reset();
+
+            std::cout<<"sending \""<<msg.m_sKey<<"\" as \""<<route.dest_name<<"\" to "<<route.dest_address.to_string()<<"\n";
+        }
 
 		//rename here...
 		msg.m_sKey = route.dest_name;
@@ -949,6 +1088,8 @@ bool Share::Impl::ApplyRoutes(CMOOSMsg & msg)
 		{
 			throw std::runtime_error("failed \"sendto\"");
 		}
+
+		route.last_time_sent=now;
 	}
 
 	return true;

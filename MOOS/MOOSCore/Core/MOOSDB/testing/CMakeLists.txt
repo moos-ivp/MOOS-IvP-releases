@@ -11,9 +11,6 @@ target_link_libraries(async_test ${MOOS_LIBRARIES} ${MOOS_DEPEND_LIBRARIES})
 add_executable(app_test DBAppTest.cpp )
 target_link_libraries(app_test ${MOOS_LIBRARIES} ${MOOS_DEPEND_LIBRARIES})
 
-add_executable(queue_test QueueTest.cpp )
-target_link_libraries(queue_test ${MOOS_LIBRARIES} ${MOOS_DEPEND_LIBRARIES})
-
 add_executable(io_test IOTest.cpp )
 target_link_libraries(io_test ${MOOS_LIBRARIES} ${MOOS_DEPEND_LIBRARIES})
 
@@ -22,3 +19,6 @@ target_link_libraries(capture_test ${MOOS_LIBRARIES} ${MOOS_DEPEND_LIBRARIES})
 
 add_executable(cmp2sock cmp2sock.cpp )
 target_link_libraries(cmp2sock ${MOOS_LIBRARIES} ${MOOS_DEPEND_LIBRARIES})
+
+add_executable(reg_test RegisterTest.cpp )
+target_link_libraries(reg_test ${MOOS_LIBRARIES} ${MOOS_DEPEND_LIBRARIES})

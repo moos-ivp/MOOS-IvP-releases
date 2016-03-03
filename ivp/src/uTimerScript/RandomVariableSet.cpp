@@ -4,20 +4,21 @@
 /*    FILE: RandomVariableSet.cpp                                */
 /*    DATE: Dec 18th 2009                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iostream>
@@ -83,12 +84,12 @@ string RandomVariableSet::addRandomVarUniform(const string& spec)
   vector<string> svector = parseString(spec, ',');
   unsigned int i, vsize = svector.size();
   for(i=0; i<vsize; i++) {
-    string left  = stripBlankEnds(biteString(svector[i], '='));
-    string right = stripBlankEnds(svector[i]);
+    string left  = biteStringX(svector[i], '=');
+    string right = svector[i];
     if(left == "varname")
       varname = right;
     else if(left == "key")
-      keyname = right;
+      keyname = tolower(right);
     else if((left == "min") && isNumber(right)) {
       minval = atof(right.c_str());
       minval_set = true;
@@ -101,6 +102,12 @@ string RandomVariableSet::addRandomVarUniform(const string& spec)
       return("Bad parametery=value: " + left + "=" + right);
   }
   
+  if(keyname == "")
+    return("key is not specified");
+
+  if((keyname != "at_post") && (keyname != "at_start") && (keyname != "at_reset"))
+    return("unknown random_var key: " + keyname);
+
   if(varname == "")
     return("Unset variable name");
 
@@ -154,7 +161,7 @@ string RandomVariableSet::addRandomVarGaussian(const string& spec)
     if(left == "varname")
       varname = right;
     else if(left == "key")
-      keyname = right;
+      keyname = tolower(right);
     else if((left == "min") && isNumber(right)) {
       minval = atof(right.c_str());
       minval_set = true;
@@ -175,6 +182,12 @@ string RandomVariableSet::addRandomVarGaussian(const string& spec)
       return("Bad parameterx=value: " + left + "=" + right);
   }
   
+  if(keyname == "")
+    return("key is not specified");
+  
+  if((keyname != "at_post") && (keyname != "at_start") && (keyname != "at_reset"))
+    return("unknown random_var key: " + keyname);
+
   if(varname == "")
     return("Unset variable name");
 
@@ -326,5 +339,8 @@ void RandomVariableSet::print() const
   }
   cout << "done." << endl;
 }
+
+
+
 
 

@@ -4,20 +4,21 @@
 /*    FILE: BHV_ConstantHeading.cpp                              */
 /*    DATE: Jul 21st 2005                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #ifdef _WIN32
@@ -50,6 +51,12 @@ BHV_ConstantHeading::BHV_ConstantHeading(IvPDomain gdomain) :
   m_basewidth       = 170;
   m_summitdelta     = 25;
   m_os_heading      = 0;
+
+  // The complete threshold represents an absolute discrepancy between 
+  // the desired and actual heading, below which the behavior will 
+  // complete and post an endflag. By default, by setting to -1, it will
+  // not factor in to the performance of the behavior.
+  m_complete_thresh = -1;  
 
   // The default duration at the IvPBehavior level is "-1", which
   // indicates no duration applied to the behavior by default. By
@@ -84,6 +91,10 @@ bool BHV_ConstantHeading::setParam(string param, string val)
     m_summitdelta = vclip(dval, 0, 100);
     return(true);
   }
+  else if((param == "complete_thresh") && isNumber(val)) {
+    m_complete_thresh = dval;
+    return(true);
+  }
   else if((param == "heading_mismatch_var") && !strContainsWhite(val)) {
     m_heading_mismatch_var = val;
     return(true);
@@ -103,6 +114,12 @@ IvPFunction *BHV_ConstantHeading::onRunState()
     postEMessage("No 'heading/course' variable in the helm domain");
     return(0);
   }
+
+  if(m_heading_delta < m_complete_thresh) {
+    setComplete();
+    return(0);
+  }
+
 
   ZAIC_PEAK zaic(m_domain, "course");
   zaic.setSummit(m_desired_heading);
@@ -142,13 +159,16 @@ bool BHV_ConstantHeading::updateInfoIn()
     return(false);
   }
   
-  double delta = angle180(m_os_heading - m_desired_heading);
-  if(delta < 0)
-    delta *= -1; 
+  m_heading_delta = angle180(m_os_heading - m_desired_heading);
+  if(m_heading_delta < 0)
+    m_heading_delta *= -1; 
 
   if(m_heading_mismatch_var != "")
-    postMessage(m_heading_mismatch_var, delta);
+    postMessage(m_heading_mismatch_var, m_heading_delta);
   
   return(true);
 }
+
+
+
 

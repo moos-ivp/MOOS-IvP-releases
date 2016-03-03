@@ -84,7 +84,7 @@ bool CMOOSUDPLink::Post(CMOOSMsg & M,const std::string & sHost, long int nPort)
             throw XPCException("serialised packet is too big to send ....ask for an upgrade");    
         }
         
-        int nSent = m_pUDPSocket->iSendMessageTo(P.m_pStream,P.GetStreamLength(),nPort,sHost);
+        int nSent = m_pUDPSocket->iSendMessageTo(P.Stream(),P.GetStreamLength(),nPort,sHost);
         
         
         if(nSent!=P.GetStreamLength())

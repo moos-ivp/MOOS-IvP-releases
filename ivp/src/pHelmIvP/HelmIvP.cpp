@@ -4,20 +4,33 @@
 /*    FILE: HelmIvP.cpp                                          */
 /*    DATE: Oct 12th 2004                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* The algorithms embodied in this software are protected under  */
+/* U.S. Pat. App. Ser. Nos. 10/631,527 and 10/911,765 and are    */
+/* the property of the United States Navy.                       */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* Permission to use, copy, modify and distribute this software  */
+/* and its documentation for any non-commercial purpose, without */
+/* fee, and without a written agreement is hereby granted        */
+/* provided that the above notice and this paragraph and the     */
+/* following three paragraphs appear in all copies.              */
 /*                                                               */
-/* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* Commercial licences for this software may be obtained by      */
+/* contacting Patent Counsel, Naval Undersea Warfare Center      */
+/* Division Newport at 401-832-4736 or 1176 Howell Street,       */
+/* Newport, RI 02841.                                            */
+/*                                                               */
+/* In no event shall the US Navy be liable to any party for      */
+/* direct, indirect, special, incidental, or consequential       */
+/* damages, including lost profits, arising out of the use       */
+/* of this software and its documentation, even if the US Navy   */
+/* has been advised of the possibility of such damage.           */
+/*                                                               */
+/* The US Navy specifically disclaims any warranties, including, */
+/* but not limited to, the implied warranties of merchantability */
+/* and fitness for a particular purpose. The software provided   */
+/* hereunder is on an 'as-is' basis, and the US Navy has no      */
+/* obligations to provide maintenance, support, updates,         */
+/* enhancements or modifications.                                */
 /*****************************************************************/
 
 #ifdef _WIN32
@@ -162,6 +175,11 @@ bool HelmIvP::OnNewMail(MOOSMSG_LIST &NewMail)
     double skew_time;
     msg.IsSkewed(m_curr_time, &skew_time);
     
+    
+    double reg_skew_time = m_curr_time - m_var_reg_time[moosvar];
+    if(reg_skew_time < skew_time)
+      skew_time = reg_skew_time;
+
     if(moosvar=="MOOS_MANUAL_OVERIDE") {
       string skew_info = "var=" + moosvar + ":";
       skew_info += "matter="+boolToString(m_skews_matter);
@@ -174,10 +192,15 @@ bool HelmIvP::OnNewMail(MOOSMSG_LIST &NewMail)
       bool posted_by_this_helm = true;
       if((source != GetAppName()) || (m_host_community != community))
 	posted_by_this_helm = false;
-      if(!posted_by_this_helm) {
+      bool exception = false;
+      if(moosvar == "HELM_MAP_CLEAR")
+	exception = true;
+      if(!posted_by_this_helm && !exception) {
 	string msg = "Helm ignores MOOS msg due to skew: " + moosvar;
 	msg += " Source=" + source + " Skew=" + doubleToString(skew_time,2);
 	reportRunWarning(msg);
+	msg += " curr_time: " + doubleToString(m_curr_time,3);
+	Notify("IVPHELM_SKEW", msg);
 	continue;
       }
     }
@@ -238,6 +261,7 @@ bool HelmIvP::OnNewMail(MOOSMSG_LIST &NewMail)
       bool ok = processNodeReport(sval);
       if(!ok)
 	reportRunWarning("Unhandled NODE_REPORT");
+      updateInfoBuffer(msg);
     }
     else if(moosvar == m_refresh_var) {
       m_refresh_pending = true;
@@ -309,9 +333,9 @@ bool HelmIvP::Iterate()
   }
 
   registerNewVariables();
+  postModeMessages();
   postBehaviorMessages();
   postLifeEvents();
-  postModeMessages();
   postDefaultVariables();
 
   // Should be called after postBehaviorMessages() where warnings
@@ -329,6 +353,24 @@ bool HelmIvP::Iterate()
   
   Notify("IVPHELM_SUMMARY", report);
   Notify("IVPHELM_IPF_CNT", m_helm_report.getOFNUM());
+
+  string bhvs_active_list = m_helm_report.getActiveBehaviors(false);
+  if(m_bhvs_active_list != bhvs_active_list) {
+    Notify("IVPHELM_BHV_ACTIVE", bhvs_active_list); 
+    m_bhvs_active_list = bhvs_active_list;
+  }
+  string bhvs_running_list = m_helm_report.getRunningBehaviors(false);
+  if(m_bhvs_running_list != bhvs_running_list) {
+    Notify("IVPHELM_BHV_RUNNING", bhvs_running_list); 
+    m_bhvs_running_list = bhvs_running_list;
+  }
+  string bhvs_idle_list = m_helm_report.getIdleBehaviors(false);
+  if(m_bhvs_idle_list != bhvs_idle_list) {
+    Notify("IVPHELM_BHV_IDLE", bhvs_idle_list); 
+    m_bhvs_idle_list = bhvs_idle_list;
+  }
+
+
   m_prev_helm_report = m_helm_report;
 
    string allstop_msg = "clear";
@@ -443,10 +485,16 @@ void HelmIvP::postBehaviorMessages()
 
       // If posting an IvP Function, mux first and post the parts.
       if(var == "BHV_IPF") { // mikerb
+
+#if 0
+	Notify("BHV_IPF", sdata);
+#endif
+#if 1
 	string id = bhv_descriptor + intToString(m_helm_iteration);
 	vector<string> svector = IvPFunctionToVector(sdata, id, 2000);
 	for(unsigned int k=0; k<svector.size(); k++)
 	  Notify("BHV_IPF", svector[k], bhv_descriptor);
+#endif
       }
       // Otherwise just post to the DB directly.
       else {
@@ -600,6 +648,37 @@ void HelmIvP::postModeMessages()
 }
 
 //------------------------------------------------------------
+// Procedure: handleHelmStartMessages
+
+void HelmIvP::handleHelmStartMessages()
+{
+  if(!m_bhv_set) 
+    return;
+
+  vector<VarDataPair> helm_start_msgs = m_bhv_set->getHelmStartMessages();
+
+  unsigned int j, msize = helm_start_msgs.size();
+  for(j=0; j<msize; j++) {
+    VarDataPair msg = helm_start_msgs[j];
+
+    string var   = stripBlankEnds(msg.get_var());
+    string sdata = stripBlankEnds(msg.get_sdata());
+    double ddata = msg.get_ddata();
+
+    if(!strContainsWhite(var)) {
+      if(sdata != "") {
+	m_info_buffer->setValue(var, sdata);
+	Notify(var, sdata, "HELM_STARTUP_MSG");
+      }
+      else {
+	m_info_buffer->setValue(var, ddata);
+	Notify(var, ddata, "HELM_STARTUP_MSG");
+      }
+    }
+  }
+}
+
+//------------------------------------------------------------
 // Procedure: handleInitialVarsPhase1()
 
 void HelmIvP::handleInitialVarsPhase1()
@@ -608,6 +687,7 @@ void HelmIvP::handleInitialVarsPhase1()
     return;
 
   vector<VarDataPair> mvector = m_bhv_set->getInitialVariables();
+
   unsigned int j, msize = mvector.size();
   for(j=0; j<msize; j++) {
     VarDataPair msg = mvector[j];
@@ -905,7 +985,11 @@ void HelmIvP::registerSingleVariable(string varname, double frequency)
 {
   if(frequency < 0)
     frequency = 0;
-  m_Comms.Register(varname, frequency);
+  Register(varname, frequency);
+
+  Notify("IVPHELM_REGISTER", varname);
+  if(m_var_reg_time.count(varname) == 0)
+    m_var_reg_time[varname] = m_curr_time;
 }
 
 
@@ -1054,6 +1138,7 @@ bool HelmIvP::OnStartUp()
   string mode_set_string_description = m_bhv_set->getModeSetDefinition();
 
   handleInitialVarsPhase1();
+  handleHelmStartMessages();
   registerVariables();
   requestBehaviorLogging();
 
@@ -1391,4 +1476,6 @@ bool HelmIvP::helmStatusEnabled() const
   return(false);
 }
   
+
+
 

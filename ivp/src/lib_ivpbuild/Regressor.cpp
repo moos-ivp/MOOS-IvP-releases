@@ -4,20 +4,23 @@
 /*    FILE: Regressor.cpp                                        */
 /*    DATE: Dec 5th, 2004 (Sat at Brueggers)                     */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of IvP Helm Core Libs                       */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
+/* IvP Helm Core Libs is free software: you can redistribute it  */
+/* and/or modify it under the terms of the Lesser GNU General    */
+/* Public License as published by the Free Software Foundation,  */
+/* either version 3 of the License, or (at your option) any      */
+/* later version.                                                */
+/*                                                               */
+/* IvP Helm Core Libs is distributed in the hope that it will    */
+/* be useful but WITHOUT ANY WARRANTY; without even the implied  */
 /* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* PURPOSE. See the Lesser GNU General Public License for more   */
+/* details.                                                      */
 /*                                                               */
-/* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* You should have received a copy of the Lesser GNU General     */
+/* Public License along with MOOS-IvP.  If not, see              */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iostream>
@@ -222,7 +225,8 @@ double Regressor::setWeight1(IvPBox *gbox, bool feedback)
   }
   
   // Calculated and used only if strict_range is true
-  double max_intercept, min_intercept; 
+  double max_intercept = 0; 
+  double min_intercept = 0; 
   
   // For each of the m_corners, calculate what would be the correct
   // intercept for that point. If strict_range is true, also 
@@ -611,7 +615,9 @@ double Regressor::evalPtBox(const IvPBox *gbox)
     pvals.push_back(m_domain.getVal(d, gbox->pt(d)));
   double val = m_aof->evalPoint(pvals);
   if(val == 0)
-    return(m_aof->evalBox(gbox));
+    val = m_aof->evalBox(gbox);
+  if(val == 0)
+    val = m_aof->evalBoxDebug(gbox, m_messages);
   return(val);
 }
 
@@ -654,10 +660,12 @@ bool Regressor::centerBox(const IvPBox *container_box, IvPBox *rbox)
 }
 
 
+//---------------------------------------------------------------
+// Procedure: getMessage()
 
-
-
-
-
-
-
+string Regressor::getMessage(unsigned int ix)
+{
+  if(ix < m_messages.size())
+    return(m_messages[ix]);
+  return("");
+}

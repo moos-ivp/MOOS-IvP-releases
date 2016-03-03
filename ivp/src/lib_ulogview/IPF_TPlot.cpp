@@ -4,20 +4,21 @@
 /*    FILE: IPF_TPlot.cpp                                        */
 /*    DATE: Feb2407, Sep2811                                     */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iostream>
@@ -93,9 +94,9 @@ string IPF_TPlot::getIPFByIndex(unsigned int index) const
   if(m_ipf_string.size() == 0)
     return("");
 
-  if(index < 0)
-    return(m_ipf_string[0]);
-  else if(index >= m_ipf_string.size())
+  //if(index < 0)
+  //  return(m_ipf_string[0]);
+  if(index >= m_ipf_string.size())
     return(m_ipf_string[m_ipf_string.size()-1]);
   else
     return(m_ipf_string[index]);
@@ -308,4 +309,7 @@ void IPF_TPlot::print() const
     cout << "time:" << m_time[i] << 
       "  ipf:" << m_ipf_string[i] << endl;
 }
+
+
+
 

@@ -46,7 +46,12 @@
 #include <string>
 #include "PlaybackWindow.h"
 
-#include "MOOS/libalogTools/indexWriter.h"
+#include "MOOS/AlogTools/indexWriter.h"
+#include "MOOS/AlogTools/exceptions.h"
+
+using MOOS::AlogTools::exceptions::CannotOpenIndexFileForReadingException;
+using MOOS::AlogTools::exceptions::CannotOpenFileForReadingException;
+using MOOS::AlogTools::exceptions::CannotOpenFileForWritingException;
 
 #define DEFAULT_COMMS_TICK 40
 #define DEFAULT_TIMER_INTERVAL 0.01
@@ -379,49 +384,69 @@ bool CPlaybackWindow::OnFile()
 
         while (!bInitialised)
         {
-            if(m_PlayBack.Initialise(pFile))
-            {
-                m_sFileName = std::string(pFile);
-                pSourceCheck->clear();
-
-                STRING_SET Sources = m_PlayBack.GetSources();
-                STRING_SET::iterator p;
-                for(p = Sources.begin();p!= Sources.end();p++)
-                {
-                    pSourceCheck->add(p->c_str(),1);
-                }
-
-                GetByID(ID_SOURCE)->activate();
-                GetByID(ID_CLOCK)->activate();
-
-                //here we save the last file we opened
-                app.set( "LastFile",pFile );
-
-                GetByID(ID_PROGRESS)->label(pFile);
-
-                //lets tell the user how much data has been loaded
-                static char sNumRecords[128];
-                sprintf(sNumRecords,"%d records",m_PlayBack.m_ALog.GetLineCount());
-                GetByID(ID_SOURCE)->label(sNumRecords);
-
-                bInitialised = true;
+            try {
+                m_PlayBack.Initialise(pFile);
             }
-            else
+            catch (CannotOpenIndexFileForReadingException& e)
             {
-                int v = fl_choice("Cannot find index file for this alog.  Would you like to create one?",
+                int v = fl_choice("Cannot find index file for this alog.  "
+                        "Would you like to create one?",
                         "No", "Yes", NULL);
 
                 if (v == 0)
+                {
+                    fl_message("Please choose a different alog file to read.");
                     break;
+                }
                 else
                 {
-                    indexWriter idxWriter;
+                    MOOS::AlogTools::indexWriter idxWriter;
                     idxWriter.parseAlogFile(string(pFile));
-                    idxWriter.writeIndexFile(string(pFile)+string(".idx"));
-                }
 
+                    try {
+                        idxWriter.writeIndexFile(string(pFile)+string(".idx"));
+                    }
+                    catch (CannotOpenFileForWritingException& e) {
+                        fl_alert("Cannot open file for writing.  Please "
+                                "check permissions:\n%s", e.FileName().c_str());
+                        break;
+                    }
+
+                    // Now go back and try to initialise m_Playback again
+                    continue;
+                }
+            }
+            catch (CannotOpenFileForReadingException& e)
+            {
+                fl_alert("Cannot open file for reading.  Please check "
+                        "permissions:\n%s", e.FileName().c_str());
+                break;
             }
 
+            m_sFileName = std::string(pFile);
+            pSourceCheck->clear();
+
+            STRING_SET Sources = m_PlayBack.GetSources();
+            STRING_SET::iterator p;
+            for(p = Sources.begin();p!= Sources.end();p++)
+            {
+                pSourceCheck->add(p->c_str(),1);
+            }
+
+            GetByID(ID_SOURCE)->activate();
+            GetByID(ID_CLOCK)->activate();
+
+            //here we save the last file we opened
+            app.set( "LastFile",pFile );
+
+            GetByID(ID_PROGRESS)->label(pFile);
+
+            //lets tell the user how much data has been loaded
+            static char sNumRecords[128];
+            sprintf(sNumRecords,"%d records",m_PlayBack.m_ALog.GetLineCount());
+            GetByID(ID_SOURCE)->label(sNumRecords);
+
+            bInitialised = true;
         }
 
         GetRootWindow()->cursor(FL_CURSOR_DEFAULT );
@@ -430,6 +455,7 @@ bool CPlaybackWindow::OnFile()
     take_focus();
     return bInitialised;
 }
+
 
 Fl_Window * CPlaybackWindow::GetRootWindow()
 {

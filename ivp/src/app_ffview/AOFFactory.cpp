@@ -4,9 +4,21 @@
 /*    FILE:                                                      */
 /*    DATE:                                                      */
 /*                                                               */
-/* This is unreleased BETA code. No permission is granted or     */
-/* implied to use, copy, modify, and distribute this software    */
-/* except by the author(s).                                      */
+/* This file is part of MOOS-IvP                                 */
+/*                                                               */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
+/*                                                               */
+/* You should have received a copy of the GNU General Public     */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 #include "AOFFactory.h"
 #include "fileutil.h"
@@ -120,32 +132,32 @@ void AOFFactory::load_directory(string dirname) {
 
 
 #ifdef _WIN32
-	TFuncPtrCreateAOF createFn = 
-		(TFuncPtrCreateAOF)(GetProcAddress((HMODULE)handle,"createAOF"));
-
-	const DWORD dlsym_error = GetLastError();
-
-	if (dlsym_error) {
-         cerr << "Cannot load symbol 'createAOF' from file " << fname << endl;
-         cerr << "dlerror() returns: " << dlsym_error << endl;
+     TFuncPtrCreateAOF createFn = 
+       (TFuncPtrCreateAOF)(GetProcAddress((HMODULE)handle,"createAOF"));
+     
+     const DWORD dlsym_error = GetLastError();
+     
+     if (dlsym_error) {
+       cerr << "Cannot load symbol 'createAOF' from file " << fname << endl;
+       cerr << "dlerror() returns: " << dlsym_error << endl;
 #else
-	 TFuncPtrCreateAOF createFn = 
-       (TFuncPtrCreateAOF)(dlsym(handle, "createAOF"));
-
+       TFuncPtrCreateAOF createFn = 
+	 (TFuncPtrCreateAOF)(dlsym(handle, "createAOF"));
+       
      const char *dlsym_error = dlerror();
      if (dlsym_error) {
-         cerr << endl;
-         cerr << "Cannot load symbol 'createAOF' from file " << fname << endl;
-         cerr << "dlerror() returns: " << dlsym_error << endl;
+       cerr << endl;
+       cerr << "Cannot load symbol 'createAOF' from file " << fname << endl;
+       cerr << "dlerror() returns: " << dlsym_error << endl;
 #endif
-         exit(1);
-      }
-
+       exit(1);
+     }
+     
      cerr << "SUCCESS" << endl;
-
+     
      creation_funcs[aof_name] = createFn;
      open_library_handles.push_back(handle);
-   }
+     }
 }
 
 //=========================================================================
@@ -221,5 +233,8 @@ AOF* AOFFactory::new_aof(string name, IvPDomain domain) {
 }
 
 //==============================================================================
+
+
+
 
 

@@ -52,6 +52,7 @@
 #include <map>
 #include <fstream>
 #include "MOOS/libMOOS/MOOSLib.h"
+#include "MOOS/libMOOS/Comms/MOOSAsyncCommClient.h"
 
 extern "C" {
 #include "mex.h"
@@ -491,7 +492,8 @@ bool Initialise(int nlhs, mxArray *plhs[], const mxArray *prhs[], int nrhs)
             //here we launch the comms
             if(pComms==NULL)
             {
-                pComms = new CMOOSCommClient;
+                //pComms = new CMOOSCommClient;
+                pComms = new MOOS::MOOSAsyncCommClient;
                 pComms->SetOnConnectCallBack(OnMOOSConnect,NULL);
                 pComms->Run(sServerHost.c_str(),lServerPort,sMOOSName.c_str());
             }

@@ -4,20 +4,21 @@
 /*    FILE: NodeReporter.cpp                                     */
 /*    DATE: Feb 13th 2006 (TransponderAIS)                       */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <list>
@@ -152,8 +153,18 @@ bool NodeReporter::OnNewMail(MOOSMSG_LIST &NewMail)
 	m_record_gt_updated = m_curr_time;
     }
     // END logic for checking for alternative nav reporting
+    
+    if(key == "AUX_MODE") 
+      m_record.setModeAux(sdata);
 
-    if(key == "IVPHELM_SUMMARY") {
+    else if(key == "LOAD_WARNING") {
+      string app = tokStringParse(sdata, "app", ',', '=');
+      string gap = tokStringParse(sdata, "maxgap", ',', '=');
+      if((app != "") && (gap != ""))
+	m_record.setLoadWarning(app + ":" + gap);
+    }
+
+    else if(key == "IVPHELM_SUMMARY") {
       m_helm_lastmsg = m_curr_time;
       handleLocalHelmSummary(sdata);
     }
@@ -234,6 +245,8 @@ void NodeReporter::registerVariables()
   m_Comms.Register("IVPHELM_SUMMARY", 0);
   m_Comms.Register("IVPHELM_STATE", 0);
   m_Comms.Register("IVPHELM_ALLSTOP", 0);
+  m_Comms.Register("AUX_MODE", 0);
+  m_Comms.Register("LOAD_WARNING", 0);
 }
 
 //-----------------------------------------------------------------
@@ -439,6 +452,7 @@ bool NodeReporter::Iterate()
   if(platform_report != "")
     Notify(m_plat_report_var, platform_report);
 
+  m_record.setLoadWarning("");
   AppCastingMOOSApp::PostReport();
   return(true);
 }
@@ -669,9 +683,9 @@ void NodeReporter::crossFillLocalToGlobal(NodeRecord& record)
   double nav_lat, nav_lon;
 
 #ifdef USE_UTM
-  m_geodesy.LocalGrid2LatLong(nav_x, nav_y, nav_lat, nav_lon);
-#else
   m_geodesy.UTM2LatLong(nav_x, nav_y, nav_lat, nav_lon);
+#else
+  m_geodesy.LocalGrid2LatLong(nav_x, nav_y, nav_lat, nav_lon);
 #endif      
 
   record.setLat(nav_lat);
@@ -785,5 +799,4 @@ bool NodeReporter::buildReport()
 
   return(true);
 }
-
 

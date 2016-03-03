@@ -33,7 +33,6 @@ TARGET_LINK_LIBRARIES(geoview
   marineview
   ${MOOSGeodesy_LIBRARIES}
   contacts
-  contacts
   mbutil
   geometry
   ${SYSTEM_LIBS}

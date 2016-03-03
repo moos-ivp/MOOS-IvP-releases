@@ -4,20 +4,21 @@
 /*    FILE: WaypointEngine.cpp                                   */
 /*    DATE: May 6th, 2007                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #ifdef _WIN32
@@ -112,6 +113,15 @@ void WaypointEngine::setReverse(bool g_val)
   m_curr_ix  = 0;
   m_prev_ix  = -1;
   m_complete = false;
+}
+
+
+//-----------------------------------------------------------
+// Procedure: setReverseToggle
+
+void WaypointEngine::setReverseToggle()
+{
+  setReverse(!m_reverse);
 }
 
 //-----------------------------------------------------------
@@ -230,8 +240,11 @@ unsigned int WaypointEngine::resetsRemaining() const
 
 //-----------------------------------------------------------
 // Procedure: setNextWaypoint
-//   Returns: true if waypoint index is advanced on this iteration
-//            false if not advanced (or not advanced through error)
+//   Returns: "empty_seglist"
+//            "completed"
+//            "cycled"
+//            "advanced"
+//            "in-transit"
 //      Note: Error can be checked for by checking if curr_ix == -1      
 
 
@@ -241,7 +254,7 @@ string WaypointEngine::setNextWaypoint(double os_x, double os_y)
   // --------------------------------------------------------------
   unsigned int vsize = m_seglist.size();
   if(vsize == 0)
-    return("empty seglist");
+    return("empty_seglist");
   if(m_complete)
     return("completed");
   
@@ -317,6 +330,9 @@ string WaypointEngine::setNextWaypoint(double os_x, double os_y)
 
   return("in-transit");
 }
+
+
+
 
 
 

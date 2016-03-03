@@ -4,20 +4,21 @@
 /*    FILE: ScanReport.h                                         */
 /*    DATE: June 4th, 2008                                       */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #ifndef ALOG_SCAN_REPORT_HEADER
@@ -81,6 +82,7 @@ class ScanReport
   // Routines for building and retrieving app stat summary info
   void fillAppStats();
   std::vector<std::string> getAllSources()  {return(m_all_sources);};
+  std::vector<std::string> getAllVarNames() {return(m_var_names);};
   double getLinesBySource(std::string s)    {return(m_app_lines[s]);};
   double getCharsBySource(std::string s)    {return(m_app_chars[s]);};
   double getLinesPctBySource(std::string s) {return(m_app_lines_pct[s]);};
@@ -114,6 +116,9 @@ class ScanReport
 };
 
 #endif 
+
+
+
 
 
 

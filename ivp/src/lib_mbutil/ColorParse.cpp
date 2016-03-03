@@ -4,20 +4,21 @@
 /*    FILE: ColorParse.h                                         */
 /*    DATE: Aug 19th 2006                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iostream>
@@ -273,24 +274,43 @@ string colorNameToHex(const string &str)
   if(cstr == "gold")           return("hex:ff,d7,00");
   if(cstr == "goldenrod")      return("hex:da,a5,20");
   if(cstr == "gray")           return("hex:80,80,80");
+  if(cstr == "grey05")         return("0.05,0.05,0.05");
   if(cstr == "gray05")         return("0.05,0.05,0.05");
+  if(cstr == "grey10")         return("0.10,0.10,0.10");
   if(cstr == "gray10")         return("0.10,0.10,0.10");
+  if(cstr == "grey15")         return("0.15,0.15,0.15");
   if(cstr == "gray15")         return("0.15,0.15,0.15");
+  if(cstr == "grey20")         return("0.20,0.20,0.20");
   if(cstr == "gray20")         return("0.20,0.20,0.20");
+  if(cstr == "grey25")         return("0.25,0.25,0.25");
   if(cstr == "gray25")         return("0.25,0.25,0.25");
+  if(cstr == "grey30")         return("0.30,0.30,0.30");
   if(cstr == "gray30")         return("0.30,0.30,0.30");
+  if(cstr == "grey35")         return("0.35,0.35,0.35");
   if(cstr == "gray35")         return("0.35,0.35,0.35");
+  if(cstr == "grey40")         return("0.40,0.40,0.40");
   if(cstr == "gray40")         return("0.40,0.40,0.40");
+  if(cstr == "grey45")         return("0.45,0.45,0.45");
   if(cstr == "gray45")         return("0.45,0.45,0.45");
+  if(cstr == "grey50")         return("0.50,0.50,0.50");
   if(cstr == "gray50")         return("0.50,0.50,0.50");
+  if(cstr == "grey55")         return("0.55,0.55,0.55");
   if(cstr == "gray55")         return("0.55,0.55,0.55");
+  if(cstr == "grey60")         return("0.60,0.60,0.60");
   if(cstr == "gray60")         return("0.60,0.60,0.60");
+  if(cstr == "grey65")         return("0.65,0.65,0.65");
   if(cstr == "gray65")         return("0.65,0.65,0.65");
+  if(cstr == "grey70")         return("0.70,0.70,0.70");
   if(cstr == "gray70")         return("0.70,0.70,0.70");
+  if(cstr == "grey75")         return("0.75,0.75,0.75");
   if(cstr == "gray75")         return("0.75,0.75,0.75");
+  if(cstr == "grey80")         return("0.80,0.80,0.80");
   if(cstr == "gray80")         return("0.80,0.80,0.80");
+  if(cstr == "grey85")         return("0.85,0.85,0.85");
   if(cstr == "gray85")         return("0.85,0.85,0.85");
+  if(cstr == "grey90")         return("0.90,0.90,0.90");
   if(cstr == "gray90")         return("0.90,0.90,0.90");
+  if(cstr == "grey95")         return("0.95,0.95,0.95");
   if(cstr == "gray95")         return("0.95,0.95,0.95");
   if(cstr == "greenyellow")    return("hex:ad,ff,2f");
   if(cstr == "honeydew")       return("hex:f0,ff,f0");
@@ -507,4 +527,7 @@ void mag(const string& str, const string& xstr)
 {
   cout << "\33[35m" << str << "\33[0m" << xstr << endl;
 }
+
+
+
 

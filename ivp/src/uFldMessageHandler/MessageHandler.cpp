@@ -4,20 +4,21 @@
 /*    FILE: MessageHandler.cpp                                   */
 /*    DATE: Jan 30th 2012                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iterator>
@@ -45,6 +46,7 @@ MessageHandler::MessageHandler()
   
   // Initialize config variables
   m_strict_addressing   = false;
+  m_appcast_trunc_msg   = 75;
 }
 
 //---------------------------------------------------------
@@ -112,12 +114,20 @@ bool MessageHandler::OnStartUp()
   for(p=sParams.rbegin(); p!=sParams.rend(); p++) {
     string orig  = *p;
     string line  = *p;
-    string param = toupper(biteStringX(line, '='));
+    string param = tolower(biteStringX(line, '='));
     string value = line;
     
     bool handled = false;
-    if(param == "STRICT_ADDRESSING")
+    if(param == "strict_addressing")
       handled = setBooleanOnString(m_strict_addressing, value);
+
+    else if((param == "appcast_trunc_msg") && isNumber(value)) {
+      int ival = atoi(value.c_str());
+      if(ival < 0)
+	ival = 0;
+      m_appcast_trunc_msg = (unsigned int)(ival);
+      handled = true;
+    }
     
     if(!handled)
       reportUnhandledConfigWarning(orig);
@@ -313,7 +323,13 @@ bool MessageHandler::buildReport()
   else {
     for(p2 = m_last_valid_msgs.begin(); p2 != m_last_valid_msgs.end(); p2++) {
       string msg = *p2;
-      m_msgs << "  " << truncString(msg, 70) << endl;
+      string trunc_msg = msg;
+      if(m_appcast_trunc_msg > 0) {
+	trunc_msg = truncString(msg, m_appcast_trunc_msg);
+	if(trunc_msg.length() != msg.length())
+	  trunc_msg += "...";
+      }
+      m_msgs << "  " << trunc_msg << endl;
     }
   }
 
@@ -339,4 +355,7 @@ bool MessageHandler::buildReport()
   
   return(true);
 }
+
+
+
 

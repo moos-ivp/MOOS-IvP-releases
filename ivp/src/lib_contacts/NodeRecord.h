@@ -4,20 +4,21 @@
 /*    FILE: NodeRecord.h                                         */
 /*    DATE: Feb 27th 2010                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #ifndef NODE_RECORD_HEADER
@@ -51,7 +52,9 @@ class NodeRecord
   void setGroup(std::string s)   {m_group=s;};
   void setType(std::string s)    {m_type=s;};
   void setMode(std::string s)    {m_mode=s;};
+  void setModeAux(std::string s) {m_mode_aux=s;};
   void setAllStop(std::string s) {m_allstop=s;};
+  void setLoadWarning(std::string s) {m_load_warning=s;};
 
   void setProperty(std::string, std::string);
 
@@ -90,7 +93,9 @@ class NodeRecord
   std::string getGroup(std::string s="") const;
   std::string getType(std::string s="") const;
   std::string getMode(std::string s="") const;
+  std::string getModeAux(std::string s="") const;
   std::string getAllStop(std::string s="") const;
+  std::string getLoadWarning(std::string s="") const;
 
   std::string getSpec() const;
 
@@ -115,7 +120,9 @@ class NodeRecord
   std::string  m_group;
   std::string  m_type;
   std::string  m_mode;
+  std::string  m_mode_aux;
   std::string  m_allstop;
+  std::string  m_load_warning;
   
   bool m_x_set;
   bool m_y_set;
@@ -140,5 +147,8 @@ class NodeRecord
 };
 
 #endif 
+
+
+
 
 

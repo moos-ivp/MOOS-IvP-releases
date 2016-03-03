@@ -4,20 +4,21 @@
 /*    FILE: ShoreBroker.cpp                                      */
 /*    DATE: Dec 16th 2011                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iterator>
@@ -241,6 +242,7 @@ void ShoreBroker::handleMailNodePing(const string& info)
   
   if((m_keyword != "") && (m_keyword != hrecord.getKeyword()))
     status = "keyword_mismatch";
+  hrecord.setStatus(status);
 
   string ping_time = hrecord.getTimeStamp();
   double skew = m_curr_time - (atof(ping_time.c_str()));
@@ -261,6 +263,13 @@ void ShoreBroker::handleMailNodePing(const string& info)
   unsigned int j, jsize = m_node_host_records.size();
   for(j=0; j<jsize; j++) { 
     if(m_node_host_records[j].getCommunity() == hrecord.getCommunity()) {
+      // Begin added mikerb mar0414
+      if(m_node_host_records[j].getHostIP() != hrecord.getHostIP()) {
+	m_node_bridges_made[j] = false;
+	makeBridgeRequest("NODE_BROKER_ACK_$V", hrecord, "NODE_BROKER_ACK"); 
+	m_node_host_records[j] = hrecord;
+      }
+      // End added mikerb mar0414      
       m_node_last_tstamp[j] = m_curr_time;
       m_node_total_skew[j] += skew;
       m_node_pings[j]++;
@@ -271,16 +280,16 @@ void ShoreBroker::handleMailNodePing(const string& info)
 
   // Part 5: Handle the new Node.
   // Prepare to send this host and acknowldgement by posting a 
-  // request to pMOOSBridge for a new variable bridging.
+  // request to pShare for a new variable bridging.
   makeBridgeRequest("NODE_BROKER_ACK_$V", hrecord, "NODE_BROKER_ACK"); 
 
   reportEvent("New node discovered: " + hrecord.getCommunity());
   
   // The incoming host record now becomes the host record of record, so 
   // store its status.
-  hrecord.setStatus(status);
+  //hrecord.setStatus(status);
   
-  // Store the host info.
+  // Store the new host info.
   m_node_host_records.push_back(hrecord);
   m_node_total_skew.push_back(skew);
   m_node_last_tstamp.push_back(m_curr_time);  
@@ -483,4 +492,7 @@ bool ShoreBroker::buildReport()
   m_msgs << actab.getFormattedString();
   return(true);
 }
+
+
+
 

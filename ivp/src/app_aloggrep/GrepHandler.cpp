@@ -4,20 +4,21 @@
 /*    FILE: GrepHandler.cpp                                      */
 /*    DATE: August 6th, 2008                                     */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iostream>
@@ -44,6 +45,8 @@ GrepHandler::GrepHandler()
   m_lines_retained = 0;
   m_chars_removed  = 0;
   m_chars_retained = 0;
+
+  m_var_condition_met = true;
 
   m_file_overwrite = false;
 }
@@ -99,6 +102,16 @@ bool GrepHandler::handle(const string& alogfile, const string& new_alogfile)
       string varname = getVarName(line_raw);
       string srcname = getSourceNameNoAux(line_raw);
 
+#if 1
+      if((m_var_condition != "") && (varname == m_var_condition)) {
+	string varval = getDataEntry(line_raw);
+	cout << "varval:" << varval << endl;
+	if(tolower(varval) == "true")
+	  m_var_condition_met = true;
+	else
+	  m_var_condition_met = false;
+      }
+#endif 
       //string data = getDataEntry(line_raw);
       //cout << "data: [" << data << "]" << endl;
 
@@ -112,6 +125,10 @@ bool GrepHandler::handle(const string& alogfile, const string& new_alogfile)
 	  match = true;
       }
 
+
+      if(!m_var_condition_met)
+	match = false;
+      
       if(match || line_is_comment) {
 	if(m_file_out)
 	  fprintf(m_file_out, "%s\n", line_raw.c_str());
@@ -243,6 +260,9 @@ void GrepHandler::printReport()
   }
   cout << endl;
 }
+
+
+
 
 
 

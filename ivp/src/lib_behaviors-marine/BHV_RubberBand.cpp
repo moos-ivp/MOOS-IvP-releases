@@ -4,20 +4,21 @@
 /*    FILE: BHV_RubberBand.cpp                                   */
 /*    DATE: Aug 25 2006                                          */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #ifdef _WIN32
@@ -156,8 +157,10 @@ bool BHV_RubberBand::setParam(string param, string val)
 void BHV_RubberBand::onSetParamComplete() 
 {
   m_trail_point.set_label(m_us_name + "_station");
+  m_trail_point.set_type("station");
   m_trail_point.set_active("false");
   string bhv_tag = tolower(getDescriptor());
+  m_trail_point.set_source(m_us_name + "_" + bhv_tag);
 }
 
 //-----------------------------------------------------------
@@ -253,7 +256,7 @@ IvPFunction *BHV_RubberBand::onRunState()
       else
 	desired_speed = m_outer_speed;
 
-      relevance += stiffness*(dist_to_station - m_outer_radius)/m_outer_radius;
+      relevance = 1.0+stiffness*(dist_to_station - m_outer_radius)/m_outer_radius;
     }
 
   ZAIC_PEAK spd_zaic(m_domain, "speed");
@@ -390,6 +393,8 @@ void BHV_RubberBand::postErasableTrailPoint()
   string spec = m_trail_point.get_spec();
   postMessage("VIEW_POINT", spec);
 }
+
+
 
 
 

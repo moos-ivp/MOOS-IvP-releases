@@ -4,20 +4,21 @@
 /*    FILE: REPLAY_GUI.cpp                                       */
 /*    DATE: May 31st, 2005                                       */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <cstdio>
@@ -495,7 +496,7 @@ void REPLAY_GUI::augmentMenu()
   m_menubar->add("Replay/Step Back  1",  '[', (Fl_Callback*)REPLAY_GUI::cb_Step, (void*)-1, 0);
   m_menubar->add("Replay/Step Ahead 5", '>', (Fl_Callback*)REPLAY_GUI::cb_Step, (void*)5, 0);
   m_menubar->add("Replay/Step Back  5", '<', (Fl_Callback*)REPLAY_GUI::cb_Step, (void*)-5, FL_MENU_DIVIDER);
-};
+}
 
 //----------------------------------------------------------
 // Procedure: handle
@@ -1089,7 +1090,11 @@ inline void REPLAY_GUI::cb_Delete_i() {
   
   string command = "rm -f " + m_log_file + " " + slog_file + " " +
     ylog_file + " " + moos_file; 
-  system(command.c_str());
+
+  // Pretend to care about the system return value to avoid compiler warning
+  // Declare the result variable to be unused to avoid a compiler warning
+  int result __attribute__((unused));
+  result = system(command.c_str());
   exit(0);
 }
 void REPLAY_GUI::cb_Delete(Fl_Widget* o) {
@@ -1343,7 +1348,7 @@ void REPLAY_GUI::setVNameMenuButtonA(string vname)
   // First get the index in the list of known vehicle names. This index is 
   // needed to configure the callback for the menu item.
   // Use special unsigned int type having same size a pointer (void*)
-  uintptr_t i, vindex, vsize = m_vnames.size();
+  uintptr_t i, vindex=0, vsize = m_vnames.size();
   for(i=0; i<vsize; i++)
     if(m_vnames[i] == vname)
       vindex = i;
@@ -1386,7 +1391,7 @@ void REPLAY_GUI::updateSourceMenuButtonA()
     // First get the index in the list of known sources. This index is 
     // needed to configure the callback for the menu item.
     // Use special unsigned int type having same size a pointer (void*)
-    uintptr_t i, vindex, vsize = m_sources.size();
+    uintptr_t i=0, vindex=0, vsize = m_sources.size();
     for(i=0; i<vsize; i++)
       if(m_sources[i] == source)
 	vindex = i;
@@ -1408,7 +1413,7 @@ void REPLAY_GUI::setVNameMenuButtonB(string vname)
   // First get the index in the list of known vehicle names. This index is 
   // needed to configure the callback for the menu item.
   // Use special unsigned int type having same size a pointer (void*)
-  uintptr_t i, vindex, vsize = m_vnames.size();
+  uintptr_t i, vindex=0, vsize = m_vnames.size();
   for(i=0; i<vsize; i++)
     if(m_vnames[i] == vname)
       vindex = i;
@@ -1451,7 +1456,7 @@ void REPLAY_GUI::updateSourceMenuButtonB()
     // First get the index in the list of known sources. This index is 
     // needed to configure the callback for the menu item.
     // Use special unsigned int type having same size a pointer (void*)
-    uintptr_t i, vindex, vsize = m_sources.size();
+    uintptr_t i, vindex=0, vsize = m_sources.size();
     for(i=0; i<vsize; i++)
       if(m_sources[i] == source)
 	vindex = i;
@@ -1495,9 +1500,17 @@ void REPLAY_GUI::capture_to_file()
   if(m_save_file_ix < 100)  command += "0";
   if(m_save_file_ix < 1000) command += "0";
   command += intToString(m_save_file_ix) + ".png";
-  system(command.c_str());
+
+  // Pretend to care about the system return value to avoid compiler warning
+  // Declare the result variable to be unused to avoid a compiler warning
+  int result __attribute__((unused));
+  result = system(command.c_str());
+
   cout << "command: " << command << endl;
   m_save_file_ix++;
 }
+
+
+
 
 

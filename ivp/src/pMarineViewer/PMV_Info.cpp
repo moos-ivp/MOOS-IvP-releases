@@ -4,20 +4,21 @@
 /*    FILE: PMV_Info.cpp                                         */
 /*    DATE: Dec 26th 2011                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
  
 #include <cstdlib>
@@ -131,7 +132,8 @@ void showExampleConfigAndExit()
   blk("  // Vehicles Pull-Down Menu ===================================");
   blk("  vehicles_viewable       = true   // {TRUE, false}             ");
   blk("  vehicles_name_mode      = names  // {names, names+depth, off  ");
-  blk("                                       names+mode, names+shortmode}");
+  blk("                                       names+mode, names+auxmode");
+  blk("                                       names+shortmode}         ");
   blk("  stale_report_thresh     = 30     // [5, inf)                  ");
   blk("  stale_remove_thresh     = 30     // [0, inf)                  ");
   blk("  vehicles_active_color   = red    // {yellow,white,blue,green} ");
@@ -225,6 +227,7 @@ void showInterfaceAndExit()
   blk("  HELM_MAP_CLEAR                                                ");
   blk("  MVIEWER_LCLICK                                                ");
   blk("  MVIEWER_RCLICK                                                ");
+  blk("  MVIEWER_UNHANDLED_MAIL                                        ");
   blk("  PLOGGER_CMD                                                   ");
   blk("                                                                ");
   exit(0);
@@ -238,5 +241,8 @@ void showReleaseInfoAndExit()
   showReleaseInfo("pMarineViewer", "gpl");
   exit(0);
 }
+
+
+
 
 

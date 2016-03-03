@@ -4,20 +4,21 @@
 /*    FILE: AOF_AvoidObstacles.cpp                               */
 /*    DATE: Aug 2nd, 2006                                        */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <string>
@@ -32,22 +33,22 @@ using namespace std;
 
 AOF_AvoidObstacles::AOF_AvoidObstacles(IvPDomain gdomain) : AOF(gdomain)
 {
-  crs_ix = gdomain.getIndex("course");
-  spd_ix = gdomain.getIndex("speed");
+  m_crs_ix = gdomain.getIndex("course");
+  m_spd_ix = gdomain.getIndex("speed");
 
-  os_x            = 0;
-  os_y            = 0;
-  activation_dist = -1;
-  allowable_ttc   = 20;  // time-to-collision in seconds
+  m_osx             = 0;
+  m_osy             = 0;
+  m_osh             = 0;
+  m_activation_dist = -1;
+  m_allowable_ttc   = 20;  // time-to-collision in seconds
 
-  os_x_set        = false;
-  os_y_set        = false;
-  activation_dist_set = false;
-  allowable_ttc_set   = false;
+  m_osx_set             = false;
+  m_osy_set             = false;
+  m_osh_set             = false;
+  m_activation_dist_set = false;
+  m_allowable_ttc_set   = false;
 
-  m_present_heading = 0;
-  m_present_heading_set = false;
-  m_present_heading_influence = 0;
+  m_present_heading_influence = 1;
 }
 
 //----------------------------------------------------------------
@@ -56,32 +57,33 @@ AOF_AvoidObstacles::AOF_AvoidObstacles(IvPDomain gdomain) : AOF(gdomain)
 bool AOF_AvoidObstacles::setParam(const string& param, double param_val)
 {
   if(param == "os_y") {
-    os_y = param_val;
-    os_y_set = true;
+    m_osy = param_val;
+    m_osy_set = true;
     return(true);
   }
   else if(param == "os_x") {
-    os_x = param_val;
-    os_x_set = true;
+    m_osx = param_val;
+    m_osx_set = true;
     return(true);
   }
   else if(param == "allowable_ttc") {
     if(param_val <= 0)
       return(false);
-    allowable_ttc = param_val;
-    allowable_ttc_set = true;
+    m_allowable_ttc = param_val;
+    m_allowable_ttc_set = true;
     return(true);
   }
   else if(param == "activation_dist") {
     if(param_val <= 0)
       return(false);
-    activation_dist = param_val;
-    activation_dist_set = true;
+    m_activation_dist = param_val;
+    m_activation_dist_set = true;
     return(true);
   }
-  else if(param == "present_heading") {
-    m_present_heading = param_val;
-    m_present_heading_set = true;
+  else if((param == "os_h") ||
+	  (param == "present_heading")) {  // deprecated
+    m_osh = param_val;
+    m_osh_set = true;
     return(true);
   }
   else if(param == "present_heading_influence") {
@@ -95,10 +97,7 @@ bool AOF_AvoidObstacles::setParam(const string& param, double param_val)
   else if(param == "buffer_dist") {
     if(param_val < 0)
       return(false);
-    if(m_buffer_dist != param_val) {
-      m_buffer_dist = param_val;
-      applyBuffer();
-    }
+    m_buffer_dist = param_val;
     return(true);
   }
   else
@@ -119,48 +118,58 @@ bool AOF_AvoidObstacles::setParam(const string& param,
 
 bool AOF_AvoidObstacles::initialize()
 {
-  if((crs_ix==-1) || (spd_ix==-1))
+  // Part 1: Sanity Checks
+  unsigned int object_cnt = m_obstacles_orig.size();
+  if(object_cnt == 0)
     return(false);
-  if((!os_x_set) || (!os_y_set))
+  if(m_obstacles_buff.size() != object_cnt)
     return(false);
-  if(!allowable_ttc_set)
+  if(m_obstacles_pert.size() != object_cnt)
     return(false);
-  if(!activation_dist_set)
+  if((m_crs_ix==-1) || (m_spd_ix==-1))
     return(false);
-  
-  unsigned int  i, j, osize = m_obstacles_buff.size();
-  if(osize == 0)
+  if((!m_osx_set) || (!m_osy_set) || (!m_osh_set))
     return(false);
-  for(i=0; i<osize; i++)
+  if(!m_allowable_ttc_set)
+    return(false);
+  if(!m_activation_dist_set)
+    return(false);
+
+  // Part 2: Apply the buffer distance to each of the original obstacles
+  applyBuffer();
+
+
+  // Part 3: Figure out which obstacles are pertinent
+  for(unsigned int i=0; i<object_cnt; i++) {
     m_obstacles_pert[i] = true;
+    if(polyAft(m_osx, m_osy, m_osh, m_obstacles_buff[i]))
+      m_obstacles_pert[i] = false;
+    if(m_obstacles_buff[i].dist_to_poly(m_osx, m_osy) > m_activation_dist)
+      m_obstacles_pert[i] = false;
+  }
+  bufferBackOff(m_osx, m_osy);
 
-  bufferBackOff(os_x, os_y);
-
-  // Fill in a cache of distances mapping a particular heading to
-  // the minimum/closest distance to any of the obstacle polygons.
+  // Part 4: Fill in a cache of distances mapping a particular heading 
+  // to the minimum/closest distance to any of the obstacle polygons.
   // A distance of -1 indicates infinite distance.
   
   m_cache_distance.clear();
-  unsigned int hsize = m_domain.getVarPoints(crs_ix);
-  for(i=0; i<hsize; i++)
-    m_cache_distance.push_back(-1);
+  unsigned int hsize = m_domain.getVarPoints(m_crs_ix);
+  vector<double> virgin_cache(hsize, -1);
+  m_cache_distance = virgin_cache;
 
-  double heading, dist_to_poly; 
-  for(i=0; i<hsize; i++) {
-    bool ok = m_domain.getVal(crs_ix, i, heading);
+  double heading=0; 
+  for(unsigned int i=0; i<hsize; i++) {
+    bool ok = m_domain.getVal(m_crs_ix, i, heading);
     if(!ok)
       return(false);
     double min_dist = -1; 
-    bool   min_dist_set = false;
-    for(j=0; j<osize; j++) {
+    for(unsigned int j=0; j<object_cnt; j++) {
       if(m_obstacles_pert[j]) {
-	double position_dist_to_poly = m_obstacles_buff[j].dist_to_poly(os_x, os_y);
-	if(position_dist_to_poly < activation_dist) {
-	  dist_to_poly = m_obstacles_buff[j].dist_to_poly(os_x, os_y, heading);
-	  if(dist_to_poly != -1) {
-	    if(!min_dist_set || (dist_to_poly < min_dist))
-	      min_dist = dist_to_poly;
-	  }
+	double dist = m_obstacles_buff[j].dist_to_poly(m_osx, m_osy, heading);
+	if(dist != -1) {
+	  if((min_dist==-1) || (dist < min_dist))
+	    min_dist = dist;
 	}
       }
     }
@@ -180,8 +189,8 @@ unsigned int AOF_AvoidObstacles::obstaclesInRange()
   unsigned int  count = 0;
 
   for(unsigned int i=0; i<vsize; i++) {
-    double position_dist_to_poly = m_obstacles_buff[i].dist_to_poly(os_x, os_y);
-    if(position_dist_to_poly < activation_dist)
+    double position_dist_to_poly = m_obstacles_buff[i].dist_to_poly(m_osx, m_osy);
+    if(position_dist_to_poly < m_activation_dist)
       count++;
   }
   return(count);
@@ -205,44 +214,34 @@ void AOF_AvoidObstacles::addObstacle(const XYPolygon& new_poly)
   m_obstacles_pert.push_back(true);
 }
 
-
 //----------------------------------------------------------------
-// Procedure: objectInObstacle
+// Procedure: ownshipInObstacle
 
-bool AOF_AvoidObstacles::objectInObstacle(double dx, double dy, 
-					  bool use_buffered)
+bool AOF_AvoidObstacles::ownshipInObstacle(bool use_buffered)
 {
-  int ix = objectInWhichObstacle(dx, dy, use_buffered);
-  if(ix == -1)
-    return(false);
-  else
-    return(true);
+  unsigned int vsize = m_obstacles_orig.size();
+  for(unsigned int i=0; i<vsize; i++) {
+    if(ownshipInObstacle(i, use_buffered))
+      return(true);
+  }
+  return(false);
 }
 
 //----------------------------------------------------------------
-// Procedure: objectInWhichObstacle
-//      Note: Checks to see if the given point is within any of the
-//            obstacles. If so, the index of the object is returned.
-//            Otherwise -1 is returned. 
+// Procedure: ownshipInObstacle
 
-int AOF_AvoidObstacles::objectInWhichObstacle(double dx, double dy, 
-					      bool use_buffered)
+bool AOF_AvoidObstacles::ownshipInObstacle(unsigned int ix, 
+					   bool use_buffered)			   
 {
   if(!use_buffered) {
-    int vsize = m_obstacles_orig.size();
-    for(int i=0; i<vsize; i++) {
-      if(m_obstacles_orig[i].contains(dx, dy))
-	return(i);
-    }
+    if(m_obstacles_orig[ix].contains(m_osx, m_osy))
+      return(true);
   }
   else {
-    int vsize = m_obstacles_buff.size();
-    for(int i=0; i<vsize; i++) {
-      if(m_obstacles_buff[i].contains(dx, dy))
-	return(i);
-    }
+    if(m_obstacles_buff[ix].contains(m_osx, m_osy))
+      return(true);
   }
-  return(-1);
+  return(false);
 }
 
 //----------------------------------------------------------------
@@ -251,8 +250,8 @@ int AOF_AvoidObstacles::objectInWhichObstacle(double dx, double dy,
 
 unsigned int AOF_AvoidObstacles::pertObstacleCount()
 {
-  unsigned int i, count = 0;
-  unsigned int vsize = m_obstacles_pert.size();
+  unsigned count = 0;
+  unsigned int i, vsize = m_obstacles_pert.size();
   for(i=0; i<vsize; i++)
     if(m_obstacles_pert[i])
       count++;
@@ -265,49 +264,52 @@ unsigned int AOF_AvoidObstacles::pertObstacleCount()
 
 void AOF_AvoidObstacles::applyBuffer()
 {
-  int vsize = m_obstacles_orig.size();
-  for(int i=0; i<vsize; i++) {
+  unsigned int vsize = m_obstacles_orig.size();
+  for(unsigned int i=0; i<vsize; i++) {
     m_obstacles_buff[i] = m_obstacles_orig[i];
-    m_obstacles_buff[i].grow_by_amt(m_buffer_dist);
+    if(m_buffer_dist > 0)
+      m_obstacles_buff[i].grow_by_amt(m_buffer_dist);
     m_obstacles_buff[i].set_label(m_obstacles_orig[i].get_label()+"_buff");
   }    
 }
 
 //----------------------------------------------------------------
-// Procedure: getObstacleSpec
+// Procedure: isObstaclePert
 
-string AOF_AvoidObstacles::getObstacleSpec(unsigned int ix, 
-					   bool use_buffered, 
-					   bool active)
+bool AOF_AvoidObstacles::isObstaclePert(unsigned int ix)
 {
-  if(ix >= m_obstacles_buff.size())
-    return("");
-
-  string param = "active=true";
-  if(!active)
-    param = "active=false";
-
-  if(use_buffered)
-    return(m_obstacles_buff[ix].get_spec(0, param));
-  else
-    return(m_obstacles_orig[ix].get_spec(0, param));
+  if(ix >= m_obstacles_pert.size()) 
+    return(false);
+  return(m_obstacles_pert[ix]);
 }
 
 //----------------------------------------------------------------
-// Procedure: rangeToObstacle
+// Procedure: getObstacleOrig
 
-double AOF_AvoidObstacles::rangeToObstacle(unsigned int ix)
+XYPolygon AOF_AvoidObstacles::getObstacleOrig(unsigned int ix)
 {
-  if(ix >= m_obstacles_buff.size())
-    return(-1);
+  if(ix >= m_obstacles_orig.size()) {
+    XYPolygon null_poly;
+    return(null_poly);
+  }
+  return(m_obstacles_orig[ix]);
+}
 
-  double dist = m_obstacles_buff[ix].dist_to_poly(os_x, os_y);
-  return(dist);
+//----------------------------------------------------------------
+// Procedure: getObstacleBuff
+
+XYPolygon AOF_AvoidObstacles::getObstacleBuff(unsigned int ix)
+{
+  if(ix >= m_obstacles_buff.size()) {
+    XYPolygon null_poly;
+    return(null_poly);
+  }
+  return(m_obstacles_buff[ix]);
 }
 
 //----------------------------------------------------------------
 // Procedure: bufferBackOff
-//            For each of the buffered obstacles, if the ownship 
+//   Purpose: For each of the buffered obstacles, if the ownship 
 //            position is within the obstacle boundary, it will 
 //            shrink until ownship is no longer inside.
 
@@ -363,6 +365,20 @@ void AOF_AvoidObstacles::bufferBackOff(double osx, double osy)
 
 double AOF_AvoidObstacles::evalBox(const IvPBox *b) const
 {
+  double avd_obstacles_utility  = evalAuxObstacles(b);
+  double center_points_utility  = evalAuxCtrPoints(b);
+
+  double utility = ((2*avd_obstacles_utility) + 
+		    (2*center_points_utility)) / 4.0;
+
+  return(utility);
+}
+
+//----------------------------------------------------------------
+// Procedure: evalAuxObstacles
+
+double AOF_AvoidObstacles::evalAuxObstacles(const IvPBox* b) const
+{
   double max_utility = 100;
   double min_utility = 0;
 
@@ -372,29 +388,14 @@ double AOF_AvoidObstacles::evalBox(const IvPBox *b) const
   
   double eval_crs = 0;
   double eval_spd = 0;
-  
-  m_domain.getVal(crs_ix, b->pt(crs_ix,0), eval_crs);
-  m_domain.getVal(spd_ix, b->pt(spd_ix,0), eval_spd);
+  m_domain.getVal(m_crs_ix, b->pt(m_crs_ix,0), eval_crs);
+  m_domain.getVal(m_spd_ix, b->pt(m_spd_ix,0), eval_spd);
 
-  // Possibly calculate the "heading delta" and adjust "max_utility" 
-  // based on the heading delta.
-  double heading_delta = -1;
-  if(m_present_heading_set && (m_present_heading_influence > 0)) {
-    heading_delta = angle180(eval_crs - m_present_heading);
-    if(heading_delta < 0)
-      heading_delta *= -1;
-    double pct = (100 - (heading_delta / 180));
-    double base = (100 - m_present_heading_influence);
-    double more = (pct * m_present_heading_influence);
-    max_utility = base + more;
-  }
-
-
-  double lowest_utility;
+  double lowest_utility = 0;
   for(i=0; i<osize; i++) {
-    double i_utility;
+    double i_utility = 0;
 
-    int   heading_index = b->pt(crs_ix, 0);
+    int   heading_index = b->pt(m_crs_ix, 0);
     double dist_to_poly = m_cache_distance[heading_index];
 
     if(dist_to_poly == -1) 
@@ -404,7 +405,7 @@ double AOF_AvoidObstacles::evalBox(const IvPBox *b) const
     else {
       // determine time to collision w/ poly (in seconds)
       double time_to_collision = dist_to_poly / eval_spd;
-      if(time_to_collision > allowable_ttc)
+      if(time_to_collision > m_allowable_ttc)
 	i_utility = max_utility;
       else
 	i_utility = min_utility;
@@ -413,16 +414,67 @@ double AOF_AvoidObstacles::evalBox(const IvPBox *b) const
       lowest_utility = i_utility;
   }
       
-  double utility = lowest_utility - (eval_spd * 0.00001);
+  double utility = lowest_utility;
 
   return(utility);
 }
 
+//----------------------------------------------------------------
+// Procedure: evalAuxCtrPoints
 
+double AOF_AvoidObstacles::evalAuxCtrPoints(const IvPBox* b) const
+{
+  double max_utility = 100;
+  double min_utility = 0;
 
+  unsigned i, osize = m_obstacles_buff.size();
+  if(osize == 0)
+    return(max_utility);
+  
+  double eval_crs = 0;
+  double eval_spd = 0;
+  m_domain.getVal(m_crs_ix, b->pt(m_crs_ix,0), eval_crs);
+  m_domain.getVal(m_spd_ix, b->pt(m_spd_ix,0), eval_spd);
 
+  double lowest_utility = max_utility;
+  for(i=0; i<osize; i++) {
+    if(m_obstacles_pert[i]) {
+      double i_utility = 0;
 
+      double poly_center_x = m_obstacles_orig[i].get_center_x();
+      double poly_center_y = m_obstacles_orig[i].get_center_y();
+      
+      // Determine if the polygon is *presently* on ownhip's port or 
+      // starboard side.
+      double curr_crs_bng_to_poly = relBearing(m_osx, m_osy, m_osh,
+					       poly_center_x, poly_center_y);
+      bool poly_on_port_curr = true;
+      if(curr_crs_bng_to_poly <= 180)
+	poly_on_port_curr = false;
+      
+      // Determine if the polygon *would be* on ownhip's port or 
+      // starboard if the crs being evaluated would be true instead.
+      double eval_crs_bng_to_poly = relBearing(m_osx, m_osy, eval_crs,
+					       poly_center_x, poly_center_y);
+      bool poly_on_port_eval = true;
+      if(eval_crs_bng_to_poly <= 180)
+	poly_on_port_eval = false;
+      
+      // If they do not match, set i_utility to min_utility
+      if(poly_on_port_curr != poly_on_port_eval)
+	i_utility = min_utility;
+      else
+	i_utility = max_utility;
+      
+      if((i==0) || (i_utility < lowest_utility))
+	lowest_utility = i_utility;
+    }
+  }
+      
+  double utility = lowest_utility;
 
+  return(utility);
+}
 
 
 

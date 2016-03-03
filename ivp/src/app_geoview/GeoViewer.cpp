@@ -4,20 +4,21 @@
 /*    FILE: GeoViewer.cpp                                        */
 /*    DATE: May 1st, 2005 (Major Modifications November 2007)    */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
 
 #include <iostream>
@@ -305,10 +306,10 @@ void GeoViewer::adjustActive(int v)
 {
   unsigned int old_ix = m_active_poly;
 
-  m_active_poly += v;
-
-  if(m_active_poly < 0)
+  if(((int)(m_active_poly) + v) < 0)
     m_active_poly = 0;
+  else
+    m_active_poly += v;
   
   if(m_active_poly > m_geoshapes.sizePolygons()-1)
     m_active_poly = m_geoshapes.sizePolygons()-1;
@@ -323,7 +324,7 @@ void GeoViewer::adjustActive(int v)
 
 void GeoViewer::shiftHorzPoly(double shift_val)
 {
-  if((m_active_poly < 0) || (m_active_poly >= m_geoshapes.sizePolygons()))
+  if(m_active_poly >= m_geoshapes.sizePolygons())
     return;
   
   m_geoshapes.poly(m_active_poly).shift_horz(shift_val);
@@ -335,7 +336,7 @@ void GeoViewer::shiftHorzPoly(double shift_val)
 
 void GeoViewer::shiftVertPoly(double shift_val)
 {
-  if((m_active_poly < 0) || (m_active_poly >= m_geoshapes.sizePolygons()))
+  if(m_active_poly >= m_geoshapes.sizePolygons())
     return;
   
   m_geoshapes.poly(m_active_poly).shift_vert(shift_val);
@@ -349,7 +350,7 @@ void GeoViewer::shiftVertPoly(double shift_val)
 
 void GeoViewer::rotatePoly(int rval)
 {
-  if((m_active_poly < 0) || (m_active_poly >= m_geoshapes.sizePolygons()))
+  if(m_active_poly >= m_geoshapes.sizePolygons())
     return;
 
   m_geoshapes.poly(m_active_poly).rotate(rval);
@@ -363,7 +364,7 @@ void GeoViewer::rotatePoly(int rval)
 
 void GeoViewer::growPoly(int gval)
 {
-  if((m_active_poly < 0) || (m_active_poly >= m_geoshapes.sizePolygons()))
+  if(m_active_poly >= m_geoshapes.sizePolygons())
     return;
 
   double dgval = (double)(gval) / 100.0;
@@ -376,7 +377,7 @@ void GeoViewer::growPoly(int gval)
 
 void GeoViewer::reversePoly()
 {
-  if((m_active_poly < 0) || (m_active_poly >= m_geoshapes.sizePolygons()))
+  if(m_active_poly >= m_geoshapes.sizePolygons())
     return;
 
   m_geoshapes.poly(m_active_poly).reverse();
@@ -388,7 +389,7 @@ void GeoViewer::reversePoly()
 
 void GeoViewer::duplicateActive()
 {
-  if((m_active_poly < 0) || (m_active_poly >= m_geoshapes.sizePolygons()))
+  if(m_active_poly >= m_geoshapes.sizePolygons())
     return;
   
   XYPolygon new_poly = m_geoshapes.getPolygon(m_active_poly);
@@ -404,7 +405,7 @@ void GeoViewer::duplicateActive()
 
 void GeoViewer::clearActivePoly()
 {
-  if((m_active_poly < 0) || (m_active_poly >= m_geoshapes.sizePolygons()))
+  if(m_active_poly >= m_geoshapes.sizePolygons())
     return;
   
   m_geoshapes.poly(m_active_poly).clear();
@@ -416,11 +417,14 @@ void GeoViewer::clearActivePoly()
 
 void GeoViewer::reApplySnapToCurrent()
 {
-  if((m_active_poly < 0) || (m_active_poly >= m_geoshapes.sizePolygons()))
+  if(m_active_poly >= m_geoshapes.sizePolygons())
     return;
   
   m_geoshapes.poly(m_active_poly).apply_snap(m_snap_val);
 }
+
+
+
 
 
 

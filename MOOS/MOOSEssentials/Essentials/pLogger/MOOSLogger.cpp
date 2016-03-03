@@ -229,7 +229,8 @@ bool CMOOSLogger::OnStartUp()
     string sTmp;
     if(m_MissionReader.GetConfigurationParam("SYNCLOG",sTmp))
     {
-        string sBool = MOOSChomp(sTmp,"@");
+    	MOOSRemoveChars(sTmp," ");
+    	string sBool = MOOSChomp(sTmp,"@");
         
         m_bSynchronousLog = MOOSStrCmp(sBool,"TRUE");
 

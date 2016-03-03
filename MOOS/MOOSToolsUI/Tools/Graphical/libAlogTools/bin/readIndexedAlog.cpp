@@ -4,6 +4,8 @@
 
 #include "alogTools/indexedAlogReader.h"
 
+using namespace MOOS::AlogTools;
+
 int main( int argc, char** argv )
 {
     if( argc < 2 )

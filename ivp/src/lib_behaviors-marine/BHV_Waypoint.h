@@ -4,20 +4,21 @@
 /*    FILE: BHV_Waypoint.h                                       */
 /*    DATE: Nov 2004 (original version - many changes since)     */
 /*                                                               */
-/* This program is free software; you can redistribute it and/or */
-/* modify it under the terms of the GNU General Public License   */
-/* as published by the Free Software Foundation; either version  */
-/* 2 of the License, or (at your option) any later version.      */
+/* This file is part of MOOS-IvP                                 */
 /*                                                               */
-/* This program is distributed in the hope that it will be       */
-/* useful, but WITHOUT ANY WARRANTY; without even the implied    */
-/* warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR       */
-/* PURPOSE. See the GNU General Public License for more details. */
+/* MOOS-IvP is free software: you can redistribute it and/or     */
+/* modify it under the terms of the GNU General Public License   */
+/* as published by the Free Software Foundation, either version  */
+/* 3 of the License, or (at your option) any later version.      */
+/*                                                               */
+/* MOOS-IvP is distributed in the hope that it will be useful,   */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty   */
+/* of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See  */
+/* the GNU General Public License for more details.              */
 /*                                                               */
 /* You should have received a copy of the GNU General Public     */
-/* License along with this program; if not, write to the Free    */
-/* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
-/* Boston, MA 02111-1307, USA.                                   */
+/* License along with MOOS-IvP.  If not, see                     */
+/* <http://www.gnu.org/licenses/>.                               */
 /*****************************************************************/
  
 #ifndef BHV_WAYPOINT_HEADER
@@ -35,6 +36,8 @@ public:
   
   bool           setParam(std::string, std::string);
   IvPFunction*   onRunState();
+  void           onIdleState();
+  void           onIdleToRunState();
   BehaviorReport onRunState(std::string);
   void           onRunToIdleState();
   void           onSetParamComplete();
@@ -52,6 +55,8 @@ protected:
   void         postCycleFlags();
   void         postWptFlags(double x, double y);
   void         handleVisualHint(std::string);
+  void         updateOdoDistance();
+  void         markOdoLeg();
 
 protected: 
   WaypointEngine m_waypoint_engine;
@@ -61,6 +66,7 @@ protected: // configuration parameters
   bool        m_lead_to_start;
   double      m_lead_distance;
   double      m_lead_damper;
+  std::string m_efficiency_measure;
   std::string m_ipf_type;
 
   // Configurable names of MOOS variables for reports
@@ -76,13 +82,29 @@ protected: // configuration parameters
   // Visual hints affecting properties of polygons/points
   std::string m_hint_vertex_color;
   std::string m_hint_edge_color;
+  std::string m_hint_nextpt_color;
+  std::string m_hint_nextpt_lcolor;
   double      m_hint_vertex_size;
   double      m_hint_edge_size;
+  double      m_hint_nextpt_vertex_size;
 
 protected: // intermediate or object global variables.
+  double    m_osh;  // Ownship heading
   double    m_osv;  // Ownship velocity
   double    m_osx;  // Ownship x position
   double    m_osy;  // Ownship y position
+  
+  // Odometry state information
+  bool      m_odo_set_flag;
+  double    m_odo_setx;
+  double    m_odo_sety;
+  double    m_odo_distance;
+  bool      m_odo_virgin;
+  double    m_dist_total_odo;
+  double    m_dist_total_linear;
+
+  double    m_osx_prev;
+  double    m_osy_prev;
 
   XYPoint   m_nextpt;
   XYPoint   m_trackpt;
@@ -93,6 +115,9 @@ protected: // intermediate or object global variables.
   bool      m_greedy_tour_pending;
 };
 #endif
+
+
+
 
 
 

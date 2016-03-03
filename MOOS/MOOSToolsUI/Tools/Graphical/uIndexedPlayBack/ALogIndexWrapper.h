@@ -1,7 +1,7 @@
 #ifndef _ALogIndexWrapper_h_
 #define _ALogIndexWrapper_h_
 
-#include "MOOS/libalogTools/indexedAlogReader.h"
+#include "MOOS/AlogTools/indexedAlogReader.h"
 
 // wraps indexed alog reader so that uPlayBack can use this new
 // indexed class without any modifications
@@ -12,12 +12,15 @@ class ALogIndexWrapper
 
         bool m_bInitialized;
         int m_nLineCount;
-        indexedAlogReader m_ALog;
+        MOOS::AlogTools::indexedAlogReader m_ALog;
         std::string m_sFileName;
 
         ALogIndexWrapper();
         ~ALogIndexWrapper();
-        bool Open(const std::string & sfName);
+
+        // Throws CannotOpenFileForReadingException,
+        //        CannotOpenIndexFileForReadingException
+        void Open(const std::string & sfName);
         std::string GetFileName();
         bool IsOpen();
         void Close();
