@@ -7,8 +7,6 @@ PROJECT(IVP)
 ENABLE_TESTING()
 INCLUDE(CTest)
 
-# ADD_TEST(MyTest1 ${EXECUTABLE_OUTPUT_PATH}/pMarineViewer --version)
-
 IF (${WIN32})
   # Define Windows Compiler flags here
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -19,11 +17,11 @@ ELSE (${WIN32})
   # AFAIK, CMake gets that right when building shared objects. -CJC
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -g")
   IF( ${APPLE} )
-    # FLTK is not supported in 64-bit for Mac OS X. Until it is supported
-    # we will force all applications to build in 32-bit. Libtiff must also
-    # be compiled in 32-bit. 
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
-    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
+    # FLTK 1.3.0 is supported for 64 bit on OS X so we no longer force 32bit
+    # as done previously. Below commented-out lines left just for clarity
+    #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
+    #SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
+
   ENDIF( ${APPLE} )
 
 ENDIF (${WIN32})
@@ -144,9 +142,11 @@ SET(IVP_NON_GUI_LIBS
    lib_ivpcore
    lib_logic
    lib_contacts
+   lib_ufield
    lib_logutils
    lib_mbutil
    lib_navplot
+   lib_ulogview
    )
 
 IF (${WIN32})
@@ -164,7 +164,7 @@ IF (${WIN32})
    SET(IVP_GUI_LIBS
       lib_ipfview
       lib_marineview
-      lib_fltk-1.1.10
+      lib_fltk-1.3.0
       lib_tiff
       )
 ELSE (${WIN32})
@@ -172,7 +172,7 @@ ELSE (${WIN32})
    SET(IVP_GUI_LIBS
       lib_ipfview
       lib_marineview
-      lib_fltk-1.1.10
+      lib_fltk-1.3.0
       )
 ENDIF (${WIN32})
 
@@ -182,8 +182,6 @@ IF("${IVP_BUILD_GUI_CODE}" STREQUAL "ON")
 ENDIF("${IVP_BUILD_GUI_CODE}" STREQUAL "ON")
 
 
-# message("A: IVP_LIB_DIRECTORY = ${IVP_LIB_DIRECTORY}")
-
 # If the environment hasn't explicitly set 'IVP_LIB_DIRECTORY', give it a good
 # default value...
 IF("${IVP_LIB_DIRECTORY}" STREQUAL "")
@@ -192,12 +190,9 @@ IF("${IVP_LIB_DIRECTORY}" STREQUAL "")
    GET_FILENAME_COMPONENT(IVP_LIB_DIRECTORY "${IVP_SOURCE_DIR}/../../lib" ABSOLUTE)
 ENDIF("${IVP_LIB_DIRECTORY}" STREQUAL "")
 
-# message("B: IVP_SOURCE_DIR = ${IVP_SOURCE_DIR}")
-# message("C: IVP_LIB_DIRECTORY = ${IVP_LIB_DIRECTORY}")
-
 FOREACH(L ${IVP_LIBS_TO_BUILD} )
 # message("D: ${L} : IVP_LIB_DIRECTORY = ${IVP_LIB_DIRECTORY}")
-  # We're actually fighting the lib_fltk-1.1.10 CMake files for control over this
+  # We're actually fighting the lib_fltk CMake files for control over this
   # detail, so we have to reset it after adding the FLTK subdirectory.
   
   SET( LIBRARY_OUTPUT_PATH "${IVP_LIB_DIRECTORY}" CACHE PATH "" FORCE )  # For CMake 2.4
@@ -224,6 +219,7 @@ SET(IVP_NON_GUI_APPS
   app_alogclip
   app_aloghelm
   app_nsplug
+  app_gen_hazards
   pEchoVar
   pXRelay
   pHelmIvP
@@ -231,20 +227,31 @@ SET(IVP_NON_GUI_APPS
   pBasicContactMgr
   pNodeReporter
   pSafetyRetreat
+  uFldPathCheck
+  uFldShoreBroker
+  uFldMessageHandler
+  uFldNodeBroker
+  uFldScope
+  uFldNodeComms
+  uFldBeaconRangeSensor
+  uFldContactRangeSensor
+  uFldHazardSensor
+  uMOOSClient
+  pSearchGrid
   uTimerScript
   uHelmScope
   uProcessWatch
-  uSimContactRange
   uSimCurrent
   uSimMarine
-  uSimBeaconRange
   uTermCommand
   uXMS
   uPokeDB
+  pHostInfo
+  pBinaryTest
   )
 
 SET(IVP_GUI_APPS
-  app_ivpcheck
+ app_ivpcheck
   app_ffview
   app_geoview
   app_currview
@@ -253,6 +260,9 @@ SET(IVP_GUI_APPS
   app_gzaicview
   pMarineViewer
   uFunctionVis
+  uLogView
+  uLogViewIPF
+  uLogViewHelm
   app_cpaview
   )
   

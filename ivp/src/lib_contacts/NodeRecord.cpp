@@ -40,6 +40,7 @@ NodeRecord::NodeRecord(string vname, string vtype)
   m_heading    = 0;
   m_heading_og = 0;
   m_depth      = 0;
+  m_altitude   = 0;
   m_timestamp  = 0;
   m_length     = 0;
   m_name       = vname;
@@ -54,6 +55,7 @@ NodeRecord::NodeRecord(string vname, string vtype)
   m_heading_set    = false;
   m_heading_og_set = false;
   m_depth_set      = false;
+  m_altitude_set   = false;
   m_length_set     = false;
   m_timestamp_set  = false;
 }
@@ -84,6 +86,8 @@ string NodeRecord::getStringValue(string key) const
     return(doubleToStringX(m_yaw, 4));
   else if((key == "depth") || (key == "dep"))
     return(doubleToStringX(m_depth, 2));
+  else if((key == "altitude") || (key == "alt"))
+    return(doubleToStringX(m_altitude, 2));
   else if((key == "length") || (key == "len"))
     return(doubleToStringX(m_length, 2));
   else if((key == "timestamp") || (key == "time") || (key == "utime"))
@@ -155,10 +159,15 @@ string NodeRecord::getSpec() const
     str += ",LON=" + doubleToStringX(m_lon, 8);
   if(m_type != "")
     str += ",TYPE=" + m_type;
+  if(m_group != "")
+    str += ",GROUP=" + m_group;
   if(m_mode != "")
     str += ",MODE=" + m_mode;
   if(m_allstop != "")
     str += ",ALLSTOP=" + m_allstop;
+
+  if(m_altitude_set)
+    str += ",ALTITUDE=" + doubleToStringX(m_altitude,2);
 
   if(m_speed_og_set)
     str += ",SPD_OG=" + doubleToStringX(m_speed_og,2);
@@ -190,6 +199,16 @@ string NodeRecord::getName(string default_name) const
   if(m_name == "")
     return(default_name);
   return(m_name);
+}
+
+//---------------------------------------------------------------
+// Procedure: getGroup
+
+string NodeRecord::getGroup(string default_group) const
+{
+  if(m_group == "")
+    return(default_group);
+  return(m_group);
 }
 
 //---------------------------------------------------------------

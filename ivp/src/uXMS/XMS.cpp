@@ -61,7 +61,7 @@ XMS::XMS(string server_host, long int server_port)
   m_db_start_time     = 0;
   
   m_filter            = "";
-  m_history_length    = 20;
+  m_history_length    = 200;
   m_history_mode      = false;
   m_report_histvar    = true;
   
@@ -369,6 +369,18 @@ void XMS::handleCommand(char c)
       m_history_length = 100;
     m_update_requested = true;
     break;
+  case '}':
+    m_trunc_data       *= 1.2;
+    m_trunc_data_start = m_trunc_data;
+    m_update_requested = true;
+    break;
+  case '{':
+    m_trunc_data       *= 0.8;
+    if((m_trunc_data > 0) && (m_trunc_data < 15))
+      m_trunc_data = 15;
+    m_trunc_data_start = m_trunc_data;
+    m_update_requested = true;
+    break;
   case ' ':
     m_refresh_mode = "paused";
     m_update_requested = true;
@@ -387,10 +399,10 @@ void XMS::handleCommand(char c)
   case '`':
     if(m_trunc_data == 0)
       m_trunc_data = m_trunc_data_start;
-    else if(m_trunc_data == m_trunc_data_start)
-      m_trunc_data = m_trunc_data * 0.8;
-    else 
+    else {
+      m_trunc_data_start = m_trunc_data;
       m_trunc_data = 0;
+    }
     m_update_requested = true;
     break;
     
@@ -565,6 +577,7 @@ void XMS::setFilter(string str)
 void XMS::setTruncData(double v)
 {
   m_trunc_data = vclip(v, 0, 1000);
+  m_trunc_data_start = m_trunc_data;
 }
 
 //------------------------------------------------------------
@@ -637,7 +650,7 @@ void XMS::registerVariables()
   map<string, string>::iterator p;
   for(p=m_src_map.begin(); p!=m_src_map.end(); p++) {
     string reg_str = p->first;
-    m_Comms.Register(reg_str, 2.0);
+    m_Comms.Register(reg_str, 1.0);
   }
 
   if(m_history_var != "")
@@ -877,8 +890,11 @@ void XMS::printReport()
       if(m_var_type[i] == "string") {
 	if(m_var_vals[i] != "n/a") {
 	  if(m_trunc_data > 0) {
-	    string tstr = truncString(m_var_vals[i], m_trunc_data, "middle");	    
-	    printf("\"%s\"", tstr.c_str());
+	    string tstr = truncString(m_var_vals[i], m_trunc_data);
+	    if(tstr.length() < m_var_vals[i].length())
+	      printf("\"%s...\"", tstr.c_str());
+	    else
+	      printf("\"%s\"", tstr.c_str());
 	  }
 	  else
 	    printf("\"%s\"", m_var_vals[i].c_str());	    
@@ -922,6 +938,19 @@ void XMS::printHistoryReport()
     refstr = termColor("reversegreen") + refstr;
   string mode_str = "(MODE = HISTORY:" + refstr + ")";   
 
+  unsigned int varlen = m_history_var.length();
+  if(varlen < 11)
+    varlen = 11;
+
+  unsigned int max_srclen = 12;
+  if(m_display_source) {
+    // Find length of longest source string
+    list<string>::iterator p;
+    for(p=m_history_sources.begin(); p != m_history_sources.end(); p++) {
+      if(p->length() > max_srclen)
+	max_srclen = p->length();
+    }
+  }
 
   bool do_the_report = false;
   if((m_refresh_mode == "paused") && m_update_requested)
@@ -943,31 +972,35 @@ void XMS::printHistoryReport()
   
   printf("\n\n\n\n\n");
   
+  string var_hdr = padString("VariableName", varlen, false);
   if(m_report_histvar)
-    printf("  %-22s", "VarName");
+    printf("  %s", var_hdr.c_str());
   
+  string src_hdr = padString("(S)ource", max_srclen, false);
   if(m_display_source)
-    printf("%-12s", "(S)ource");
+    printf("  %s", src_hdr.c_str());
   else
     printf(" (S) ");
 
   if(m_display_time)
-    printf("%-12s", "(T)ime");
+    printf("  %-12s", "(T)ime");
   else
     printf(" (T) ");
 
   printf(" VarValue %s\n", mode_str.c_str());
   
+  string var_bar = padString("------------", varlen, false);
   if(m_report_histvar)
-    printf("  %-22s", "----------------");
+    printf("  %s", var_bar.c_str());
   
+  string src_bar = padString("-------------", max_srclen, false);
   if(m_display_source)
-    printf("%-12s", "----------");
+    printf("  %s", src_bar.c_str());
   else
     printf(" --- ");
   
   if(m_display_time)
-    printf("%-12s", "----------");
+    printf("  %-12s", "----------");
   else
     printf(" --- ");
   
@@ -984,20 +1017,24 @@ void XMS::printHistoryReport()
     int    count  = hist_counts.back();
     string htime  = doubleToString(hist_times.back(), 2);
     
-    if(m_report_histvar)
-      printf("  %-22s ", m_history_var.c_str());
-      
-    if(m_display_source)
-      printf("%-12s", source.c_str());
+    if(m_report_histvar) {
+      string var = padString(m_history_var, varlen, false);
+      printf("  %s", var.c_str());
+    }
+
+    if(m_display_source) {
+      source = padString(source, max_srclen, false);
+      printf("  %s", source.c_str());
+    }
     else
       printf("     ");
     
     if(m_display_time)
-      printf("%-12s", htime.c_str());
+      printf("  %-12s", htime.c_str());
     else
       printf("     ");
     
-    printf("(%d) %s", count, entry.c_str());
+    printf(" (%d) %s", count, entry.c_str());
     printf("\n");		
 
     hist_list.pop_back();

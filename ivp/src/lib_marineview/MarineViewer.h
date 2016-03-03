@@ -31,11 +31,13 @@
 #include "FL/fl_draw.H"
 #include "BackImg.h"
 #include "XYGrid.h"
+#include "XYConvexGrid.h"
 #include "XYPolygon.h"
 #include "XYSegList.h"
 #include "XYCircle.h"
 #include "XYHexagon.h"
 #include "XYRangePulse.h"
+#include "XYCommsPulse.h"
 #include "OpAreaSpec.h"
 #include "MOOSGeodesy.h"
 #include "VPlug_GeoShapes.h"
@@ -101,11 +103,17 @@ protected:
   void  drawGrids(const std::vector<XYGrid>&);
   void  drawGrid(const XYGrid&);
 
+  void  drawConvexGrids(const std::vector<XYConvexGrid>&);
+  void  drawConvexGrid(const XYConvexGrid&);
+
   void  drawCircles(const std::vector<XYCircle>&);
   void  drawCircle(const XYCircle&, unsigned int pts);
 
   void  drawRangePulses(const std::vector<XYRangePulse>&, double timstamp);
   void  drawRangePulse(const XYRangePulse&, double timestamp);
+  
+  void  drawCommsPulses(const std::vector<XYCommsPulse>&, double timstamp);
+  void  drawCommsPulse(const XYCommsPulse&, double timestamp);
   
   void  drawPoints(const std::vector<XYPoint>&);
   void  drawPoint(const XYPoint&);

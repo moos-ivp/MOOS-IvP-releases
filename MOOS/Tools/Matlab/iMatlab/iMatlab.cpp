@@ -72,6 +72,7 @@ extern "C" {
  #if MX_API_VER>=0x07030000
   #define DIM_TYPE mwSize
  #else
+#warning MX_API_VER
   #define DIM_TYPE int
  #endif
 #endif
@@ -248,7 +249,7 @@ bool OnMOOSConnect(void * pParam)
 }
 
 
-//called the fist time iMatlab runs or when 'init' is passed as teh first parameter
+//called the fist time iMatlab runs or when 'init' is passed as the first parameter
 bool Initialise(const mxArray *prhs[], int nrhs)
 {
     
@@ -637,14 +638,25 @@ void iMatlab( int nlhs, mxArray *plhs[], int nrhs, const mxArray  *prhs[] )
                             mxSetFieldByNumber(plhs[0],i,nTypeField,mxCreateString(pType));
                             
                             //copy in time
-                            mxSetFieldByNumber(plhs[0],i,nTimeField,mxCreateScalarDouble(p->GetTime()));    
-                            
+                            //  Note: mxCreateScalarDouble is deprecated as of Matlab 2011a, see:
+                            //      http://xerxes.robots.ox.ac.uk:8000/ticket/52
+                            //      MX_API_VER = 7.04 for 2010b and 2011b
+                            #ifdef mxCreateScalarDouble     
+                                mxSetFieldByNumber(plhs[0],i,nTimeField,mxCreateScalarDouble(p->GetTime()));    
+                            #else
+                                mxSetFieldByNumber(plhs[0],i,nTimeField,mxCreateDoubleScalar(p->GetTime()));    
+                            #endif
+
                             //copy in sVal
                             mxSetFieldByNumber(plhs[0],i,nStrField,mxCreateString(p->m_sVal.c_str()));
                             
                             //copy in dfVal
-                            mxSetFieldByNumber(plhs[0],i,nDblField,mxCreateScalarDouble(p->GetDouble()));    
-                            
+                            #ifdef mxCreateScalarDouble
+                                mxSetFieldByNumber(plhs[0],i,nDblField,mxCreateScalarDouble(p->GetDouble()));    
+                            #else
+                                mxSetFieldByNumber(plhs[0],i,nDblField,mxCreateDoubleScalar(p->GetDouble()));    
+                            #endif
+
                             //copy in src process
                             mxSetFieldByNumber(plhs[0],i,nSrcField,mxCreateString(p->m_sSrc.c_str()));
                             

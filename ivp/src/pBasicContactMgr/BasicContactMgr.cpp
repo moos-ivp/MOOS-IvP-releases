@@ -96,7 +96,7 @@ bool BasicContactMgr::OnNewMail(MOOSMSG_LIST &NewMail)
       m_nav_lat = dval;
       m_pos_timestamp = mtime;
     }
-    else if(key == "NAV_LON") {
+    else if(key == "NAV_LONG") {
       m_nav_lon = dval;
       m_pos_timestamp = mtime;
     }
@@ -137,7 +137,7 @@ void BasicContactMgr::RegisterVariables()
   m_Comms.Register("NAV_X", 0);
   m_Comms.Register("NAV_Y", 0);
   m_Comms.Register("NAV_LAT", 0);
-  m_Comms.Register("NAV_LON", 0);
+  m_Comms.Register("NAV_LONG", 0);
   m_Comms.Register("NAV_SPEED", 0);
   m_Comms.Register("NAV_HEADING", 0);
   m_Comms.Register("NAV_DEPTH", 0);
@@ -273,7 +273,7 @@ void BasicContactMgr::postErrorMsg(const string& msg)
 //   Example: NAME=alpha,TYPE=KAYAK,UTC_TIME=1267294386.51,
 //            X=29.66,Y=-23.49, LAT=43.825089,LON=-70.330030, 
 //            SPD=2.00,HDG=119.06,YAW=119.05677,DEPTH=0.00,     
-//            LENGTH=4.0,MODE=ENGAGED
+//            LENGTH=4.0,MODE=DRIVE
 
 bool BasicContactMgr::handleNodeReport(const string& report)
 {

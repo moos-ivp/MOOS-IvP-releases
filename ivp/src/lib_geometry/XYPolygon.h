@@ -38,6 +38,8 @@ public:
   bool   add_vertex(double, double, double, std::string, bool=true);
   bool   alter_vertex(double, double, double=0);
   bool   delete_vertex(double, double);
+  void   grow_by_pct(double pct);
+  void   grow_by_amt(double amt);
   bool   insert_vertex(double, double, double=0);
   bool   is_clockwise() const;
 
@@ -54,7 +56,7 @@ public:
   double dist_to_poly(double px, double py, double angle) const;
   bool   seg_intercepts(double, double, double, double) const;
   bool   vertex_is_viewable(unsigned int, double, double) const;
-  bool   is_convex() const  {return(convex_state);};
+  bool   is_convex() const  {return(m_convex_state);};
   void   determine_convexity();
 
   XYSegList exportSegList(double x=0, double y=0);
@@ -65,9 +67,9 @@ protected:
   void   set_side(int);
 
 private:
-  std::vector<int> side_xy;
+  std::vector<int> m_side_xy;
 
-  bool convex_state;
+  bool     m_convex_state;
 };
 
 #endif

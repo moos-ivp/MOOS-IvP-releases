@@ -20,42 +20,46 @@
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
-#include <string>
-#include "MOOSLib.h"
-#include "MOOSGenLib.h"
-#include "ProcessWatch.h"
+#include <iostream>
 #include "MBUtils.h"
-#include "ReleaseInfo.h"
+#include "ColorParse.h"
+#include "ProcessWatch.h"
+#include "ProcessWatch_Info.h"
 
 using namespace std;
 
 int main(int argc, char *argv[])
 {
-  // Look for a request for version information
-  if(scanArgs(argc, argv, "-v", "--version", "-version")) {
-    showReleaseInfo("uProcessWatch", "gpl");
-    return(0);
-  }
+  string mission_file;
+  string run_command = argv[0];
 
-  // Look for a request for help or usage information
-  if(scanArgs(argc, argv, "-h", "--help", "-help")) {
-    MOOSTrace("Usage: uProcessWatch moosfile.moos   \n");
-    return(0);
-  }
-
-  string sMissionFile = "ProcessWatch.moos";
-  string sMOOSName = "uProcessWatch";
-
-  switch(argc) {
-  case 3:
-    sMOOSName = argv[2];
-  case 2:
-    sMissionFile = argv[1];
+  for(int i=1; i<argc; i++) {
+    string argi = argv[i];
+    if((argi=="-v") || (argi=="--version") || (argi=="-version"))
+      showReleaseInfoAndExit();
+    else if((argi=="-e") || (argi=="--example") || (argi=="-example"))
+      showExampleConfigAndExit();
+    else if((argi == "-h") || (argi == "--help") || (argi=="-help"))
+      showHelpAndExit();
+    else if((argi == "-i") || (argi == "--interface"))
+      showInterfaceAndExit();
+    else if(strEnds(argi, ".moos") || strEnds(argi, ".moos++"))
+      mission_file = argv[i];
+    else if(strBegins(argi, "--alias="))
+      run_command = argi.substr(8);
+    else if(i==2)
+      run_command = argi;
   }
   
-  ProcessWatch ProcessWatch;
-  
-  ProcessWatch.Run(sMOOSName.c_str(), sMissionFile.c_str());
+  if(mission_file == "")
+    showHelpAndExit();
+
+  cout << termColor("green");
+  cout << "uProcessWatch launching as " << run_command << endl;
+  cout << termColor() << endl;
+
+  ProcessWatch process_watch;
+  process_watch.Run(run_command.c_str(), mission_file.c_str());
   
   return(0);
 }

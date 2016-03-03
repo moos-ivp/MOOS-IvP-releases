@@ -46,6 +46,7 @@ PMV_Viewer::PMV_Viewer(int x, int y, int w, int h, const char *l)
   m_reference_point     = "datum";
   m_reference_bearing   = "relative";
   m_stale_report_thresh = 5;
+  m_stale_report_thresh_nodraw = 120;
   m_mouse_x   = 0;
   m_mouse_y   = 0;
   m_mouse_lat = 0;
@@ -53,7 +54,7 @@ PMV_Viewer::PMV_Viewer(int x, int y, int w, int h, const char *l)
   m_lclick_ix = 0;
   m_rclick_ix = 0;
   
-  string str = "x=$(XPOS),y=$(YPOS),lat=$(LAT),lon=$(LON)";
+  string str = "x=$(XPOS),y=$(YPOS),lat=$(LAT),lon=$(LON),";
   str += "vname=$(VNAME),counter=$(IX)";
   VarDataPair lft_pair("MVIEWER_LCLICK", str); 
   VarDataPair rgt_pair("MVIEWER_RCLICK", str);
@@ -78,20 +79,24 @@ void PMV_Viewer::draw()
   for(i=0; i<vsize; i++) {
     vector<XYPolygon> polys   = m_geoshapes_map.getPolygons(vnames[i]);
     vector<XYGrid>    grids   = m_geoshapes_map.getGrids(vnames[i]);
+    vector<XYConvexGrid> cgrids = m_geoshapes_map.getConvexGrids(vnames[i]);
     vector<XYPoint>   points  = m_geoshapes_map.getPoints(vnames[i]);
     vector<XYSegList> segls   = m_geoshapes_map.getSegLists(vnames[i]);
     vector<XYCircle>  circles = m_geoshapes_map.getCircles(vnames[i]);
     vector<XYVector>  vectors = m_geoshapes_map.getVectors(vnames[i]);
-    vector<XYRangePulse> pulses = m_geoshapes_map.getRangePulses(vnames[i]);
+    vector<XYRangePulse> rng_pulses = m_geoshapes_map.getRangePulses(vnames[i]);
+    vector<XYCommsPulse> cms_pulses = m_geoshapes_map.getCommsPulses(vnames[i]);
     vector<XYMarker>  markers = m_geoshapes_map.getMarkers(vnames[i]);
-    
+
     drawPolygons(polys);
     drawGrids(grids);
+    drawConvexGrids(cgrids);
     drawSegLists(segls);
     drawCircles(circles);
     drawPoints(points);
     drawVectors(vectors);
-    drawRangePulses(pulses, m_curr_time);
+    drawRangePulses(rng_pulses, m_curr_time);
+    drawCommsPulses(cms_pulses, m_curr_time);
     drawMarkers(markers);
   }
 
@@ -174,8 +179,12 @@ int PMV_Viewer::handle(int event)
 
 bool PMV_Viewer::setParam(string param, string value)
 {
+  if(strContains(param, "comms"))
+    cout << "PMV_VIewer::setparam: " << param << " value:" << value << endl;
   if(MarineViewer::setParam(param, value))
     return(true);
+  if(strContains(param, "comms"))
+    cout << "PMV_VIewer::setparam(B): " << param << " value:" << value << endl;
 
   param = tolower(stripBlankEnds(param));
   value = stripBlankEnds(value);
@@ -222,6 +231,11 @@ bool PMV_Viewer::setParam(string param, string value)
     double dval = atof(value.c_str());
     if(isNumber(value) && (dval > 0))
       m_stale_report_thresh = dval;
+  }
+  else if(param == "stale_report_thresh_nodraw") {
+    double dval = atof(value.c_str());
+    if(isNumber(value) && (dval > 0))
+      m_stale_report_thresh_nodraw = dval;
   }
   else if(param == "lclick_ix_start") {
     if(isNumber(value)) {
@@ -294,6 +308,10 @@ void PMV_Viewer::drawVehicle(string vname, bool active, string vehibody)
   if(!record.valid())  // FIXME more rigorous test
     return;
 
+  double age_report = m_vehiset.getDoubleInfo(vname, "age_ais");
+  if(age_report > m_stale_report_thresh_nodraw)
+    return;
+
   BearingLine bng_line = m_vehiset.getBearingLine(vname);
 
   // If there has been no explicit mapping of color to the given vehicle
@@ -308,7 +326,6 @@ void PMV_Viewer::drawVehicle(string vname, bool active, string vehibody)
   string vnames_mode = m_vehi_settings.getVehiclesNameMode();
   
   double shape_scale  = m_vehi_settings.getVehiclesShapeScale();
-  double age_report   = m_vehiset.getDoubleInfo(vname, "age_ais");
 
   //  double shape_length = m_vehiset.getDoubleInfo(vname, "vlength") * shape_scale;
   record.setLength(record.getLength() * shape_scale);
@@ -348,6 +365,7 @@ void PMV_Viewer::drawVehicle(string vname, bool active, string vehibody)
   } 
 
   record.setName(vname_aug);
+
   drawCommonVehicle(record, bng_line, vehi_color, vname_color, 
 		    vname_draw, 1);
 }

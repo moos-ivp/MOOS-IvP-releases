@@ -94,14 +94,14 @@ int MarineViewer::handle(int event)
 {
   int result;
  
-  if (event == FL_MOUSEWHEEL) {
-    if (Fl::event_dy () < 0) {
-      // Not great, value copied from MarineGUI::cb_Zoom_i (int).
+  if(event == FL_MOUSEWHEEL) {
+    if(Fl::event_dy () < 0) {
       setParam("zoom", 1.05);
+      redraw();
     }
-    else if (Fl::event_dy () > 0) {
-      // Not great, value copied from MarineGUI::cb_Zoom_i (int).
-      setParam("zoom", 0.80);
+    else if(Fl::event_dy () > 0) {
+      setParam("zoom", 0.95);
+      redraw();
     }
     result = 1;
   }
@@ -197,7 +197,6 @@ bool MarineViewer::setParam(string param, double v)
     m_zoom *= v;
     if(m_zoom < 0.00001)      
       m_zoom = 0.00001;
-    cout << "zoom:" << m_zoom << endl;
   }
   else if(param == "pan_x") {
     double pix_shift = v * m_back_img.get_pix_per_mtr_x();
@@ -537,7 +536,7 @@ void MarineViewer::drawCommonVehicle(const NodeRecord& record,
 				     unsigned int outer_line)
 {
   string vname    = record.getName();
-  string vehibody = record.getType();
+  string vehibody = tolower(record.getType());
   double vlength  = record.getLength();
 
   glMatrixMode(GL_PROJECTION);
@@ -726,10 +725,11 @@ void MarineViewer::drawMarker(const XYMarker& marker)
 
   vector<ColorPack> color_vector;
 
-  string mtype = marker.get_type();
-  string label = marker.get_label();
-  double x     = marker.get_vx();
-  double y     = marker.get_vy();
+  string mtype   = marker.get_type();
+  string label   = marker.get_label();
+  string message = marker.get_msg();
+  double x       = marker.get_vx();
+  double y       = marker.get_vy();
   double shape_width = marker.get_width() * gscale;
 
   if(shape_width <= 0)
@@ -853,14 +853,17 @@ void MarineViewer::drawMarker(const XYMarker& marker)
 
   bool draw_labels = m_geo_settings.viewable("marker_viewable_labels");
 
-  if(draw_labels &&(label != "")) {
+  if(draw_labels && ((label != "") || (message != ""))) {
     glColor3f(labelc.red(), labelc.grn(), labelc.blu());
     gl_font(1, 10);
     if(m_zoom > 4)
       gl_font(1, 12);
     double offset = 4.0 * (1/m_zoom);
     glRasterPos3f(offset, offset, 0);
-    gl_draw(label.c_str());
+    if(message != "")
+      gl_draw(message.c_str());
+    else
+      gl_draw(label.c_str());
   }
 
   glPopMatrix();
@@ -1050,8 +1053,12 @@ void MarineViewer::drawPolygon(const XYPolygon& poly)
     vert_c = poly.get_color("vertex");
   if(poly.color_set("edge"))             // edge_color
     edge_c = poly.get_color("edge");
-  if(poly.color_set("fill"))             // edge_color
+  if(poly.color_set("fill"))             // fill_color
     fill_c = poly.get_color("fill");
+  
+  double transparency = 0.2;
+  if(poly.transparency_set())
+    transparency = poly.get_transparency();
 
   double line_width  = m_geo_settings.geosize("polygon_line_size");
   double vertex_size = m_geo_settings.geosize("polygon_vertex_size");
@@ -1097,7 +1104,7 @@ void MarineViewer::drawPolygon(const XYPolygon& poly)
   // "valid" too, but we decide here not to draw the interior
   if((vsize > 2) && poly.is_convex() && fill_c.visible()) {
     glEnable(GL_BLEND);
-    glColor4f(fill_c.red(), fill_c.grn(), fill_c.blu(), 0.1);
+    glColor4f(fill_c.red(), fill_c.grn(), fill_c.blu(), transparency);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glBegin(GL_POLYGON);
     for(i=0; i<vsize*2; i=i+2) {
@@ -1109,7 +1116,7 @@ void MarineViewer::drawPolygon(const XYPolygon& poly)
   
   // Now draw the edges - if the polygon is invalid, don't draw
   // the last edge.
-  if(vsize > 1) {
+  if((vsize > 1) && (line_width > 0)) {
     glLineWidth(line_width);
     glColor3f(edge_c.red(), edge_c.grn(), edge_c.blu());
     
@@ -1165,7 +1172,7 @@ void MarineViewer::drawPolygon(const XYPolygon& poly)
     string plabel = poly.get_msg();
     if(plabel == "")
       plabel = poly.get_label();
-    if(plabel != "") {
+    if((plabel != "") && (plabel != "_null_")) {
       glRasterPos3f(0, 0, 0);
       gl_draw(plabel.c_str());
     }
@@ -1626,6 +1633,118 @@ void MarineViewer::drawGrid(const XYGrid& grid)
 }
 
 //-------------------------------------------------------------
+// Procedure: drawConvexGrids
+
+void MarineViewer::drawConvexGrids(const vector<XYConvexGrid>& grids)
+{
+  if(m_geo_settings.viewable("grid_viewable_all", true) == false)
+    return;
+
+  unsigned int i, vsize = grids.size();
+  for(i=0; i<vsize; i++)
+    drawConvexGrid(grids[i]);
+}
+
+//-------------------------------------------------------------
+// Procedure: drawConvexGrid
+
+void MarineViewer::drawConvexGrid(const XYConvexGrid& grid)
+{
+  FColorMap cmap;
+
+  unsigned int gsize = grid.size();
+  if(gsize == 0)
+    return;
+
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  glOrtho(0, w(), 0, h(), -1 ,1);
+
+  double tx = meters2img('x', 0);
+  double ty = meters2img('y', 0);
+  double qx = img2view('x', tx);
+  double qy = img2view('y', ty);
+
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+  glLoadIdentity();
+
+  glLineWidth(0.5);  // added dec1306
+  glTranslatef(qx, qy, 0);
+  glScalef(m_zoom, m_zoom, m_zoom);
+
+  unsigned int i;
+  double px[4];
+  double py[4];
+
+  double min_eval, max_eval, range = 0;
+
+  //cout << "min_limited:" << grid.cellVarMinLimited() << endl;
+  //cout << "max_limited:" << grid.cellVarMaxLimited() << endl << endl;
+
+
+  if(grid.cellVarMaxLimited() && grid.cellVarMinLimited()) {
+    min_eval = grid.getMinLimit();
+    max_eval = grid.getMaxLimit();
+    range  = max_eval - min_eval;
+  }
+  else {
+    min_eval = grid.getMin();
+    max_eval = grid.getMax();
+    range  = max_eval - min_eval;
+  }
+  
+  double cell_transparency = m_geo_settings.transparency("grid_transparency", 0.3);
+  double edge_transparency = cell_transparency * 0.6;
+  
+  for(i=0; i<gsize; i++) {
+    XYSquare element = grid.getElement(i);
+
+    px[0] = element.getVal(0,0) * m_back_img.get_pix_per_mtr_x();
+    py[0] = element.getVal(1,0) * m_back_img.get_pix_per_mtr_y();
+    px[1] = element.getVal(0,1) * m_back_img.get_pix_per_mtr_x();
+    py[1] = element.getVal(1,0) * m_back_img.get_pix_per_mtr_y();
+    px[2] = element.getVal(0,1) * m_back_img.get_pix_per_mtr_x();
+    py[2] = element.getVal(1,1) * m_back_img.get_pix_per_mtr_y();
+    px[3] = element.getVal(0,0) * m_back_img.get_pix_per_mtr_x();
+    py[3] = element.getVal(1,1) * m_back_img.get_pix_per_mtr_y();
+
+    // Draw the internal parts of the cells if range is nonzero.
+    if(range > 0) {
+      double   eval = grid.getVal(i);
+      double   pct  = (eval-min_eval)/(range);
+      double   r    = cmap.getIRVal(pct);
+      double   g    = cmap.getIGVal(pct);
+      double   b    = cmap.getIBVal(pct);
+      
+      glEnable(GL_BLEND);
+      //glColor4f(r,g,b,0.3);
+      glColor4f(r,g,b,cell_transparency);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      glBegin(GL_POLYGON);
+      for(int j=0; j<4; j++)
+	glVertex2f(px[j], py[j]);
+      glEnd();
+      glDisable(GL_BLEND);
+    }
+
+    // Begin Draw the cell edges
+    glEnable(GL_BLEND);
+    glColor4f(0.6,0.6,0.6,edge_transparency);
+    glBegin(GL_LINE_LOOP);
+    for(int k=0; k<4; k++)
+      glVertex2f(px[k], py[k]);
+    glEnd();
+    glDisable(GL_BLEND);
+    // End Draw the cell edges
+    
+  }
+
+  glFlush();
+  glPopMatrix();
+}
+
+//-------------------------------------------------------------
 // Procedure: drawCircles
 
 void MarineViewer::drawCircles(const vector<XYCircle>& circles)
@@ -1660,6 +1779,12 @@ void MarineViewer::drawCircle(const XYCircle& circle, unsigned int pts)
     vert_c = circle.get_color("vertex");
   if(circle.color_set("edge"))           // edge_color
     edge_c = circle.get_color("edge");  
+  if(circle.color_set("fill"))             // fill_color
+    fill_c = circle.get_color("fill");
+
+  double transparency = 0.2;
+  if(circle.transparency_set())
+    transparency = circle.get_transparency();
 
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
@@ -1713,11 +1838,11 @@ void MarineViewer::drawCircle(const XYCircle& circle, unsigned int pts)
     glVertex2f(points[i], points[i+1]);
   }
   glEnd();
-  
+
   // If filled option is on, draw the interior of the circle
   if(fill_c.visible()) {
     glEnable(GL_BLEND);
-    glColor4f(fill_c.red(), fill_c.grn(), fill_c.blu(), 0.1);
+    glColor4f(fill_c.red(), fill_c.grn(), fill_c.blu(), transparency);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glBegin(GL_POLYGON);
     for(i=0; i<actual_pts*2; i=i+2) {
@@ -1804,6 +1929,92 @@ void MarineViewer::drawRangePulse(const XYRangePulse& pulse,
   double fill_degree = pulse.get_fill(timestamp);
 
   // If filled option is on, draw the interior of the circle
+  if((fill_degree > 0) && fill_c.visible()) {
+    glEnable(GL_BLEND);
+    glColor4f(fill_c.red(), fill_c.grn(), fill_c.blu(), fill_degree);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBegin(GL_POLYGON);
+    for(i=0; i<pcnt; i=i+2)
+      glVertex2f(points[i], points[i+1]);
+    glEnd();
+    glDisable(GL_BLEND);
+  }
+
+  glFlush();
+  glPopMatrix();  
+}
+
+//-------------------------------------------------------------
+// Procedure: drawCommsPulses
+
+void MarineViewer::drawCommsPulses(const vector<XYCommsPulse>& pulses,
+				   double timestamp)
+{
+  // If the viewable parameter is set to false just return. In 
+  // querying the parameter the optional "true" argument means return
+  // true if nothing is known about the parameter.
+  if(!m_geo_settings.viewable("comms_pulses_viewable_all", true))
+    return;
+
+  unsigned int i, vsize = pulses.size();
+
+  for(i=0; i<vsize; i++)
+    if(pulses[i].active())
+      drawCommsPulse(pulses[i], timestamp);
+}
+
+//-------------------------------------------------------------
+// Procedure: drawCommsPulse
+
+void MarineViewer::drawCommsPulse(const XYCommsPulse& pulse,
+				  double timestamp)
+{
+  ColorPack fill_c("light_blue");
+  if(pulse.color_set("fill"))           // fill_color
+    fill_c = pulse.get_color("fill");
+  
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  glOrtho(0, w(), 0, h(), -1 ,1);
+  
+  double tx = meters2img('x', 0);
+  double ty = meters2img('y', 0);
+  double qx = img2view('x', tx);
+  double qy = img2view('y', ty);
+
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+  glLoadIdentity();
+  
+  glLineWidth(1.0); 
+  glTranslatef(qx, qy, 0);
+  glScalef(m_zoom, m_zoom, m_zoom);
+
+  vector<double> points = pulse.get_triangle(timestamp);
+  unsigned int vsize   = points.size();
+  unsigned int i, pcnt = vsize;
+
+  double pix_per_mtr_x = m_back_img.get_pix_per_mtr_x();
+  double pix_per_mtr_y = m_back_img.get_pix_per_mtr_y();
+  for(i=0; i<pcnt; i=i+2) {
+    points[i]   *= pix_per_mtr_x;
+    points[i+1] *= pix_per_mtr_y;
+  }
+
+#if 0
+  // Draw the triangle line
+  glColor3f(fill_c.red(), fill_c.grn(), fill_c.blu());
+  glBegin(GL_LINE_LOOP);
+  for(i=0; i<pcnt; i=i+2) 
+    glVertex2f(points[i], points[i+1]);
+  glEnd();
+#endif
+
+  // Determine the fill degree [0,1]. 1 is completely opaque
+  //double fill_degree = pulse.get_fill(timestamp);
+  double fill_degree = 0.5;
+
+  // If filled option is on, draw the interior of the triangle
   if((fill_degree > 0) && fill_c.visible()) {
     glEnable(GL_BLEND);
     glColor4f(fill_c.red(), fill_c.grn(), fill_c.blu(), fill_degree);

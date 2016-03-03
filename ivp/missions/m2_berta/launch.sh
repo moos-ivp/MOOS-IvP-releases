@@ -1,4 +1,4 @@
-#!/bin/sh 
+#!/bin/bash 
 
 WARP=1
 HELP="no"
@@ -25,7 +25,7 @@ for ARGI; do
         let "COUNT=$COUNT+1"
         UNDEFINED_ARG=""
     fi
-    if [ "${ARGI}" = "--just_build" ] ; then
+    if [ "${ARGI}" = "--just_build" -o "${ARGI}" = "-j" ] ; then
 	JUST_BUILD="yes"
 	UNDEFINED_ARG=""
     fi
@@ -43,7 +43,7 @@ if [ "${HELP}" = "yes" ]; then
     printf "%s [SWITCHES]         \n" $0
     printf "Switches:             \n" 
     printf "  --warp=WARP_VALUE   \n" 
-    printf "  --just_build        \n" 
+    printf "  --just_build, -j    \n" 
     printf "  --help, -h          \n" 
     exit 0;
 fi
@@ -82,6 +82,8 @@ nsplug meta_vehicle.moos targ_gilda.moos -f WARP=$WARP       \
 nsplug meta_shoreside.moos targ_shoreside.moos -f WARP=$WARP    \
    VNAME1=$VNAME1 VNAME2=$VNAME2 VPORT1=$VPORT1 VPORT2=$VPORT2  \
    SPORT=$SPORT SNAME=$SNAME
+
+nsplug meta_shoresidex.moos targ_shoresidex.moos -f WARP=$WARP
 
 nsplug meta_vehicle.bhv targ_henry.bhv -f VNAME=$VNAME1      \
     START_POS=$START_POS1 LOITER_POS=$LOITER_POS1       

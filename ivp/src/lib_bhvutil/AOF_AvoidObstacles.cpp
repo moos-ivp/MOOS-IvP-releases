@@ -20,7 +20,6 @@
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
 
-#include <iostream>
 #include <string>
 #include "AOF_AvoidObstacles.h"
 #include "AngleUtils.h"
@@ -129,8 +128,7 @@ bool AOF_AvoidObstacles::initialize()
   if(!activation_dist_set)
     return(false);
   
-  unsigned int  i, j;
-  unsigned int  osize = m_obstacles_buff.size();
+  unsigned int  i, j, osize = m_obstacles_buff.size();
   if(osize == 0)
     return(false);
   for(i=0; i<osize; i++)
@@ -368,7 +366,7 @@ double AOF_AvoidObstacles::evalBox(const IvPBox *b) const
   double max_utility = 100;
   double min_utility = 0;
 
-  int osize = m_obstacles_buff.size();
+  unsigned i, osize = m_obstacles_buff.size();
   if(osize == 0)
     return(max_utility);
   
@@ -393,7 +391,7 @@ double AOF_AvoidObstacles::evalBox(const IvPBox *b) const
 
 
   double lowest_utility;
-  for(int i=0; i<osize; i++) {
+  for(i=0; i<osize; i++) {
     double i_utility;
 
     int   heading_index = b->pt(crs_ix, 0);
@@ -401,10 +399,11 @@ double AOF_AvoidObstacles::evalBox(const IvPBox *b) const
 
     if(dist_to_poly == -1) 
       i_utility = max_utility;
+    else if(eval_spd == 0)
+     i_utility = max_utility;
     else {
       // determine time to collision w/ poly (in seconds)
       double time_to_collision = dist_to_poly / eval_spd;
-      
       if(time_to_collision > allowable_ttc)
 	i_utility = max_utility;
       else

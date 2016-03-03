@@ -203,8 +203,17 @@ bool CMOOSScheduler::AddSequences()
                 continue;
 
             //get the names
+
+#if 1 // Fix by mikerb
+            string sNameVal = MOOSChomp(sVal,":");
+            string sName = MOOSChomp(sNameVal,"@");
+#endif
+
+#if 0 // Erroneous. fixed with above by mikerb
             string sName = MOOSChomp(sVal,":");
             string sNameVal = MOOSChomp(sVal,"@");
+#endif
+
             if(sVal.empty())
             {
                 MOOSTrace("Missing time in sequence setting!");

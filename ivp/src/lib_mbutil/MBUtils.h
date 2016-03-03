@@ -70,6 +70,7 @@ std::string doubleToHex(double);
 
 std::string packageToString(const std::vector<std::string>&);
 
+bool isValidIPAddress(const std::string&);
 bool strContains(const std::string&, const std::string&);
 bool strContains(const std::string&, const char);
 bool strContainsWhite(const std::string&);
@@ -86,6 +87,8 @@ std::string tokStringParse(const std::string&, const std::string&,
 double tokDoubleParse(const std::string&, const std::string&, 
 		      char, char);
 
+double minElement(const std::vector<double>&);
+double maxElement(const std::vector<double>&);
 double vclip(const double& var, const double& low, const double& high);
 double vclip_min(const double& var, const double& low);
 double vclip_max(const double& var, const double& high);

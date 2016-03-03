@@ -35,10 +35,13 @@ public:
 
   bool   setParam(const std::string& param, std::string value);
   bool   setColorMapping(std::string, std::string);
+  bool   setTransparencyMapping(std::string, std::string);
   bool   setViewableMapping(std::string, std::string);
+  bool   setGSizeMapping(std::string, std::string, double max=0);
+
   bool   viewable(const std::string&, bool view_default=true);
   double geosize(const std::string&, double size_default=0);
-  bool   setGSizeMapping(std::string, std::string, double max=0);
+  double transparency(const std::string&, double size_default=0.5);
   
   ColorPack geocolor(const std::string&, 
 		     std::string color_default="");
@@ -49,6 +52,8 @@ protected:
   std::map<std::string, ColorPack>  m_color_map;
   std::map<std::string, bool>       m_viewable_map;
   std::map<std::string, double>     m_gsize_map;
+  std::map<std::string, double>     m_trans_map;
+  
 };
 
 #endif

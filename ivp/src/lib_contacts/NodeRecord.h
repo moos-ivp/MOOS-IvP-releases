@@ -42,29 +42,37 @@ class NodeRecord
   void setHeading(double v)   {m_heading=v;    m_heading_set=true;};
   void setHeadingOG(double v) {m_heading_og=v; m_heading_og_set=true;};
   void setYaw(double v)       {m_yaw=v;        m_yaw_set=true;};
+  void setPitch(double v)     {m_pitch=v;      m_pitch_set=true;};
   void setDepth(double v)     {m_depth=v;      m_depth_set=true;};
   void setLength(double v)    {m_length=v;     m_length_set=true;};
   void setTimeStamp(double v) {m_timestamp=v;  m_timestamp_set=true;};
+  void setAltitude(double v)  {m_altitude=v;   m_altitude_set=true;};
 
   void setName(std::string s)    {m_name=s;};
+  void setGroup(std::string s)   {m_group=s;};
   void setType(std::string s)    {m_type=s;};
   void setMode(std::string s)    {m_mode=s;};
   void setAllStop(std::string s) {m_allstop=s;};
 
   void setProperty(std::string, std::string);
 
-  double getX() const         {return(m_x);};
-  double getY() const         {return(m_y);};
-  double getLat() const       {return(m_lat);};
-  double getLon() const       {return(m_lon);};
-  double getSpeed() const     {return(m_speed);};
-  double getSpeedOG() const   {return(m_speed_og);};
-  double getHeading() const   {return(m_heading);};
-  double getHeadingOG() const {return(m_heading_og);};
-  double getYaw() const       {return(m_heading);};
-  double getDepth() const     {return(m_depth);};
-  double getLength() const    {return(m_length);};
-  double getTimeStamp() const {return(m_timestamp);};
+  double getX() const          {return(m_x);};
+  double getY() const          {return(m_y);};
+  double getLat() const        {return(m_lat);};
+  double getLon() const        {return(m_lon);};
+  double getSpeed() const      {return(m_speed);};
+  double getSpeedOG() const    {return(m_speed_og);};
+  double getHeading() const    {return(m_heading);};
+  double getHeadingOG() const  {return(m_heading_og);};
+  double getYaw() const        {return(m_yaw);};
+  double getPitch() const      {return(m_pitch);};
+  double getDepth() const      {return(m_depth);};
+  double getAltitude() const   {return(m_altitude);};
+  double getLength() const     {return(m_length);};
+  double getTimeStamp() const  {return(m_timestamp);};
+  
+  bool   isSetAltitude() const {return(m_altitude_set);};
+  
 
   double getElapsedTime(double) const;
   bool   hasProperty(std::string) const;
@@ -72,6 +80,7 @@ class NodeRecord
   std::string getProperty(std::string) const;
 
   std::string getName(std::string s="") const;
+  std::string getGroup(std::string s="") const;
   std::string getType(std::string s="") const;
   std::string getMode(std::string s="") const;
   std::string getAllStop(std::string s="") const;
@@ -88,12 +97,15 @@ class NodeRecord
   double m_heading;
   double m_heading_og;  // Heading over ground
   double m_yaw;
+  double m_pitch;
   double m_depth;
+  double m_altitude;
   double m_lat;
   double m_lon;
   double m_length;
   double m_timestamp;
   std::string  m_name;
+  std::string  m_group;
   std::string  m_type;
   std::string  m_mode;
   std::string  m_allstop;
@@ -107,7 +119,9 @@ class NodeRecord
   bool m_heading_set;
   bool m_heading_og_set;
   bool m_yaw_set;
+  bool m_pitch_set;
   bool m_depth_set;
+  bool m_altitude_set;
   bool m_length_set;
   bool m_timestamp_set;
 

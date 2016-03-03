@@ -32,9 +32,12 @@ using namespace std;
 
 void showReleaseInfo(string app, string license_info)
 {
-  string pad = padString("", (16-app.length()));
+  string pad = "";
+  if(app.length() < 22)
+    pad = padString("", (22-app.length()));
   cout << "************************************************************************" << endl;
-  cout << "* " + app + " - MOOS-IvP Release Bundle - VERSION 4.2.2" + pad + "  r3531 *" << endl;
+  cout << "* " + app + " - Part of the MOOS-IvP Release Bundle         " + pad +"*" << endl;
+  cout << "* Version 12.2, Released Feb 6th, 2012                                 *" << endl;
   cout << "* M.Benjamin, H.Schmidt and J.Leonard (MIT), P.Newman (Oxford)         *" << endl;
   if(license_info == "gpl") {
     cout << "* Copyright (C) 2008 Free Software Foundation, Inc.                    *" << endl;

@@ -75,6 +75,8 @@ bool USM_MOOSApp::OnNewMail(MOOSMSG_LIST &NewMail)
       m_model.setForceVector(sval, true);
     else if(key == "USM_FORCE_VECTOR_MULT")
       m_model.magForceVector(dval);
+    else if(key == "USM_WATER_DEPTH")
+      m_model.setParam("water_depth", dval);
     else if(key == "USM_RESET") {
       m_reset_count++;
       m_Comms.Notify("USM_RESET_COUNT", m_reset_count);
@@ -96,6 +98,11 @@ bool USM_MOOSApp::OnStartUp()
   MOOSTrace("sim starting\n");
   
   m_model.resetTime(MOOSTime());
+
+  double foobar = 23;
+  m_MissionReader.GetConfigurationParam("FOOBAR", foobar);
+
+  cout << "Value of FOOBAR is: " << foobar << endl;
 
   STRING_LIST sParams;
   m_MissionReader.GetConfiguration(GetAppName(), sParams);
@@ -161,6 +168,8 @@ bool USM_MOOSApp::OnStartUp()
       handleThrustMapping(value);
     else if(param == "TURN_RATE")
       m_model.setParam("turn_rate", dval);
+    else if(param == "DEFAULT_WATER_DEPTH")
+      m_model.setParam("water_depth", dval);
   }
 
   // look for latitude, longitude global variables
@@ -210,6 +219,7 @@ void USM_MOOSApp::registerVariables()
   m_Comms.Register("DESIRED_ELEVATOR", 0);
 
   m_Comms.Register("USM_BUOYANCY_RATE", 0);
+  m_Comms.Register("USM_WATER_DEPTH", 0);
   m_Comms.Register("USM_FORCE_X", 0);
   m_Comms.Register("USM_FORCE_Y", 0);
   m_Comms.Register("USM_FORCE_VECTOR", 0);
@@ -276,11 +286,24 @@ void USM_MOOSApp::postNodeRecordUpdate(string prefix,
   m_Comms.Notify(prefix+"_SPEED", new_speed, curr_time);
   m_Comms.Notify(prefix+"_DEPTH", record.getDepth(), curr_time);
 
+  // Added by HS 120124 to make it work ok with iHuxley
+  m_Comms.Notify("SIMULATION_MODE","TRUE", curr_time);
+  m_Comms.Notify(prefix+"_Z", -record.getDepth(), curr_time);
+  m_Comms.Notify(prefix+"_PITCH", record.getPitch(), curr_time);
+  m_Comms.Notify(prefix+"_YAW", record.getYaw(), curr_time);
+  m_Comms.Notify("TRUE_X", nav_x, curr_time);
+  m_Comms.Notify("TRUE_Y", nav_y, curr_time);
+
+
   double hog = angle360(record.getHeadingOG());
   double sog = record.getSpeedOG();
 
   m_Comms.Notify(prefix+"_HEADING_OVER_GROUND", hog, curr_time);
   m_Comms.Notify(prefix+"_SPEED_OVER_GROUND", sog, curr_time);
+  
+  if(record.isSetAltitude()) 
+    m_Comms.Notify(prefix+"_ALTITUDE", record.getAltitude(), curr_time);
+  
 }
 
 //--------------------------------------------------------------------

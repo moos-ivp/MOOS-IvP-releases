@@ -63,25 +63,29 @@ bool VPlug_GeoShapesMap::addGeoShape(const string& param,
   bool handled = false;
   unsigned int starting_map_size = m_geoshapes_map.size();
 
-  string lparam = tolower(param);
-  if(lparam == "view_polygon")
+  string lparam = toupper(param);
+  if(lparam == "VIEW_POLYGON")
     handled = m_geoshapes_map[vname].addPolygon(value);
-  else if(lparam == "view_seglist")
+  else if(lparam == "VIEW_SEGLIST")
     handled = m_geoshapes_map[vname].addSegList(value);
-  else if(lparam == "view_point")
+  else if(lparam == "VIEW_POINT")
     handled = m_geoshapes_map[vname].addPoint(value);
-  else if(lparam == "view_vector")
+  else if(lparam == "VIEW_VECTOR")
     handled = m_geoshapes_map[vname].addVector(value);
-  else if(lparam == "view_circle")
+  else if(lparam == "VIEW_CIRCLE")
     handled = m_geoshapes_map[vname].addCircle(value);
-  else if(lparam == "view_range_pulse")
+  else if(lparam == "VIEW_RANGE_PULSE")
     handled = m_geoshapes_map[vname].addRangePulse(value);
-  else if((lparam == "view_marker") || (lparam == "marker"))
+  else if(lparam == "VIEW_COMMS_PULSE")
+    handled = m_geoshapes_map[vname].addCommsPulse(value);
+  else if((lparam == "VIEW_MARKER") || (lparam == "MARKER"))
     handled = m_geoshapes_map[vname].addMarker(value);
-  else if(lparam == "grid_config")
+  else if(lparam == "grid_CONFIG")
     handled = m_geoshapes_map[vname].addGrid(value);
-  else if(lparam == "grid_delta")
+  else if(lparam == "grid_DELTA")
     handled = m_geoshapes_map[vname].updateGrid(value);
+  else if(lparam == "VIEW_GRID")
+    handled = m_geoshapes_map[vname].addConvexGrid(value);
 
   if(handled)
     updateBounds(m_geoshapes_map[vname]);
@@ -103,6 +107,7 @@ bool VPlug_GeoShapesMap::addGeoShape(const string& param,
 // Procedure: getPoints
 // Procedure: getVectors
 // Procedure: getRangePulses
+// Procedure: getCommsPulses
 // Procedure: getMarkers
 
 vector<XYPolygon> VPlug_GeoShapesMap::getPolygons(const string& vname)
@@ -121,6 +126,10 @@ vector<XYGrid> VPlug_GeoShapesMap::getGrids(const string& vname)
 {
   return(m_geoshapes_map[vname].getGrids());
 }
+vector<XYConvexGrid> VPlug_GeoShapesMap::getConvexGrids(const string& vname)
+{
+  return(m_geoshapes_map[vname].getConvexGrids());
+}
 vector<XYCircle> VPlug_GeoShapesMap::getCircles(const string& vname)
 {
   return(m_geoshapes_map[vname].getCircles());
@@ -136,6 +145,10 @@ vector<XYVector> VPlug_GeoShapesMap::getVectors(const string& vname)
 vector<XYRangePulse> VPlug_GeoShapesMap::getRangePulses(const string& vname)
 {
   return(m_geoshapes_map[vname].getRangePulses());
+}
+vector<XYCommsPulse> VPlug_GeoShapesMap::getCommsPulses(const string& vname)
+{
+  return(m_geoshapes_map[vname].getCommsPulses());
 }
 vector<XYMarker> VPlug_GeoShapesMap::getMarkers(const string& vname)
 {
@@ -155,6 +168,8 @@ unsigned int VPlug_GeoShapesMap::size(const string& gtype) const
       return_size += p->second.sizeMarkers();
     else if(gtype == "range_pulses")
       return_size += p->second.sizeRangePulses();
+    else if(gtype == "comms_pulses")
+      return_size += p->second.sizeCommsPulses();
     else if(gtype == "points")
       return_size += p->second.sizePolygons();
     else if(gtype == "polygons")
@@ -166,7 +181,9 @@ unsigned int VPlug_GeoShapesMap::size(const string& gtype) const
     else if(gtype == "circles")
       return_size += p->second.sizeCircles();
     else if(gtype == "grids")
-      return_size += p->second.sizeCircles();
+      return_size += p->second.sizeGrids();
+    else if(gtype == "convex_grids")
+      return_size += p->second.sizeConvexGrids();
     else if(gtype == "hexagons")
       return_size += p->second.sizeHexagons();
   }  
