@@ -31,6 +31,11 @@
 
 #define USE_UTM
 
+#ifdef _WIN32
+#   include <float.h>
+#   define isnan _isnan
+#endif
+
 using namespace std;
 
 PMV_Viewer::PMV_Viewer(int x, int y, int w, int h, const char *l)
@@ -413,14 +418,23 @@ void PMV_Viewer::handleMoveMouse(int vx, int vy)
   double iy = view2img('y', vy);
   double mx = img2meters('x', ix);
   double my = img2meters('y', iy);
+
+  double new_lat, new_lon;
+
+  bool ok = false;
+#ifdef USE_UTM
+  ok = m_geodesy.UTM2LatLong(mx, my, new_lat, new_lon);
+#else
+  ok = m_geodesy.LocalGrid2LatLong(mx, my, new_lat, new_lon);
+#endif
+  
+  if(!ok || isnan(new_lat) || isnan(new_lon))
+    return;
+  
   m_mouse_x = snapToStep(mx, 0.1);
   m_mouse_y = snapToStep(my, 0.1);
-
-#ifdef USE_UTM
-  m_geodesy.UTM2LatLong(mx, my, m_mouse_lat, m_mouse_lon);
-#else
-  m_geodesy.LocalGrid2LatLong(mx, my, m_mouse_lat, m_mouse_lon);
-#endif
+  m_mouse_lon = new_lon;
+  m_mouse_lat = new_lat;
 }
 
 //-------------------------------------------------------------
@@ -443,11 +457,15 @@ void PMV_Viewer::handleLeftMouse(int vx, int vy)
 
   double dlat, dlon;
 
+  bool ok = false;
 #ifdef USE_UTM
-  m_geodesy.UTM2LatLong(sx, sy, dlat, dlon);
+  ok = m_geodesy.UTM2LatLong(sx, sy, dlat, dlon);
 #else
-  m_geodesy.LocalGrid2LatLong(sx, sy, dlat, dlon);
+  ok = m_geodesy.LocalGrid2LatLong(sx, sy, dlat, dlon);
 #endif
+
+  if(!ok || isnan(dlat) || isnan(dlon))
+    return;
 
   string slat = doubleToString(dlat, 8);
   string slon = doubleToString(dlon, 8);
@@ -479,37 +497,43 @@ void PMV_Viewer::handleLeftMouse(int vx, int vy)
       string ikey = m_var_data_pairs_all[i].get_key();
       if((ikey == "any_left") || (ikey == m_left_mouse_key)) {
 	VarDataPair pair = m_var_data_pairs_all[i];
-	if(pair.is_string()) {
-	  string str = m_var_data_pairs_all[i].get_sdata();
-	  if(strContains(str, "$(XPOS)")) 
-	    str = findReplace(str, "$(XPOS)", doubleToString(sx,1));
-	  if(strContains(str, "$(X)")) 
-	    str = findReplace(str, "$(X)", doubleToString(sx,0));
-	  if(strContains(str, "$(X:1)")) 
-	    str = findReplace(str, "$(X)", doubleToString(sx,1));
-	  if(strContains(str, "$(X:2)")) 
-	    str = findReplace(str, "$(X)", doubleToString(sx,2));
-	  if(strContains(str, "$(YPOS)")) 
-	    str = findReplace(str, "$(YPOS)", doubleToString(sy,1));
-	  if(strContains(str, "$(IX)"))
-	    str = findReplace(str, "$(IX)", intToString(m_lclick_ix));
-	  if(strContains(str, "$(Y)")) 
-	    str = findReplace(str, "$(Y)", doubleToString(sy,0));
-	  if(strContains(str, "$(Y)")) 
-	    str = findReplace(str, "$(Y:1)", doubleToString(sy,1));
-	  if(strContains(str, "$(Y)")) 
-	    str = findReplace(str, "$(Y:2)", doubleToString(sy,2));
-	  if(strContains(str, "$(LAT)")) 
-	    str = findReplace(str, "$(LAT)", doubleToString(dlat,8));
-	  if(strContains(str, "$(LON)")) 
-	    str = findReplace(str, "$(LON)", doubleToString(dlon,8));
-	  if(strContains(str, "$(VNAME)")) {
-	    string vname = getStringInfo("active_vehicle_name");
-	    str = findReplace(str, "$(VNAME)", vname);
+	if(pair.get_ptype() == "left") {
+	  if(pair.is_string()) {
+	    string str = m_var_data_pairs_all[i].get_sdata();
+	    if(strContains(str, "$(XPOS)")) 
+	      str = findReplace(str, "$(XPOS)", doubleToString(sx,1));
+	    if(strContains(str, "$(X)")) 
+	      str = findReplace(str, "$(X)", doubleToString(sx,0));
+	    
+	    if(strContains(str, "$(X:1)")) 
+	      str = findReplace(str, "$(X:1)", doubleToString(sx,1));
+	    if(strContains(str, "$(X:2)")) 
+	      str = findReplace(str, "$(X:2)", doubleToString(sx,2));
+	    
+	    if(strContains(str, "$(YPOS)")) 
+	      str = findReplace(str, "$(YPOS)", doubleToString(sy,1));
+	    if(strContains(str, "$(IX)"))
+	      str = findReplace(str, "$(IX)", intToString(m_lclick_ix));
+	    
+	    if(strContains(str, "$(Y)")) 
+	      str = findReplace(str, "$(Y)", doubleToString(sy,0));
+	    if(strContains(str, "$(Y:1)")) 
+	      str = findReplace(str, "$(Y:1)", doubleToString(sy,1));
+	    if(strContains(str, "$(Y:2)")) 
+	      str = findReplace(str, "$(Y:2)", doubleToString(sy,2));
+	    
+	    if(strContains(str, "$(LAT)")) 
+	      str = findReplace(str, "$(LAT)", doubleToString(dlat,8));
+	    if(strContains(str, "$(LON)")) 
+	      str = findReplace(str, "$(LON)", doubleToString(dlon,8));
+	    if(strContains(str, "$(VNAME)")) {
+	      string vname = getStringInfo("active_vehicle_name");
+	      str = findReplace(str, "$(VNAME)", vname);
+	    }
+	    pair.set_sdata(str);
 	  }
-	  pair.set_sdata(str);
+	  m_var_data_pairs_lft.push_back(pair);
 	}
-	m_var_data_pairs_lft.push_back(pair);
       }
     }
     m_lclick_ix++;
@@ -536,11 +560,15 @@ void PMV_Viewer::handleRightMouse(int vx, int vy)
   
   double dlat, dlon;
 
+  bool ok = false;
 #ifdef USE_UTM
-  m_geodesy.UTM2LatLong(sx, sy, dlat, dlon);
+  ok = m_geodesy.UTM2LatLong(sx, sy, dlat, dlon);
 #else
-  m_geodesy.LocalGrid2LatLong(sx, sy, dlat, dlon);
+  ok = m_geodesy.LocalGrid2LatLong(sx, sy, dlat, dlon);
 #endif
+
+  if(!ok || isnan(dlat) || isnan(dlon))
+    return;
 
   // The aim is to build a vector of VarDataPairs from the "raw" set
   // residing in m_var_data_pairs_all, by replacing all $(KEY) 
@@ -551,21 +579,23 @@ void PMV_Viewer::handleRightMouse(int vx, int vy)
     string ikey = m_var_data_pairs_all[i].get_key();
     if((ikey == "any_right") || (ikey == m_right_mouse_key)) {
       VarDataPair pair = m_var_data_pairs_all[i];
-      if(pair.is_string()) {
-	string str = m_var_data_pairs_all[i].get_sdata();
-	if(strContains(str, "$(XPOS)")) 
-	  str = findReplace(str, "$(XPOS)", doubleToString(sx,1));
-	if(strContains(str, "$(YPOS)")) 
-	  str = findReplace(str, "$(YPOS)", doubleToString(sy,1));
-	if(strContains(str, "$(LAT)")) 
-	  str = findReplace(str, "$(LAT)", doubleToString(dlat,8));
-	if(strContains(str, "$(LON)")) 
+      if(pair.get_ptype() == "right") {
+	if(pair.is_string()) {
+	  string str = m_var_data_pairs_all[i].get_sdata();
+	  if(strContains(str, "$(XPOS)")) 
+	    str = findReplace(str, "$(XPOS)", doubleToString(sx,1));
+	  if(strContains(str, "$(YPOS)")) 
+	    str = findReplace(str, "$(YPOS)", doubleToString(sy,1));
+	  if(strContains(str, "$(LAT)")) 
+	    str = findReplace(str, "$(LAT)", doubleToString(dlat,8));
+	  if(strContains(str, "$(LON)")) 
 	  str = findReplace(str, "$(LON)", doubleToString(dlon,8));
-	if(strContains(str, "$(IX)")) 
-	  str = findReplace(str, "$(IX)", intToString(m_rclick_ix));
-	pair.set_sdata(str);
+	  if(strContains(str, "$(IX)")) 
+	    str = findReplace(str, "$(IX)", intToString(m_rclick_ix));
+	  pair.set_sdata(str);
+	}
+	m_var_data_pairs_rgt.push_back(pair);
       }
-      m_var_data_pairs_rgt.push_back(pair);
     }
   }
   m_rclick_ix++;
@@ -713,11 +743,12 @@ bool PMV_Viewer::isScopeVariable(string varname) const
 // Procedure: addMousePoke
 //      Note: 
 
-void PMV_Viewer::addMousePoke(string key, string vardata_pair)
+void PMV_Viewer::addMousePoke(string side, string key, string vardata_pair)
 {
-  string var  = stripBlankEnds(biteString(vardata_pair, '='));
-  string data = stripBlankEnds(vardata_pair);
+  string var  = biteStringX(vardata_pair, '=');
+  string data = vardata_pair;
   VarDataPair new_pair(var, data, "auto");
+  new_pair.set_ptype(side);
   new_pair.set_key(key);
   
   m_var_data_pairs_all.push_back(new_pair);

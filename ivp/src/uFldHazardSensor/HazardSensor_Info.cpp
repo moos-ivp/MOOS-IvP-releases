@@ -113,11 +113,13 @@ void showExampleConfigAndExit()
   blk("                                                                ");
   blk("  show_hazards  = true  // default                // default    ");
   blk("  show_swath    = true  // default                // default    ");
-  blk("  show_reports  = 60    // seconds (unlimited if unspecified)   ");
+  blk("  show_detections = 60  // seconds (unlimited if unspecified)   ");
+  blk("  show_pd       = true  // pd shown with swaths   // default    ");
+  blk("  show_pfa      = true  // pfa shown with swaths  // default    ");
   blk("                                                                ");
   blk("  min_reset_interval       = 300  // default                    ");
+  blk("  min_classify_interval    = 30   // default                    ");
   blk("  options_summary_interval = 10   // default                    ");
-  blk("  classify_period          = 30   // default                    ");
   blk("}                                                               ");
   blk("                                                                ");
   exit(0);

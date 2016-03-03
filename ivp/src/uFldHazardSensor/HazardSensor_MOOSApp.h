@@ -28,6 +28,7 @@
 #include "NodeRecord.h"
 #include "XYHazard.h"
 #include "HeadingHistory.h"
+#include "VarDataPair.h"
 
 class HazardSensor_MOOSApp : public AppCastingMOOSApp
 {
@@ -66,20 +67,22 @@ class HazardSensor_MOOSApp : public AppCastingMOOSApp
   bool    handleSensorConfig(const std::string&, const std::string&);
 
  protected: // Outgoing mail utility
-  void    addMessage(const std::string&, const std::string&);
   void    addQueueMessage(const std::string&, const std::string&, const std::string&);
-  void    addMessage(const std::string&, double);
+  void    postQueueMessages();
   void    postHazardDetectionReport(std::string hlabel, std::string vname);
   void    postHazardClassifyReport(std::string hlabel, std::string vname);
 
  protected: // Utilities
   bool    updateVehicleHazardStatus(unsigned int vix, std::string);
   bool    setVehicleSensorSetting(std::string, double, double, bool v=false);
+  bool    setVehicleSensorSettingPD(std::string, double);
   bool    processHazardFile(std::string filename);
   bool    updateNodeRecords(NodeRecord);
   bool    updateNodePolygon(unsigned int, bool sensor_on=true);
   void    updateSwathGeometry();
   void    calcSwathGeometry(double, double&, double&);
+  void    postConfigurationAck(std::string vname);
+
 
   unsigned int sensorSwathCount(double, std::string vname);
 
@@ -105,15 +108,26 @@ class HazardSensor_MOOSApp : public AppCastingMOOSApp
   std::vector<XYPolygon>       m_node_polygons;
 
   // Key for each map below is the vehicle name. Swath width and PD are
-  // requested by the user. The pfa and pc are determined from that.
+  // requested by the user. The exp, pfa and pc are determined from that.
   std::map<std::string, double>       m_map_swath_width;
+  std::map<std::string, double>       m_map_swath_roc_exp;
   std::map<std::string, double>       m_map_prob_detect;
   std::map<std::string, double>       m_map_prob_false_alarm;
   std::map<std::string, double>       m_map_prob_classify;
-  std::map<std::string, double>       m_map_reset_time;
-  std::map<std::string, unsigned int> m_map_reset_total;  
+  std::map<std::string, double>       m_map_reset_swath_time;
+  std::map<std::string, unsigned int> m_map_reset_swath_req;  
+  std::map<std::string, unsigned int> m_map_reset_swath_total;  
+  std::map<std::string, double>       m_map_reset_pd_time;
+  std::map<std::string, unsigned int> m_map_reset_pd_total;  
+
   std::map<std::string, unsigned int> m_map_sensor_reqs;  
   std::map<std::string, unsigned int> m_map_detections;
+  std::map<std::string, unsigned int> m_map_classify_reqs;  
+  std::map<std::string, unsigned int> m_map_classify_answ;
+
+  // Limited-Frequency msgs to be posted to the MOOSDB
+  std::map<std::string, std::list<VarDataPair> >  m_map_msgs_queued;
+  std::map<std::string, double>                   m_map_msg_last_queue_time;
 
  protected: // Configuration variables
   double      m_min_reset_interval;
@@ -137,6 +151,8 @@ class HazardSensor_MOOSApp : public AppCastingMOOSApp
 
   // Visual preferences
   bool        m_show_hazards;
+  bool        m_show_pd;
+  bool        m_show_pfa;
   bool        m_show_swath;
   double      m_circle_duration;
   std::string m_color_hazard;

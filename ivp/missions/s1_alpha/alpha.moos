@@ -1,4 +1,4 @@
-// Alpha Configuration file: M. Benjamin
+l// Alpha Configuration file: M. Benjamin
 
 ServerHost = localhost
 ServerPort = 9005
@@ -45,6 +45,7 @@ ProcessConfig = uProcessWatch
   summary_wait = 5
 
   nowatch   = uXMS*
+  nowatch   = uMAC*
   nowatch   = uPokeDB*
   nowatch   = uTermCommand*
   watch_all = true
@@ -214,9 +215,7 @@ ProcessConfig = pNodeReporter
   platform_length = 4
 }
 
-//----------------------------------------------------------
-// uTermCommand config block
-//
+
 // This block is here in conjunction with the uTermCommand 
 // documentation to demonstrate functionality of that tool.
 // This mission may be alternately 

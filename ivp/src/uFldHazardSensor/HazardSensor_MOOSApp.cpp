@@ -67,6 +67,8 @@ HazardSensor_MOOSApp::HazardSensor_MOOSApp()
   m_circle_duration = -1;
   m_show_hazards = true;
   m_show_swath   = true;
+  m_show_pd      = true;
+  m_show_pfa     = true;
   m_color_hazard = "green";
   m_color_benign = "light_blue";
   m_shape_hazard = "triangle";
@@ -156,6 +158,8 @@ bool HazardSensor_MOOSApp::Iterate()
     m_last_summary_time = m_curr_time;
   }
 
+  postQueueMessages();
+
   AppCastingMOOSApp::PostReport();
   return(true);
 }
@@ -199,9 +203,11 @@ bool HazardSensor_MOOSApp::OnStartUp()
       m_sensor_max_turn_rate = atof(value.c_str());
       handled = true;
     }
-    else if((param == "classify_period") && isNumber(value)) {
-      m_min_queue_msg_interval = atof(value.c_str());
-      handled = true;
+    else if((param == "classify_period") || (param == "min_classify_interval")) {
+      if(isNumber(value)) {
+	m_min_queue_msg_interval = atof(value.c_str());
+	handled = true;
+      }
     }
     else if(param == "default_benign_shape") {
       m_shape_benign = value;
@@ -217,13 +223,18 @@ bool HazardSensor_MOOSApp::OnStartUp()
     }
     else if(param == "show_hazards")
       handled = setBooleanOnString(m_show_hazards, value);
+    else if(param == "show_pd")
+      handled = setBooleanOnString(m_show_pd, value);
+    else if(param == "show_pfa")
+      handled = setBooleanOnString(m_show_pfa, value);
     else if(param == "show_swath")
       handled = setBooleanOnString(m_show_swath, value);
-    else if((param == "show_reports") && isNumber(value)) {
+    else if(((param == "show_reports") || (param == "show_detections")) 
+	    && isNumber(value)) {
       m_circle_duration = atof(value.c_str());
       handled = true;
     }
-    else if(param == "show_reports") {
+    else if((param == "show_reports") || (param == "show_detections")) {
       value = tolower(value);
       if((value == "unlimited") || (value == "nolimit")) {
 	m_circle_duration = -1;
@@ -483,6 +494,19 @@ bool HazardSensor_MOOSApp::handleSensorRequest(const string& request)
   updateNodePolygon(vix, sensor_on);
   // Possibly draw the swath
   if(m_show_swath) {
+    if(m_show_pd || m_show_pfa) {
+      string msg;
+      string pd_str  = doubleToString(m_map_prob_detect[vname],2);
+      string pfa_str = doubleToString(m_map_prob_false_alarm[vname],2);
+      if(m_show_pd && m_show_pfa) 
+	msg = pd_str + "/" + pfa_str;
+      else if(m_show_pd && !m_show_pfa)
+	msg = pd_str;
+      else if(!m_show_pd && m_show_pfa)
+	msg = "pfa=" + pfa_str;
+      m_node_polygons[vix].set_msg(msg);
+    }
+
     string poly_spec = m_node_polygons[vix].get_spec();
     Notify("VIEW_POLYGON", poly_spec);
   }
@@ -516,8 +540,8 @@ bool HazardSensor_MOOSApp::handleSensorClear(const string& request)
   vector<string> svector = parseString(request, ',');
   unsigned int i, vsize = svector.size();
   for(i=0; i<vsize; i++) {
-    string param = tolower(stripBlankEnds(biteString(svector[i], '=')));
-    string value = stripBlankEnds(svector[i]);
+    string param = tolower(biteStringX(svector[i], '='));
+    string value = svector[i];
     if(param == "vname")
       vname = value;
   }
@@ -580,6 +604,7 @@ bool HazardSensor_MOOSApp::handleClassifyRequest(const string& request)
   }
 
   // Part 4: go ahead and post the classify report
+  m_map_classify_reqs[vname]++;
   postHazardClassifyReport(hlabel, vname);  // classify dice inside
 
   return(true);
@@ -613,7 +638,7 @@ bool HazardSensor_MOOSApp::handleSensorConfig(const string& config,
     return(false);
   }
 
-  if(!isNumber(str_width) || !isNumber(str_pd)) {
+  if(((str_width != "") && !isNumber(str_width)) || !isNumber(str_pd)) {
     reportConfigWarning("Bad sensor config request from: " + vname);
     return(false);
   }    
@@ -624,10 +649,82 @@ bool HazardSensor_MOOSApp::handleSensorConfig(const string& config,
   
   d_width = vclip_min(d_width, 0);
   d_pd    = vclip(d_pd, 0, 1);
+
+
     
-  // Part 4: Fit the request to one of the allowable sensor settings.
-  return(setVehicleSensorSetting(vname, d_width, d_pd));
+  // Part 4: Process the sensor setting request
+  if(str_width == "")
+    return(setVehicleSensorSettingPD(vname, d_pd));
+  else
+    return(setVehicleSensorSetting(vname, d_width, d_pd));
 }
+
+
+
+//---------------------------------------------------------
+// Procedure: addQueueMessage()
+
+void HazardSensor_MOOSApp::addQueueMessage(const string& vname,
+					   const string& varname,
+					   const string& value)
+{
+  // If this is the first entry in the queue for this vehicle, set the timestamp
+  // for this vehicle to the present time. To ensure even the first element in 
+  // the queue has the proper delay.
+  if(m_map_msgs_queued[vname].size() == 0)
+    m_map_msg_last_queue_time[vname] = m_curr_time;
+
+  VarDataPair pair(varname, value);
+  m_map_msgs_queued[vname].push_back(pair);
+}
+
+
+//------------------------------------------------------------
+// Procedure: postQueueMessages
+
+void HazardSensor_MOOSApp::postQueueMessages()
+{
+  map<string, list<VarDataPair> >::iterator p;
+  for(p=m_map_msgs_queued.begin(); p!=m_map_msgs_queued.end(); p++) {
+    string vname = p->first;
+
+    //  Calculate the last time since a msg was popped for this vehicle.
+    double elapsed = m_curr_time - m_map_msg_last_queue_time[vname];
+    if(elapsed < m_min_queue_msg_interval) 
+      continue;
+    
+    if(m_map_msgs_queued[vname].size() == 0) 
+      continue;
+
+    // Ok, this vehicle is due for a message, so we're going to pop N=3 of them
+    // We assume each classify report consists of three messages:
+    // UHZ_CLASSIFY_REPORT, UHZ_CLASSIFY_REPORT_VNAME, VIEW_CIRCLE
+    bool message_popped = false;
+    for(unsigned int i=0; i<3; i++) {
+      if(m_map_msgs_queued[vname].size() != 0) {
+	message_popped = true;
+	
+	VarDataPair message = m_map_msgs_queued[vname].front();
+	m_map_msgs_queued[vname].pop_front();
+	
+	string varname = message.get_var();
+	if(message.is_string())
+	  m_Comms.Notify(varname, message.get_sdata());
+	else
+	  m_Comms.Notify(varname, message.get_ddata());      
+	if(strBegins(varname, "UHZ_HAZARD_REPORT_")) {
+	  m_map_classify_answ[vname]++;
+	  reportEvent(varname + " posted");
+	}
+      }
+    }    
+
+    // Only update timestamp if there was actually something in the queue
+    if(message_popped)
+      m_map_msg_last_queue_time[vname] = m_curr_time;
+  }
+}
+
 
 //---------------------------------------------------------
 // Procedure: postVisuals()
@@ -734,7 +831,7 @@ void HazardSensor_MOOSApp::postHazardDetectionReport(string hazard_label,
 //                               label=517,hazard=false"
 
 void HazardSensor_MOOSApp::postHazardClassifyReport(string hazard_label, 
-						  string vname)
+						    string vname)
 {
   // Part 1: Sanity checking
   if(m_map_hazards.count(hazard_label) == 0) {
@@ -780,8 +877,9 @@ void HazardSensor_MOOSApp::postHazardClassifyReport(string hazard_label,
 
   string full_str = "vname=" + vname + "," + hazard_spec;
 
-  Notify("UHZ_HAZARD_REPORT", full_str);
-  Notify("UHZ_HAZARD_REPORT_"+toupper(vname), hazard_spec);
+
+  addQueueMessage(vname, "UHZ_HAZARD_REPORT", full_str);
+  addQueueMessage(vname, "UHZ_HAZARD_REPORT_"+toupper(vname), hazard_spec);
 
   // Part 4: Build some event messages/info.
   reportEvent("Classify report queued to vehicle: " + vname);
@@ -806,9 +904,8 @@ void HazardSensor_MOOSApp::postHazardClassifyReport(string hazard_label,
     circ.set_edge_size(1);
     circ.set_transparency(0.3);
     circ.set_time(m_curr_time);
-    circ.setDuration(m_circle_duration);
-    Notify("VIEW_CIRCLE", circ.get_spec());
-    //addQueueMessage(vname, "VIEW_CIRCLE", circ.get_spec());
+    //    circ.setDuration(m_circle_duration);
+    addQueueMessage(vname, "VIEW_CIRCLE", circ.get_spec());
   }
 }
 
@@ -1141,9 +1238,9 @@ void HazardSensor_MOOSApp::sortSensorProperties()
 //            and presumably bridged out to the vehicle.
 
 bool HazardSensor_MOOSApp::setVehicleSensorSetting(string vname,
-						 double width,
-						 double pd,
-						 bool guess)
+						   double width,
+						   double pd,
+						   bool guess)
 {
   reportEvent("Setting sensor settings for: " + vname);
 
@@ -1157,6 +1254,8 @@ bool HazardSensor_MOOSApp::setVehicleSensorSetting(string vname,
     return(false);
   }
 
+  // Handle the case where this function is being used to set the sensor
+  // setting to *anything* reasonable.
   if(guess == true) {
     double wid_min = m_sensor_prop_width[0];
     double wid_max = m_sensor_prop_width[psize-1];
@@ -1164,11 +1263,14 @@ bool HazardSensor_MOOSApp::setVehicleSensorSetting(string vname,
     width = wid_avg;
     pd    = 0.9;
   }
+
+  // Ensure the requested sensor width is nonzero and pd is in [0,1]
   width = vclip_min(width, 0);
   pd    = vclip(pd, 0, 1);
     
+  m_map_reset_swath_req[vname]++;
   // Part 2: Determine if this request is allowed, based on frequency
-  double elapsed = m_curr_time - m_map_reset_time[vname];
+  double elapsed = m_curr_time - m_map_reset_swath_time[vname];
   if(elapsed < m_min_reset_interval) {
     reportEvent("Sensor reset denied (too soon) for vehicle: " + vname);
     return(false);
@@ -1197,14 +1299,6 @@ bool HazardSensor_MOOSApp::setVehicleSensorSetting(string vname,
       }
     }
   }
-
-#if 0
-  unsigned int j, jsize = m_sensor_prop_width.size();
-  for(j=0; j<jsize; j++) {
-    if(width >= m_sensor_prop_width[j])
-      pix = j;
-  }
-#endif
   
   double selected_width = m_sensor_prop_width[pix];
   double selected_exp   = m_sensor_prop_exp[pix];
@@ -1213,28 +1307,75 @@ bool HazardSensor_MOOSApp::setVehicleSensorSetting(string vname,
   double implied_pfa    = pow(selected_pd, selected_exp);
   
   // Part 4: Good. We have new selected sensor settings for this vehicle
-  //         Now we need to note it locally, and send confirmation to 
-  //         the requesting vehicle.
-  // Part 4a: Store selection locally.
+  //         Now store selection locally.
   m_map_swath_width[vname]      = selected_width;
+  m_map_swath_roc_exp[vname]    = selected_exp;
   m_map_prob_detect[vname]      = selected_pd;
   m_map_prob_false_alarm[vname] = implied_pfa;
   m_map_prob_classify[vname]    = selected_class;
-  // Part 43a: Build and post confirmation
-  string var = "UHZ_CONFIG_ACK_" + toupper(vname);
-  string msg = "vname=" + vname;
-  msg += ",width="  + doubleToStringX(selected_width,1);
-  msg += ",pd="     + doubleToStringX(selected_pd,3);
-  msg += ",pfa="    + doubleToStringX(implied_pfa,3);
-  msg += ",pclass=" + doubleToStringX(selected_class,3);
-  Notify(var, msg);
+
+  postConfigurationAck(vname);
 
   // Part 5: Update our local stats reflecting the number of updates
   //         for this vehicle and the timestamp of this update
-  m_map_reset_total[vname]++;
-  m_map_reset_time[vname] = m_curr_time;
+  m_map_reset_swath_total[vname]++;
+  m_map_reset_swath_time[vname] = m_curr_time;
 	       
   return(true);
+}
+
+
+//------------------------------------------------------------
+// Procedure: setVehicleSensorSettingPD
+
+bool HazardSensor_MOOSApp::setVehicleSensorSettingPD(string vname, double new_pd)
+{
+  reportEvent("Setting sensor PD settings for: " + vname);
+
+  // First check if the primary sensor setting (swath width) has been chosen.
+  // If not a default swath setting it chosen
+  if(m_map_swath_roc_exp.count(vname) == 0)
+    setVehicleSensorSetting(vname, 0, 0, true);
+
+  // Ensure the requested sensor width is nonzero and pd is in [0,1]
+  new_pd = vclip(new_pd, 0, 1);
+    
+  double current_exp = m_map_swath_roc_exp[vname];
+  double new_pfa     = pow(new_pd, current_exp);
+  
+  m_map_prob_detect[vname]      = new_pd;
+  m_map_prob_false_alarm[vname] = new_pfa;
+
+  m_map_reset_pd_total[vname]++;
+  m_map_reset_pd_time[vname] = m_curr_time;
+
+  postConfigurationAck(vname);
+	       
+  return(true);
+}
+
+//------------------------------------------------------------
+// Procedure: postConfigurationAck
+
+void HazardSensor_MOOSApp::postConfigurationAck(string vname)
+{
+  if(m_map_swath_width.count(vname) == 0) {
+    reportRunWarning("Failed Configuration Ack for Unknown Vehicle: " + vname);
+    return;
+  }
+
+  double current_width  = m_map_swath_width[vname];
+  double current_pd     = m_map_prob_detect[vname];
+  double current_pfa    = m_map_prob_false_alarm[vname];
+  double current_class  = m_map_prob_classify[vname];
+
+  string var = "UHZ_CONFIG_ACK_" + toupper(vname);
+  string msg = "vname=" + vname;
+  msg += ",width="  + doubleToStringX(current_width,1);
+  msg += ",pd="     + doubleToStringX(current_pd,3);
+  msg += ",pfa="    + doubleToStringX(current_pfa,3);
+  msg += ",pclass=" + doubleToStringX(current_class,3);
+  Notify(var, msg);
 }
 
 //------------------------------------------------------------
@@ -1294,24 +1435,54 @@ bool HazardSensor_MOOSApp::buildReport()
   m_msgs << "============================================" << endl;
 
   actab = ACTable(8);
-  actab << "Vehicle | Swath |    |     |        | Sensor | Sensor   |        ";
-  actab << "Name    | Width | Pd | Pfa | Pclass | Resets | Requests | Detects";
+  actab << "Vehicle | Swath |    |     |        | Try Swath | Swath  | Pd     ";
+  actab << "Name    | Width | Pd | Pfa | Pclass | Resets    | Resets | Resets ";
   actab.addHeaderLines();
 
   map<string, double>::iterator p;
   for(p=m_map_swath_width.begin(); p!=m_map_swath_width.end(); p++) {
-    string vname      = p->first;
-    string last_reset = doubleToString((m_map_reset_time[vname] - m_start_time),0);
+    string vname = p->first;
 
-    string width    = doubleToString(m_map_swath_width[vname],1);
-    string pd       = doubleToString(m_map_prob_detect[vname],3);
-    string pfa      = doubleToString(m_map_prob_false_alarm[vname],3);
-    string pclass   = doubleToString(m_map_prob_classify[vname],3);
-    string resets   = uintToString(m_map_reset_total[vname]) + "(" + last_reset + ")";
-    string requests = uintToString(m_map_sensor_reqs[vname]);
-    string detects  = uintToString(m_map_detections[vname]);
+    double last_sw_reset_dbl = 0;
+    if(m_map_reset_swath_time.count(vname) != 0)
+      last_sw_reset_dbl = m_map_reset_swath_time[vname] - m_start_time;
+    string last_sw_reset_str = doubleToString(last_sw_reset_dbl,0);
+
+    double last_pd_reset_dbl = 0;
+    if(m_map_reset_pd_time.count(vname) != 0) 
+      last_pd_reset_dbl = m_map_reset_pd_time[vname] - m_start_time;
+    string last_pd_reset_str = doubleToString(last_pd_reset_dbl,0);
+
+
+    string width     = doubleToString(m_map_swath_width[vname],1);
+    string pd        = doubleToString(m_map_prob_detect[vname],3);
+    string pfa       = doubleToString(m_map_prob_false_alarm[vname],3);
+    string pclass    = doubleToString(m_map_prob_classify[vname],3);
+    string sw_resets_req = uintToString(m_map_reset_swath_req[vname]);
+    string sw_resets = uintToString(m_map_reset_swath_total[vname]) 
+      + "(" + last_sw_reset_str + ")";
+    string pd_resets = uintToString(m_map_reset_pd_total[vname]) 
+      + "(" + last_pd_reset_str + ")";
+
+    actab << vname << width << pd << pfa << pclass << sw_resets_req <<
+      sw_resets << pd_resets;
+  }
+  m_msgs << actab.getFormattedString() << endl << endl << endl;
+
+  actab = ACTable(5);
+  actab << "Vehicle | Sensor   |            | Classify | Classify ";
+  actab << "Name    | Requests | Detections | Requests | Answers  ";
+  actab.addHeaderLines();
+
+  for(p=m_map_swath_width.begin(); p!=m_map_swath_width.end(); p++) {
+    string vname     = p->first;
+
+    string sensor_reqs   = uintToString(m_map_sensor_reqs[vname]);
+    string detects       = uintToString(m_map_detections[vname]);
+    string classify_reqs = uintToString(m_map_classify_reqs[vname]);
+    string classify_answ = uintToString(m_map_classify_answ[vname]);
     
-    actab << vname << width << pd << pfa << pclass << resets << requests << detects;
+    actab << vname << sensor_reqs << detects << classify_reqs << classify_answ;
   }
   m_msgs << actab.getFormattedString();
   return(true);

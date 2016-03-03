@@ -106,9 +106,13 @@ bool CMOOSGeodesy::Initialise(double lat, double lon)
     //Translate the Origin coordinates into Northings and Eastings 
     double tempNorth = 0.0, tempEast = 0.0;
     char utmZone[4];
-    LLtoUTM(m_iRefEllipsoid, m_dOriginLatitude, 
-            m_dOriginLongitude, tempNorth, 
-            tempEast, utmZone);
+
+    // results check added by mikerb
+    bool ok = LLtoUTM(m_iRefEllipsoid, m_dOriginLatitude, 
+		      m_dOriginLongitude, tempNorth, 
+		      tempEast, utmZone);
+    if(!ok)
+      return(false);
 
     //Then set the Origin for the Northing/Easting coordinate frame
     //Also make a note of the UTM Zone we are operating in
@@ -159,6 +163,9 @@ bool CMOOSGeodesy::LLtoUTM(int ReferenceEllipsoid, const double Lat,
                             const double Long, double &UTMNorthing, 
                             double &UTMEasting, char *UTMZone)
 {
+  if(isnan(Long) || isnan(Lat))
+    return(false);
+
     //converts lat/long to UTM coords.  Equations from USGS Bulletin 1532 
     //East Longitudes are positive, West longitudes are negative. 
     //North latitudes are positive, South latitudes are negative
@@ -332,8 +339,10 @@ bool CMOOSGeodesy::LatLong2LocalUTM(double lat,
     char tmpUTM[4];
 
     
-
-    LLtoUTM(m_iRefEllipsoid,lat,lon,tmpNorth,tmpEast,tmpUTM);
+    // results check added by mikerb
+    bool ok = LLtoUTM(m_iRefEllipsoid,lat,lon,tmpNorth,tmpEast,tmpUTM);
+    if(!ok)
+      return(false);
 
     //could check for the UTMZone differing, and if so, return false
 
@@ -454,6 +463,9 @@ double CMOOSGeodesy::GetLocalGridY()
 
 bool CMOOSGeodesy::LocalGrid2LatLong(double dfEast, double dfNorth, double &dfLat, double &dfLon) 
 {
+  if(isnan(dfEast) || isnan(dfNorth))
+    return(false);
+
     //(semimajor axis)
     double dfa  = 6378137;
     // (semiminor axis)
@@ -477,52 +489,49 @@ bool CMOOSGeodesy::LocalGrid2LatLong(double dfEast, double dfNorth, double &dfLa
 }
 
 
+
 bool CMOOSGeodesy::UTM2LatLong(double dfX, double dfY, double& dfLat, double& dfLong)
 {
-    //written by Henrik Schmidt henrik@mit.edu
-    
-    double err = 1e20;
-    double dfx=dfX;
-    double dfy=dfY;
-    double eps = 1.0; // accuracy in m
-    
-    while (err > eps)
-    {
-        double dflat, dflon, dfnew_x, dfnew_y ;
+  // written by Henrik Schmidt henrik@mit.edu, 
+  // mods by mikerb checking for nans
+  
+  double err = 1e20;
+  double dfx = dfX;
+  double dfy = dfY;
+  double eps = 1.0; // accuracy in m
 
-        // first guess geodesic
-        if (!LocalGrid2LatLong(dfx,dfy,dflat,dflon))
-            return(false);
-        
-        // now convert latlong to UTM
-        if (!LatLong2LocalUTM(dflat,dflon,dfnew_y,dfnew_x))
-            return(false);
-        
-		// fix to segfault issue if you get diverging values
-		if(isnan(dflat) || isnan(dflon))
-		{
-			dflat = 91;
-			dflon = 181;
-			return(false);
-		}
-		
-        // how different
-        double dfdiff_x = dfnew_x -dfX;
-        double dfdiff_y = dfnew_y -dfY;
-        
-        // subtract difference and reconvert        
-        dfx -= dfdiff_x;
-        dfy -= dfdiff_y;
-        
-        err = hypot(dfnew_x-dfX,dfnew_y-dfY);
-        
-        //MOOSTrace("UTM2LatLong: error = %f\n",err); 
-    }
+  double dflat, dflon;
+  while (err > eps) {
+    // first guess geodesic
+    bool ok1 = LocalGrid2LatLong(dfx, dfy, dflat, dflon);
+    // fix to segfault issue if you get diverging values
+    if(!ok1 || isnan(dflat) || isnan(dflon))
+      return(false);
+
+    double dfnew_x, dfnew_y ;
+    // now convert latlong to UTM
+    bool ok2 = LatLong2LocalUTM(dflat, dflon, dfnew_y, dfnew_x);
+    if(!ok2 || isnan(dfnew_y) || isnan(dfnew_x))
+      return(false);
     
-    if (!LocalGrid2LatLong(dfx, dfy, dfLat, dfLong))
-        return(false);
+    // how different
+    double dfdiff_x = dfnew_x -dfX;
+    double dfdiff_y = dfnew_y -dfY;
     
+    // subtract difference and reconvert        
+    dfx -= dfdiff_x;
+    dfy -= dfdiff_y;
     
- 	return true;
+    err = hypot(dfnew_x-dfX,dfnew_y-dfY);
+    
+    //MOOSTrace("UTM2LatLong: error = %f\n",err); 
+  }
+  
+  LocalGrid2LatLong(dfx, dfy, dflat, dflon);
+  if(isnan(dflat) || isnan(dflon))
+    return(false);
+
+  dfLat  = dflat;
+  dfLong = dflon;
+  return(true);
 }
-
