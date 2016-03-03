@@ -17,6 +17,7 @@ SET(SRC
    XYFormatUtilsSegl.cpp XYFormatUtilsPoly.cpp
    XYSegment.cpp         XYPatternBlock.cpp
    XYObject.cpp          XYFormatUtilsCircle.cpp
+   XYVector.cpp          XYFormatUtilsVector.cpp
 )
 
 SET(HEADERS
@@ -37,6 +38,7 @@ SET(HEADERS
   XYFormatUtilsPoint.h
   XYFormatUtilsPoly.h
   XYFormatUtilsSegl.h
+  XYFormatUtilsVector.h
   XYGrid.h
   XYHexagon.h
   XYHexGrid.h
@@ -47,10 +49,16 @@ SET(HEADERS
   XYSegList.h
   XYSegment.h
   XYSquare.h
+  XYVector.h
 )
 
 # Build Library
 ADD_LIBRARY(geometry ${SRC})
+
+TARGET_LINK_LIBRARIES( geometry
+   mbutil
+   )
+
 
 # Install Headers
 INSTALL( FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/lib_geometry)

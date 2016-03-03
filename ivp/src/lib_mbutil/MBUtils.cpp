@@ -1315,11 +1315,11 @@ string modeShorten(string mode_str, bool really_short)
 
 vector<string> getReleaseInfo(const string& app)
 {
-  string pad = padString("", (23-app.length()));
+  string pad = padString("", (16-app.length()));
   vector<string> v;
   v.push_back("************************************************************************");
-  v.push_back("* " + app + " - MOOS-IvP Release Bundle - VERSION 4.1" + pad +  "      *");
-  v.push_back("* M.Benjamin (NUWC/MIT), P.Newman (Oxford), Schmidt and Leonard (MIT)  *");
+  v.push_back("* " + app + " - MOOS-IvP Release Bundle - VERSION 4.1.5" + pad + "         *");
+  v.push_back("* M.Benjamin (MIT), P.Newman (Oxford), Schmidt and Leonard (MIT)       *");
   v.push_back("* Copyright (C) 2008 Free Software Foundation, Inc.                    *");
   v.push_back("* This is free software; see the source for copying conditions.        *");
   v.push_back("************************************************************************");

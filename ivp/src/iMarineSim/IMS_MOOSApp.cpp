@@ -23,6 +23,9 @@
 #include <iostream>
 #include "IMS_MOOSApp.h"
 #include "MBUtils.h"
+#include "CurrentField.h"
+
+#define USE_UTM
 
 using namespace std;
 
@@ -31,9 +34,10 @@ using namespace std;
 
 IMS_MOOSApp::IMS_MOOSApp() 
 {
-  m_sim_prefix  = "IMS";
-  m_model       = 0;
-  m_reset_count = 0;
+  m_sim_prefix     = "IMS";
+  m_model          = 0;
+  m_reset_count    = 0;
+  m_pending_cfield = false;
 }
 
 //------------------------------------------------------------------------
@@ -76,6 +80,8 @@ bool IMS_MOOSApp::OnNewMail(MOOSMSG_LIST &NewMail)
 	m_model->setForceVector(sval, false);
       else if(key == "IMS_FORCE_VECTOR_ADD")
 	m_model->setForceVector(sval, true);
+      else if(key == "IMS_REPOST")
+	m_pending_cfield = true;
       else if((key == "MARINESIM_RESET") || (key == "IMS_RESET")) {
 	m_reset_count++;
 	m_Comms.Notify("IMS_RESET_COUNT", m_reset_count);
@@ -173,6 +179,10 @@ bool IMS_MOOSApp::OnStartUp()
       m_model->setPaused(toupper(sVal) == "TRUE");
     else if(sVarName == "START_POS")
       m_model->setPosition(sVal);
+    else if(sVarName == "CURRENT_FIELD") {
+      m_model->setCurrentField(sVal);
+      m_pending_cfield = true;
+    }
   }
 
   // tes 12-2-07
@@ -241,7 +251,7 @@ void IMS_MOOSApp::registerVariables()
   m_Comms.Register("IMS_FORCE_THETA", 0);
   m_Comms.Register("IMS_PAUSE", 0);
   m_Comms.Register("IMS_RESET", 0);
-
+  m_Comms.Register("IMS_REPOST", 0);
 }
 
 //------------------------------------------------------------------------
@@ -263,6 +273,9 @@ bool IMS_MOOSApp::Iterate()
   if(!m_model)
     return(false);
 
+  if(m_pending_cfield)
+    postCurrentField();
+
   double ctime = MOOSTime();
 
   m_model->propagate(ctime);
@@ -273,11 +286,13 @@ bool IMS_MOOSApp::Iterate()
   m_Comms.Notify(m_sim_prefix+"_X", nav_x, ctime);
   m_Comms.Notify(m_sim_prefix+"_Y", nav_y, ctime);
 
-  // tes 12-2-07 try to give a simulated lat / long
   if(m_geo_ok) {
     double lat, lon;
-    //    m_geodesy.LocalGrid2LatLong(nav_x, nav_y, lat, lon);
+#ifdef USE_UTM
     m_geodesy.UTM2LatLong(nav_x, nav_y, lat, lon);
+#else
+    m_geodesy.LocalGrid2LatLong(nav_x, nav_y, lat, lon);
+#endif
     m_Comms.Notify(m_sim_prefix+"_LAT", lat, ctime);
     m_Comms.Notify(m_sim_prefix+"_LONG", lon, ctime);
   }
@@ -291,6 +306,12 @@ bool IMS_MOOSApp::Iterate()
   m_Comms.Notify(m_sim_prefix+"_YAW", m_model->getYaw(), ctime);
   m_Comms.Notify(m_sim_prefix+"_STATE", "off",ctime);
 
+  double hog = m_model->getHeadingOG();
+  double sog = m_model->getSpeedOG();
+
+  m_Comms.Notify(m_sim_prefix+"_HEADING_OVER_GROUND", hog, ctime);
+  m_Comms.Notify(m_sim_prefix+"_SPEED_OVER_GROUND", sog, ctime);
+
   string val = "ang=";
   val += dstringCompact(doubleToString(m_model->getForceAngle()));
   val += ", mag=";
@@ -302,6 +323,57 @@ bool IMS_MOOSApp::Iterate()
   m_Comms.Notify("IMS_FSUMMARY", val);
 
   return(true);
+}
+
+
+//------------------------------------------------------------------------
+// Procedure: postCurrentField
+//      Note: Publishes the following two variables:
+//            IMS_CFIELD_SUMMARY - one posting for the whole field.
+//            VIEW_VECTOR - one for each element in the field.
+//  Examples:
+//  IMS_CFIELD_SUMMARY = field_name=bert, radius=12, elements=19
+//         VIEW_VECTOR = x=12, y=-98, mag=3.4, ang=78, label=02
+
+
+void IMS_MOOSApp::postCurrentField()
+{
+  m_pending_cfield = false;
+  if(!m_model)
+    return;
+
+  CurrentField cfield = m_model->getCurrentField();
+  unsigned int i, fld_size = cfield.size();
+  if(fld_size == 0)
+    return;
+
+  string cfield_name   = cfield.getName();
+  string cfield_radius = doubleToString(cfield.getRadius());
+  cfield_radius = dstringCompact(cfield_radius);
+  string cfield_size = doubleToString(fld_size);
+  cfield_size = dstringCompact(cfield_size);
+
+  string summary = "field_name=" + cfield_name;
+  summary += ", radius=" + cfield_radius;
+  summary += ", elements=" + cfield_size;
+  m_Comms.Notify("IMS_CFIELD_SUMMARY", summary);
+
+  for(i=0; i<fld_size; i++) {
+    double xval = cfield.getXPos(i);
+    double yval = cfield.getYPos(i);
+    double fval = cfield.getForce(i);
+    double dval = cfield.getDirection(i);
+    
+    string xstr = dstringCompact(doubleToString(xval,2));
+    string ystr = dstringCompact(doubleToString(yval,2));
+    string fstr = dstringCompact(doubleToString(fval,2));
+    string dstr = dstringCompact(doubleToString(dval,2));
+    string id   = uintToString(i);
+    
+    string msg = "xpos=" + xstr + ",ypos=" + ystr + ",mag=" + fstr;
+    msg += ",ang=" + dstr + ",label=" + cfield_name + "_" + id;
+    m_Comms.Notify("VIEW_VECTOR", msg);
+  }
 }
 
 
@@ -342,6 +414,3 @@ void IMS_MOOSApp::handleSimReset(const string& str)
     }
   }
 }
-
-
-

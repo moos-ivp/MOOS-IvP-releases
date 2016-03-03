@@ -33,10 +33,8 @@
 #include "BuildUtils.h"
 #include "MBTimer.h" 
 #include "FunctionEncoder.h" 
-#include "AngleUtils.h"
 #include "IvPProblem.h"
 #include "HelmReport.h"
-#include "stringutil.h"
 #include "Populator_BehaviorSet.h"
 #include "LifeEvent.h"
 
@@ -50,10 +48,9 @@ HelmIvP::HelmIvP()
   m_allstop_msg    = "clear";
   m_bhv_set        = 0;
   m_hengine        = 0;
-  m_hengine_beta   = 0;
   m_info_buffer    = new InfoBuffer;
   m_verbose        = "terse";
-  m_iteration      = 0;
+  m_helm_iteration = 0;
   m_ok_skew        = 60; 
   m_skews_matter   = true;
   m_warning_count  = 0;
@@ -68,7 +65,9 @@ HelmIvP::HelmIvP()
   m_disengage_on_allstop = false;
 
   m_curr_time_updated = false;
-  m_use_beta_engine   = true;
+
+  m_init_vars_ready  = false;
+  m_init_vars_done   = false;
 
   // The refresh vars handle the occasional clearing of the m_outgoing
   // maps. These maps will be cleared when MOOS mail is received for the
@@ -82,15 +81,10 @@ HelmIvP::HelmIvP()
   m_refresh_pending  = false;
   m_refresh_time     = 0;
 
-  //m_outgoing_repinterval["VIEW_POINT"] = 5;
-  //m_outgoing_repinterval["VIEW_POLYGON"] = 5;
-  //m_outgoing_repinterval["VIEW_SEGLIST"] = 5;
-
   m_node_report_vars.push_back("AIS_REPORT");
   m_node_report_vars.push_back("NODE_REPORT");
   m_node_report_vars.push_back("AIS_REPORT_LOCAL");
   m_node_report_vars.push_back("NODE_REPORT_LOCAL");
-
 }
 
 //--------------------------------------------------------------------
@@ -117,9 +111,6 @@ void HelmIvP::cleanup()
   delete(m_hengine);
   m_hengine = 0;
 
-  delete(m_hengine_beta);
-  m_hengine_beta = 0;
-
   m_ivp_domain = IvPDomain();
 }
 
@@ -138,49 +129,50 @@ bool HelmIvP::OnNewMail(MOOSMSG_LIST &NewMail)
   m_curr_time_updated = true;
 
   MOOSMSG_LIST::iterator p;
-  
+
   for(p=NewMail.begin(); p!=NewMail.end(); p++) {
     CMOOSMsg &msg = *p;
-    double dfT;
 
-    msg.IsSkewed(m_curr_time, &dfT);
+    string moosvar = msg.GetKey();
+    string sval    = msg.GetString();
+
+    double skew_time;
+    msg.IsSkewed(m_curr_time, &skew_time);
     
-    if(!m_skews_matter || (fabs(dfT) < m_ok_skew)) {
-      if((msg.m_sKey == "MOOS_MANUAL_OVERIDE") || 
-	 (msg.m_sKey == "MOOS_MANUAL_OVERRIDE") ||
-	 ((msg.m_sKey == m_additional_override) && (msg.m_sKey != ""))) {
-	if(MOOSStrCmp(msg.m_sVal, "FALSE")) {
+    if(!m_skews_matter || (fabs(skew_time) < m_ok_skew)) {
+      if((moosvar =="MOOS_MANUAL_OVERIDE") || 
+	 (moosvar =="MOOS_MANUAL_OVERRIDE") ||
+	 ((moosvar == m_additional_override) && (moosvar != ""))) {
+	if(toupper(sval) == "FALSE") {
 	  m_has_control = true;
 	  postAllStop("clear");
 	}
-	else if(MOOSStrCmp(msg.m_sVal, "TRUE")) {
+	else if(toupper(sval) == "TRUE") {
 	  if(m_allow_override) {
 	    m_has_control = false;
 	    postAllStop("ManualOverride");
 	  }
 	}
       }
-      else if(msg.m_sKey == "HELM_VERBOSE") {
-	if(msg.m_sVal == "verbose")
-	  m_verbose = "verbose";
-	else if(msg.m_sVal == "quiet")
-	  m_verbose = "quiet";
-	else
-	  m_verbose = "terse";
+      else if(moosvar == "IVPHELM_ENGAGED")
+	m_init_vars_ready = true;
+      else if(moosvar == "HELM_VERBOSE") {
+	if((sval == "verbose") || (sval == "quiet") || (sval == "terse"))
+	  m_verbose = sval;
       }
-      else if(msg.m_sKey == "RESTART_HELM") {
+      else if(moosvar == "RESTART_HELM") {
 	OnStartUp();
 	MOOSTrace("\n");
 	MOOSDebugWrite("pHelmIvP Has Been Re-Started");
       }
-      else if(vectorContains(m_node_report_vars, msg.m_sKey)) {
-	bool ok = processNodeReport(msg.m_sVal);
+      else if(vectorContains(m_node_report_vars, moosvar)) {
+	bool ok = processNodeReport(sval);
 	if(!ok) {
 	  m_Comms.Notify("BHV_WARNING", "Unhandled NODE REPORT");
 	  m_warning_count++;
 	}
       }
-      else if(msg.m_sKey == m_refresh_var) {
+      else if(moosvar == m_refresh_var) {
 	m_refresh_pending = true;
       }
       else
@@ -206,6 +198,9 @@ bool HelmIvP::Iterate()
   postEngagedStatus();
   postCharStatus();
   
+  if(m_init_vars_ready && !m_init_vars_done)
+    handleInitialVarsPhase2();
+
   // If the curr_time is not set in the OnNewMail function (possibly 
   // because there was no mail in the queue), set the current time now.
   if(!m_curr_time_updated) {
@@ -227,15 +222,12 @@ bool HelmIvP::Iterate()
   }
 
   HelmReport helm_report;
-  if(m_use_beta_engine)
-    helm_report = m_hengine_beta->determineNextDecision(m_bhv_set, m_curr_time);
-  else
-    helm_report = m_hengine->determineNextDecision(m_bhv_set, m_curr_time);
+  helm_report = m_hengine->determineNextDecision(m_bhv_set, m_curr_time);
 
-  m_iteration = helm_report.getIteration();
+  m_helm_iteration = helm_report.getIteration();
   if(m_verbose == "verbose") {
     MOOSTrace("\n\n\n\n");
-    MOOSTrace("Iteration: %d", m_iteration);
+    MOOSTrace("Iteration: %d", m_helm_iteration);
     MOOSTrace("  ******************************************\n");
     MOOSTrace("Helm Summary  ---------------------------\n");
     vector<string> svector = helm_report.getMsgs();
@@ -246,7 +238,8 @@ bool HelmIvP::Iterate()
   // Check if refresh conditions are met - perhaps clear outgoing maps.
   // This will result in all behavior postings being posted to the MOOSDB
   // on the current iteration.
-  if(m_refresh_pending && ((m_curr_time-m_refresh_time) > m_refresh_interval)) {
+  if(m_refresh_pending && 
+     ((m_curr_time-m_refresh_time) > m_refresh_interval)) {
     m_outgoing_strings.clear();
     m_outgoing_doubles.clear();
     m_refresh_time = m_curr_time;
@@ -267,7 +260,7 @@ bool HelmIvP::Iterate()
   m_Comms.Notify("IVPHELM_SUMMARY", helm_report.getReportAsString());
  
   if(m_verbose == "verbose") {
-    MOOSTrace("(End) Iteration: %d", m_iteration);
+    MOOSTrace("(End) Iteration: %d", m_helm_iteration);
     MOOSTrace("  ******************************************\n");
   }
   
@@ -354,7 +347,7 @@ void HelmIvP::postBehaviorMessages()
   unsigned int i, bhv_cnt = m_bhv_set->size();
   m_Comms.Notify("BCOUNT", bhv_cnt);
   m_Comms.Notify("TBCOUNT", m_bhv_set->getTCount());
-  m_Comms.Notify("HITER", m_iteration);
+  m_Comms.Notify("HITER", m_helm_iteration);
   for(i=0; i < bhv_cnt; i++) {
     string bhv_descriptor = m_bhv_set->getDescriptor(i);
     vector<VarDataPair> mvector = m_bhv_set->getMessages(i);
@@ -388,7 +381,7 @@ void HelmIvP::postBehaviorMessages()
 	if(bhv_postings_summary == "") {
 	  bhv_postings_summary += bhv_descriptor;
 	  bhv_postings_summary += "$@!$";
-	  bhv_postings_summary += intToString(m_iteration);
+	  bhv_postings_summary += intToString(m_helm_iteration);
 	}
 	// Handle BHV_IPF tuples separately below
 	if(var != "BHV_IPF") {
@@ -400,7 +393,7 @@ void HelmIvP::postBehaviorMessages()
 
       // If posting an IvP Function, mux first and post the parts.
       if(var == "BHV_IPF") { // mikerb
-	string id = bhv_descriptor + intToString(m_iteration);
+	string id = bhv_descriptor + intToString(m_helm_iteration);
 	vector<string> svector = IvPFunctionToVector(sdata, id, 2000);
 	for(unsigned int k=0; k<svector.size(); k++)
 	  m_Comms.Notify("BHV_IPF", svector[k], bhv_descriptor);
@@ -410,7 +403,8 @@ void HelmIvP::postBehaviorMessages()
 	if(msg_is_string) {
 	  m_info_buffer->setValue(var, sdata);
 	  if(key_change || key_repeat) {
-	    string aux = intToString(m_iteration) + ":" + bhv_descriptor;
+	    string aux = intToString(m_helm_iteration) + ":" + 
+	      bhv_descriptor;
 	    m_Comms.Notify(var, sdata, aux);
 	    m_outgoing_timestamp[var] = m_curr_time;
 	  }
@@ -418,7 +412,8 @@ void HelmIvP::postBehaviorMessages()
 	else {
 	  m_info_buffer->setValue(var, ddata);
 	  if(key_change || key_repeat) {
-	    string aux = intToString(m_iteration) + ":" + bhv_descriptor;
+	    string aux = intToString(m_helm_iteration) + ":" + 
+	      bhv_descriptor;
 	    m_Comms.Notify(var, ddata, aux);
 	    m_outgoing_timestamp[var] = m_curr_time;
 	  }
@@ -453,7 +448,7 @@ void HelmIvP::postLifeEvents()
   for(i=0; i<vsize; i++) {
     double htime = m_curr_time - m_start_time;
     string str = "time=" + doubleToString(htime, 2);
-    str += ", iter="  + intToString(m_iteration);
+    str += ", iter="  + intToString(m_helm_iteration);
     str += ", bname=" + events[i].getBehaviorName();
     str += ", btype=" + events[i].getBehaviorType();
     str += ", event=" + events[i].getEventType();
@@ -475,9 +470,9 @@ void HelmIvP::postModeMessages()
     return;
   
   vector<VarDataPair> mvector = m_bhv_set->getModeVarDataPairs();
-  int msize = mvector.size();
+  unsigned int j, msize = mvector.size();
 
-  for(int j=0; j<msize; j++) {
+  for(j=0; j<msize; j++) {
     VarDataPair msg = mvector[j];
     
     string var   = msg.get_var();
@@ -500,28 +495,79 @@ void HelmIvP::postModeMessages()
 }
 
 //------------------------------------------------------------
-// Procedure: postIntialVariables()
+// Procedure: handleInitialVarsPhase1()
 
-void HelmIvP::postInitialVariables()
+void HelmIvP::handleInitialVarsPhase1()
 {
-  if(!m_bhv_set) return;
+  if(!m_bhv_set) 
+    return;
 
   vector<VarDataPair> mvector = m_bhv_set->getInitialVariables();
-  int msize = mvector.size();
-  for(int j=0; j<msize; j++) {
+  unsigned int j, msize = mvector.size();
+  for(j=0; j<msize; j++) {
+    VarDataPair msg = mvector[j];
+
+    string var   = stripBlankEnds(msg.get_var());
+    string sdata = stripBlankEnds(msg.get_sdata());
+    double ddata = msg.get_ddata();
+    string key   = tolower(msg.get_key());
+    // key should be set to either "post" or "defer"
+
+    if(!strContainsWhite(var)) {
+      // If this is an init with deferment, just register.
+      if(key == "defer")
+	registerSingleVariable(var);
+      // If this is an init with overwrite, post and update the 
+      // info_buffer now.
+      if(key == "post") {
+	if(sdata != "") {
+	  m_info_buffer->setValue(var, sdata);
+	  m_Comms.Notify(var, sdata, "HELM_VAR_INIT");
+	}
+	else {
+	  m_info_buffer->setValue(var, ddata);
+	  m_Comms.Notify(var, ddata, "HELM_VAR_INIT");
+	}
+      }
+    }
+
+  }
+  registerSingleVariable("IVPHELM_ENGAGED");
+}
+
+//------------------------------------------------------------
+// Procedure: handleInitialVarsPhase2()
+//     Notes: Handles only initial variables that use deferment.
+//            e.g. initialize_  FOO = "bar"
+//            All other initialize lines were handled in phase1.
+
+void HelmIvP::handleInitialVarsPhase2()
+{
+  if(!m_bhv_set) 
+    return;
+
+  m_init_vars_done = true;
+  vector<VarDataPair> mvector = m_bhv_set->getInitialVariables();
+  unsigned int j, msize = mvector.size();
+  for(j=0; j<msize; j++) {
     VarDataPair msg = mvector[j];
     
     string var   = stripBlankEnds(msg.get_var());
     string sdata = stripBlankEnds(msg.get_sdata());
     double ddata = msg.get_ddata();
-    
-    if(sdata != "") {
-      m_info_buffer->setValue(var, sdata);
-      m_Comms.Notify(var, sdata);
-    }
-    else {
-      m_info_buffer->setValue(var, ddata);
-      m_Comms.Notify(var, ddata);
+
+    string key   = tolower(msg.get_key());
+    // key should be set to either "post" or "defer"
+
+    if((key == "defer") && !m_info_buffer->isKnown(var)) {
+      if(sdata != "") {
+	m_info_buffer->setValue(var, sdata);
+	m_Comms.Notify(var, sdata, "HELM_VAR_INIT");
+      }
+      else {
+	m_info_buffer->setValue(var, ddata);
+	m_Comms.Notify(var, ddata, "HELM_VAR_INIT");
+      }
     }
   }
 }
@@ -547,7 +593,8 @@ void HelmIvP::postDefaultVariables()
   int bhv_cnt = m_bhv_set->getCount();
   for(int i=0; i < bhv_cnt; i++) {
     vector<VarDataPair> mvector = m_bhv_set->getMessages(i);
-    for(unsigned int j=0; j<mvector.size(); j++) {
+    unsigned int j, vsize = mvector.size();
+    for(j=0; j<vsize; j++) {
       VarDataPair msg = mvector[j];
       message_vars.push_back(msg.get_var());
     }
@@ -557,8 +604,8 @@ void HelmIvP::postDefaultVariables()
   // for each, if the variable was contained in one of the behavior
   // messages for this iteration. If not, then post the default.
   vector<VarDataPair> dvector = m_bhv_set->getDefaultVariables();
-  int dsize = dvector.size();
-  for(int j=0; j<dsize; j++) {
+  unsigned int j, dsize = dvector.size();
+  for(j=0; j<dsize; j++) {
     VarDataPair msg = dvector[j];
     string var = msg.get_var();
     if(!vectorContains(message_vars, var)) {
@@ -578,7 +625,6 @@ void HelmIvP::postDefaultVariables()
 
 //------------------------------------------------------------
 // Procedure: postEngagedStatus()
-
 
 void HelmIvP::postEngagedStatus()
 {
@@ -613,29 +659,25 @@ void HelmIvP::postCharStatus()
 
 //------------------------------------------------------------
 // Procedure: updateInfoBuffer()
+// Note: A src_aux=HELM_VAR_INIT means that this messages was posted
+//       by the helm itself and does not need to be applied again to 
+//       the info_buffer. Handles the rare but possible situation 
+//       where another app posted to the same variable on the same 
+//       batch of incoming mail. In this case we want to defer to 
+//       value posted by the other application.
 
 bool HelmIvP::updateInfoBuffer(CMOOSMsg &msg)
 {
-  string key = msg.m_sKey;
-  string community = msg.m_sOriginatingCommunity;
-  string sdata = msg.m_sVal;
-  double ddata = msg.m_dfVal;
-  char   mtype = msg.m_cDataType;
-
-  // Special Case: We get Yaw/Heading from pNav, but pNav 
-  // doesn't post HEADING, so assume for now its same as YAW
-  if(key == "NAV_YAW") {
-    double heading = (ddata*-180.0)/3.1415926;
-    m_info_buffer->setValue("NAV_HEADING", heading);
-    m_info_buffer->setValue("NAV_YAW", ddata);
-    return(true);
+  string moosvar = msg.m_sKey;
+  string src_aux = msg.GetSourceAux();
+  if(src_aux == "HELM_VAR_INIT")
+    return(false);
+    
+  if(msg.IsDataType(MOOS_DOUBLE)) {
+    return(m_info_buffer->setValue(moosvar, msg.GetDouble()));
   }
-
-  if(mtype == MOOS_DOUBLE) {
-    return(m_info_buffer->setValue(key, ddata));
-  }
-  else if(mtype == MOOS_STRING) {
-    return(m_info_buffer->setValue(key, sdata));
+  else if(msg.IsDataType(MOOS_STRING)) {
+    return(m_info_buffer->setValue(moosvar, msg.GetString()));
   }
   return(false);
 }
@@ -655,42 +697,34 @@ bool HelmIvP::OnConnectToServer()
 
 void HelmIvP::registerVariables()
 {
-  m_Comms.Register("DB_CLIENTS", 0);
-  m_Comms.Register("MOOS_MANUAL_OVERIDE", 0);
-  m_Comms.Register("MOOS_MANUAL_OVERRIDE", 0);
-  m_Comms.Register("RESTART_HELM", 0);
-  m_Comms.Register("HELM_VERBOSE", 0);
+  registerSingleVariable("DB_CLIENTS");
+  registerSingleVariable("MOOS_MANUAL_OVERIDE");
+  registerSingleVariable("MOOS_MANUAL_OVERRIDE");
+  registerSingleVariable("RESTART_HELM");
+  registerSingleVariable("HELM_VERBOSE");
   
-  m_Comms.Register("NAV_YAW", 0);
-  m_Comms.Register("NAV_SPEED", 0);
-  m_Comms.Register("NAV_HEADING", 0);
-  m_Comms.Register("NAV_PITCH", 0);
-  m_Comms.Register("NAV_DEPTH", 0);
-  m_Comms.Register(m_refresh_var, 0);
+  registerSingleVariable("NAV_SPEED");
+  registerSingleVariable("NAV_HEADING");
+  registerSingleVariable("NAV_DEPTH");
+  registerSingleVariable(m_refresh_var);
 
   if(m_additional_override != "")
-    m_Comms.Register(m_additional_override, 0);
+    registerSingleVariable(m_additional_override);
 
   // Register for node report variables, e.g., AIS_REPORT, NODE_REPORT
   unsigned int i, vsize = m_node_report_vars.size();
   for(i=0; i<vsize; i++) 
-    m_Comms.Register(m_node_report_vars[i], 0);
+    registerSingleVariable(m_node_report_vars[i]);
   
   if(m_bhv_set) {
     vector<string> info_vars = m_bhv_set->getInfoVars();
     unsigned int j, jsize = info_vars.size();
-    for(j=0; j<jsize; j++) {
-      if(m_verbose == "verbose")
-	MOOSTrace("Registering for: %s\n", info_vars[j].c_str());
-      m_Comms.Register(info_vars[j], 0.0);
-    }
+    for(j=0; j<jsize; j++)
+      registerSingleVariable(info_vars[j]);
     vector<string> update_vars = m_bhv_set->getSpecUpdateVars();
     unsigned int i, isize = update_vars.size();
-    for(i=0; i<isize; i++) {
-      if(m_verbose == "verbose")
-	MOOSTrace("Registering for: %s\n", update_vars[i].c_str());
-      m_Comms.Register(update_vars[i], 0.0);
-    }
+    for(i=0; i<isize; i++) 
+      registerSingleVariable(update_vars[i]);
   }
 }
 
@@ -701,12 +735,23 @@ void HelmIvP::registerNewVariables()
 {
   if(m_bhv_set) {
     vector<string> info_vars = m_bhv_set->getNewInfoVars();
-    for(unsigned int j=0; j<info_vars.size(); j++) {
-      if(m_verbose == "verbose")
-	MOOSTrace("Registering for: %s\n", info_vars[j].c_str());
-      m_Comms.Register(info_vars[j], 0.0);
-    }
+    unsigned int j, jsize = info_vars.size();
+    for(j=0; j<jsize; j++) 
+      registerSingleVariable(info_vars[j]);
   }
+}
+
+
+//------------------------------------------------------------
+// Procedure: registerSingleVariable
+
+void HelmIvP::registerSingleVariable(string varname, double frequency)
+{
+  if(frequency < 0)
+    frequency = 0;
+  if(m_verbose == "verbose")
+    cout << "Registering for: " << varname.c_str() << endl;
+  m_Comms.Register(varname, frequency);
 }
 
 
@@ -782,14 +827,20 @@ bool HelmIvP::OnStartUp()
       }
       m_verbose = value;
     }
-    else if(param == "BETA_ENGINE")
-      setBooleanOnString(m_use_beta_engine, value);
     else if((param == "ACTIVE_START") || (param == "START_ENGAGED"))
       setBooleanOnString(m_has_control, value);
     else if(param == "ALLOW_DISENGAGE") 
       setBooleanOnString(m_allow_override, value);
     else if(param == "DISENGAGE_ON_ALLSTOP")
       setBooleanOnString(m_disengage_on_allstop, value);
+
+    else if(param == "NODE_SKEW") {
+      string vname = stripBlankEnds(biteString(value, ','));
+      string skew  = stripBlankEnds(value);
+      double dskew = atof(skew.c_str());
+      if((vname != "") && (skew != "") && isNumber(skew))
+	m_node_skews[vname] = dskew;
+    }
     else if(param == "DOMAIN") {
       bool ok = handleDomainEntry(value);
       if(!ok) {
@@ -804,25 +855,18 @@ bool HelmIvP::OnStartUp()
     }
   }
     
-  m_hengine = new HelmEngine(m_ivp_domain);
-  m_hengine_beta = new HelmEngineBeta(m_ivp_domain, m_info_buffer);
+  m_hengine = new HelmEngine(m_ivp_domain, m_info_buffer);
 
-#if 0
-  Populator_BehaviorSet p_bset(m_ivp_domain, m_info_buffer);
-  p_bset.loadEnvVarDirectories("IVP_BEHAVIOR_DIRS", true);
-  m_bhv_set = p_bset.populate(m_bhv_files);
-#endif  
-
-#if 1
   Populator_BehaviorSet *p_bset;
   p_bset = new Populator_BehaviorSet(m_ivp_domain, m_info_buffer);
   p_bset->loadEnvVarDirectories("IVP_BEHAVIOR_DIRS", true);
   m_bhv_set = p_bset->populate(m_bhv_files);
-#endif  
-  //cout << "=====================================================" << endl;
-  //p_bset->printBehaviorSpecs();
-  //cout << "=====================================================" << endl;
 
+#if 0
+  cout << "==================================================" << endl;
+  p_bset->printBehaviorSpecs();
+  cout << "==================================================" << endl;
+#endif
 
   if(m_bhv_set == 0) {
     MOOSTrace("NULL Behavior Set \n");
@@ -839,13 +883,12 @@ bool HelmIvP::OnStartUp()
   
   string mode_set_string_description = m_bhv_set->getModeSetDefinition();
 
-  postInitialVariables();
+  handleInitialVarsPhase1();
   registerVariables();
   requestBehaviorLogging();
 
   m_Comms.Notify("IVPHELM_DOMAIN",  domainToString(m_ivp_domain));
   m_Comms.Notify("IVPHELM_MODESET", mode_set_string_description);
-
 
   return(true);
 }
@@ -870,7 +913,7 @@ bool HelmIvP::handleDomainEntry(const string& g_entry)
   entry = findReplace(entry, ',', ':');
 
   vector<string> svector = parseString(entry, ':');
-  int vsize = svector.size();
+  unsigned int vsize = svector.size();
   if((vsize < 4) || (vsize > 5))
     return(false);
 
@@ -995,7 +1038,7 @@ bool HelmIvP::detectChangeOnKey(const string& key, double value)
 //--------------------------------------------------------------------
 // Procedure: postAllStop
 //   Purpose: Post zero-values to all decision variables. 
-
+//  
 //   CLEAR
 //   ALLSTOP_MESSAGE
 //       MANUAL_OVERRIDE
@@ -1031,8 +1074,8 @@ void HelmIvP::postAllStop(string msg)
     return;
 
   // Post all the Decision Variable Results
-  int dsize = m_ivp_domain.size();
-  for(int j=0; j<dsize; j++) {
+  unsigned int j, dsize = m_ivp_domain.size();
+  for(j=0; j<dsize; j++) {
     string domain_var = m_ivp_domain.getVarName(j);
     string post_alias = "DESIRED_"+ toupper(domain_var);
     if(post_alias == "DESIRED_COURSE")
@@ -1047,7 +1090,7 @@ void HelmIvP::postAllStop(string msg)
 
 bool HelmIvP::processNodeReport(const string& report)
 {
-  string x_val, dep_val, spd_val, hdg_val, vname;
+  string x_val, dep_val, spd_val, hdg_val, vname, raw_vname;
   string y_val, utc_val, lat_val, long_val;
   
   vector<string> svector = parseString(report, ',');
@@ -1057,8 +1100,10 @@ bool HelmIvP::processNodeReport(const string& report)
     string right = stripBlankEnds(svector[i]);
     bool right_isnum = isNumber(right);
 
-    if(left=="NAME")
+    if(left=="NAME") {
+      raw_vname = right;
       vname = toupper(right);
+    }
     else if((left == "UTC_TIME") && right_isnum)
       utc_val = right;
     else if((left == "MOOS_TIME") && right_isnum) 
@@ -1083,7 +1128,6 @@ bool HelmIvP::processNodeReport(const string& report)
      (y_val=="") || (hdg_val=="") || (dep_val==""))
     return(false);
 
-  m_info_buffer->setValue(vname+"_NAV_UTC", atof(utc_val.c_str()));
   m_info_buffer->setValue(vname+"_NAV_X", atof(x_val.c_str()));
   m_info_buffer->setValue(vname+"_NAV_Y", atof(y_val.c_str()));
   m_info_buffer->setValue(vname+"_NAV_SPEED", atof(spd_val.c_str()));
@@ -1091,7 +1135,18 @@ bool HelmIvP::processNodeReport(const string& report)
   m_info_buffer->setValue(vname+"_NAV_DEPTH", atof(dep_val.c_str()));
   m_info_buffer->setValue(vname+"_NAV_LAT", atof(lat_val.c_str()));
   m_info_buffer->setValue(vname+"_NAV_LONG", atof(long_val.c_str()));
+
+  double timestamp = atof(utc_val.c_str());
   
+  // Apply a skew if one is declared for this vehicle
+  map<string, double>::iterator p = m_node_skews.find(vname);
+  if(p == m_node_skews.end())
+    p = m_node_skews.find(raw_vname);
+  if(p != m_node_skews.end()) 
+    timestamp += p->second;
+  // Done applying the skew
+
+  m_info_buffer->setValue(vname+"_NAV_UTC", timestamp);
+
   return(true);
 }
-

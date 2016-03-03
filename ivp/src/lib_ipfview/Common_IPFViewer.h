@@ -32,6 +32,7 @@ class Common_IPFViewer : public Fl_Gl_Window
   int    handle(int);
 
 public:
+  void   applyIPF(const std::string& ipf_str, const IvPDomain&);
   void   applyIPF(const std::string& ipf_str);
   bool   setParam(std::string, std::string);
   bool   setParam(std::string, double);
@@ -52,7 +53,7 @@ protected:
   void   handleLeftMouse(int, int) {};
   void   handleRightMouse(int, int) {};
   
-  QuadSet setQuadSetFromIPF(const std::string&);
+  QuadSet setQuadSetFromIPF(const std::string&, IvPDomain);
 
   void   drawText(double px, double py, const std::string&, 
 		  const ColorPack&, double font_size);

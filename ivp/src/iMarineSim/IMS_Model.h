@@ -28,6 +28,7 @@
 #include "MBTimer.h"
 #include "SimEngine.h"
 #include "AngleUtils.h"
+#include "CurrentField.h"
 
 class IMS_Model
 {
@@ -43,8 +44,10 @@ public:
   double getForceX()    {return(m_force_x);};
   double getForceY()    {return(m_force_y);};
   double getSpeed()     {return(m_vstate.m_dfSpeed);};
+  double getSpeedOG()   {return(m_vstate.m_dfSpeedOverGround);};
   double getDepth()     {return(m_vstate.m_dfDepth);};
   double getHeading();
+  double getHeadingOG();
   double getYaw();
 
   // Get the total force factor in terms of direction and magnitude
@@ -76,7 +79,11 @@ public:
   void   setPosition(std::string);
   void   setPositionPairs(std::string);
 
+  void   setCurrentField(std::string);
+
   void   printSummary();
+
+  CurrentField getCurrentField() {return(m_current_field);};
 
 protected:
   bool      m_paused;
@@ -92,5 +99,7 @@ protected:
   VState    m_vstate; // with no noise
   MBTimer   m_pause_timer;
   SimEngine m_sim_engine;
+
+  CurrentField m_current_field;
 };
 #endif

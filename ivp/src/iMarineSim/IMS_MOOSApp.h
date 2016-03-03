@@ -52,19 +52,18 @@ public:
   bool OnNewMail(MOOSMSG_LIST &NewMail);
 
  protected:
+  void postCurrentField();
   void handleSimReset(const std::string&);
   void registerVariables();
 
 protected:
-  std::string m_sim_prefix;
-  IMS_Model*  m_model;
+  std::string  m_sim_prefix;
+  IMS_Model*   m_model;
+  bool         m_pending_cfield;
+  unsigned int m_reset_count;
 
-  int         m_reset_count;
-
-  // tes 12-2-07 added to allow simulated lat/long
   CMOOSGeodesy m_geodesy;
   bool m_geo_ok;
-
 };
 #endif
 
