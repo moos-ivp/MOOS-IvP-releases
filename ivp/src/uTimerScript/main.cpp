@@ -24,14 +24,27 @@ int main(int argc, char *argv[])
     return(0);
   }
 
-  std::string sMissionFile = "TimerScript.moos";
-	
-  if(argc > 1)
-    sMissionFile = argv[1];
-	
+  int    i;
+  string mission_file = "";
+  bool   help_requested = false;
+
+  for(i=1; i<argc; i++) {
+    string argi = argv[i];
+    if(strEnds(argi, ".moos"))
+      mission_file = argv[i];
+    else if(strEnds(argi, ".moos++"))
+      mission_file = argv[i];
+    else if((argi == "--help")||(argi=="-h"))
+      help_requested = true;
+  }
+
+  if((mission_file == "") || help_requested) {
+    MOOSTrace("Usage: uTimerScript moosfile.moos \n");
+    return(0);
+  }
+
   TS_MOOSApp TimerScript;
-	
-  TimerScript.Run(argv[0], sMissionFile.c_str());
+  TimerScript.Run(argv[0], mission_file.c_str());
 
   return(0);
 }

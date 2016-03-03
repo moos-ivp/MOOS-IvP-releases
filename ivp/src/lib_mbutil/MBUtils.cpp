@@ -1280,7 +1280,7 @@ vector<string> getReleaseInfo(const string& app)
   string pad = padString("", (16-app.length()));
   vector<string> v;
   v.push_back("************************************************************************");
-  v.push_back("* " + app + "  - MOOS-IvP Release Bundle - VERSION 4.0    11/16/09" + pad + "*");
+  v.push_back("* " + app + "  - MOOS-IvP Release Bundle - VERSION 4.0.1" + pad + "       *");
   v.push_back("* M.Benjamin (NUWC/MIT), P.Newman (Oxford), Schmidt and Leonard (MIT)  *");
   v.push_back("* Copyright (C) 2008 Free Software Foundation, Inc.                    *");
   v.push_back("* This is free software; see the source for copying conditions.        *");
@@ -1289,3 +1289,81 @@ vector<string> getReleaseInfo(const string& app)
   return(v);
 }
 
+//----------------------------------------------------------------
+// Procedure: tokenizePath
+//   Purpose: Provides a platform nuetral procedure for tokenizing
+//            a path string by the system slash. Mac and Linux
+//            only use the forward slash. Windows can use both slashes.
+//
+//   Example: pathParts = tokenizePath("/usr/local/bin/someApp");
+//            pathParts[0] = "usr"
+//            pathParts[1] = "local"
+//            pathParts[2] = "bin"
+//            pathParts[3] = "someApp"
+//
+//   Example: pathParts = tokenizePath("/opt/java/bin/");
+//            pathParts[0] = "opt"
+//            pathParts[1] = "java"
+//            pathParts[2] = "bin"
+vector<string> tokenizePath(const string& path){
+    vector<string> rvector;
+
+#ifdef _WIN32
+    // Windows - Paths can have both forward and backward slashes
+    //              Ex: C:\ivp\bin\pMarineViewer.exe
+    //              Ex: C:/ivp/bin/pMarineViewer.exe
+  int psize = path.size();
+  int prev = 0;
+  for(int i=0; i<psize;i++){
+    if(path.at(i) == '/' || path.at(i) == '\\' ){
+        // If the first char is a slash, don't add it
+        if(i!=0){
+            rvector.push_back(path.substr(prev, i - prev));
+        } // END check i!=0
+        prev = i+1;
+    } // END check for slashes
+    // Add the last substring if we reach the last character and there are
+    // still charaters to add
+    if(i == psize -1 && prev<i){
+        rvector.push_back(path.substr(prev, i - prev + 1));
+    } // END check i == psize -1
+  }// End for-loop over the string
+#else
+    // Linux and Mac - Only tokenize on the forward slash
+    rvector = parseString(path, '/');
+    // If the first element in the vector is an empty string, remove it.
+   if(rvector.front().size() == 0){
+       rvector.erase(rvector.begin() );
+   } // END check first element
+#endif
+    return (rvector);
+}
+
+//----------------------------------------------------------------
+// Procedure: parseAppName
+//   Purpose: Extract an application name from the specified string.
+//            Handles strings with full paths and relative paths
+//            on Mac, Linux and Windows. Also on Windows, the suffix
+//            ".exe" is removed from the end of the string.
+//
+//   Example: parseAppName("../pMarineViewer") return "pMarineViewer"
+//   Example: parseAppName("C:\ivp\pMarineViewer.exe") return "pMarineViewer"
+
+string parseAppName(const string& name){
+    vector<string> pathnameParts = tokenizePath(name);
+    string appFilename = pathnameParts.back();
+
+#ifdef _WIN32
+    // Handle Windows App names by removing the ".exe" from the end
+    const string suffix = ".exe";
+
+    // Check if the current appFilename contains the suffix
+    if( appFilename.substr(appFilename.size() - suffix.size(), 
+			    suffix.size()) == suffix ){
+        // Remove the suffix
+        appFilename = appFilename.substr(0, appFilename.size() - suffix.size());
+    }
+#endif
+    
+    return appFilename;
+}
