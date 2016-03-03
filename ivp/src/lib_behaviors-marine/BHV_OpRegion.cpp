@@ -38,10 +38,21 @@ using namespace std;
 
 BHV_OpRegion::BHV_OpRegion(IvPDomain gdomain) : IvPBehavior(gdomain)
 {
-  this->setParam("descriptor", "bhv_opregion");
+  m_descriptor   = "bhv_opregion";
   m_max_depth    = 0;
   m_min_altitude = 0;
   m_max_time     = 0;
+  m_hint_vertex_size  = 3;
+  m_hint_vertex_color = "brown"; 
+  m_hint_edge_size    = 1;
+  m_hint_edge_color   = "aqua"; 
+
+  m_breached_poly_flags_posted  = false;
+  m_breached_time_flags_posted  = false;
+  m_breached_altitude_flags_posted = false;
+  m_breached_depth_flags_posted = false;
+
+  m_time_remaining_var = "";
 
   // Keep track of whether the vehicle was in the polygon on the
   // previous invocation of the behavior. Initially assume false.
@@ -121,6 +132,55 @@ bool BHV_OpRegion::setParam(string param, string val)
     m_max_depth = dval;
     return(true);
   }
+  else if(param == "reset_var") {
+    if(strContainsWhite(val))
+      return(false);
+    m_reset_var = val;
+    addInfoVars(m_reset_var);
+    return(true);
+  }
+  else if(param == "time_remaining_var") {
+    if(strContainsWhite(val))
+      return(false);
+    m_time_remaining_var = val;
+    return(true);
+  }
+  else if(param == "breached_poly_flag") {
+    string varname = biteStringX(val, '=');
+    string varval  = val;
+    if(strContainsWhite(varname) || (varval == ""))
+      return(false);
+    VarDataPair pair(varname, varval, "auto");
+    m_breached_poly_flags.push_back(pair);
+    return(true);
+  }
+  else if(param == "breached_time_flag") {
+    string varname = biteStringX(val, '=');
+    string varval  = val;
+    if(strContainsWhite(varname) || (varval == ""))
+      return(false);
+    VarDataPair pair(varname, varval, "auto");
+    m_breached_time_flags.push_back(pair);
+    return(true);
+  }
+  else if(param == "breached_altitude_flag") {
+    string varname = biteStringX(val, '=');
+    string varval  = val;
+    if(strContainsWhite(varname) || (varval == ""))
+      return(false);
+    VarDataPair pair(varname, varval, "auto");
+    m_breached_altitude_flags.push_back(pair);
+    return(true);
+  }
+  else if(param == "breached_depth_flag") {
+    string varname = biteStringX(val, '=');
+    string varval  = val;
+    if(strContainsWhite(varname) || (varval == ""))
+      return(false);
+    VarDataPair pair(varname, varval, "auto");
+    m_breached_depth_flags.push_back(pair);
+    return(true);
+  }
   else if(param == "min_altitude") {
     double dval = atof(val.c_str());
     if((dval < 0) || (!isNumber(val)))
@@ -162,6 +222,16 @@ bool BHV_OpRegion::setParam(string param, string val)
 }
 
 //-----------------------------------------------------------
+// Procedure: onIdleState
+
+void BHV_OpRegion::onIdleState() 
+{
+  checkForReset();
+  postTimeRemaining();
+  postErasablePolygon();
+}
+
+//-----------------------------------------------------------
 // Procedure: onRunState
 //     Notes: Always returns NULL, never returns an IvPFunction*
 //     Notes: Sets state_ok = false and posts an error message if
@@ -172,12 +242,14 @@ IvPFunction *BHV_OpRegion::onRunState()
   // Each of the below calls will check their critical conditions
   // and post an error message if a violation is detected. The call
   // to postEMessage() also sets state_ok = false;
+  checkForReset();
   setTimeStamps();
   polygonVerify();
   postPolyStatus();
   depthVerify();
   altitudeVerify();
   timeoutVerify();
+  postTimeRemaining();
   
   postViewablePolygon();
   return(0);
@@ -271,8 +343,11 @@ void BHV_OpRegion::polygonVerify()
   // All verification cases failed. Post an error message and
   // return verification = false;
   string emsg = "BHV_OpRegion Polygon containment failure: ";
-  emsg += " x=" + doubleToString(osX);
-  emsg += " y=" + doubleToString(osY);
+  emsg += " x=" + doubleToString(osX,1);
+  emsg += " y=" + doubleToString(osY,1);
+  if(!m_breached_poly_flags_posted) {
+    postBreachFlags("poly");
+  }
   postEMessage(emsg);
 }
 
@@ -389,7 +464,6 @@ void BHV_OpRegion::depthVerify()
   if(!ok) { 
     //cout << "No NAV_DEPTH in info_buffer for vehicle: " << m_us_name << endl;
     postEMessage("No ownship depth in info_buffer.");
-    //m_info_buffer->print();
     return;
   }
 
@@ -397,6 +471,7 @@ void BHV_OpRegion::depthVerify()
     string emsg = "OpRegion Depth failure: max:";
     emsg += doubleToString(m_max_depth);
     emsg += " detected:" + doubleToString(depth);
+    postBreachFlags("depth");
     postEMessage(emsg);
   }
 }
@@ -427,6 +502,7 @@ void BHV_OpRegion::altitudeVerify()
     emsg += doubleToString(m_min_altitude);
     emsg += "  Detected Altitude: ";
     emsg += doubleToString(curr_altitude);
+    postBreachFlags("altitude");
     postEMessage(emsg);
   }
 }
@@ -442,14 +518,36 @@ void BHV_OpRegion::timeoutVerify()
   // If no max_time specified, return with no error message posted.
   if(m_max_time <= 0)
     return;
-
+   
   if(m_elapsed_time > m_max_time) {
     string emsg = "OpRegion timeout failure: MaxTime:";
     emsg += doubleToString(m_max_time);
     emsg += "  Elapsed Time: ";
     emsg += doubleToString(m_elapsed_time);
+    postBreachFlags("time");
     postEMessage(emsg);
   }
+}
+
+
+//-----------------------------------------------------------
+// Procedure: postTimeRemaining()
+
+void BHV_OpRegion::postTimeRemaining()
+{
+  if(m_time_remaining_var == "")
+    return;
+
+  if(m_max_time <= 0) 
+    postMessage(m_time_remaining_var, -1);
+   
+  double time_remaining = m_max_time - m_elapsed_time;
+  if(time_remaining < 0)
+    time_remaining = 0;
+  if(time_remaining > 10)
+    postIntMessage(m_time_remaining_var, time_remaining);
+  else
+    postMessage(m_time_remaining_var, time_remaining);
 }
 
 
@@ -521,6 +619,92 @@ void BHV_OpRegion::postErasablePolygon()
 }
 
 //-----------------------------------------------------------
+// Procedure: checkForReset()
+
+void BHV_OpRegion::checkForReset()
+{
+  double time_since_reset = getBufferTimeVal(m_reset_var);
+  if(time_since_reset != 0)
+    return;
+  
+  bool result;
+  string reset_str = getBufferStringVal(m_reset_var, result);
+  if(!result)
+    return;
+
+  // reset_str if:
+  // "true", then reset all components
+  // "time", then reset the time component only
+  // "poly", then reset the poly component only
+  // "depth", then reset the depth component only
+  // "altitude", then reset the altitude component only
+
+  reset_str = tolower(reset_str);
+  if((reset_str == "poly") || (reset_str == "true")) {
+    m_breached_poly_flags_posted = false;
+    m_secs_in_poly = 0;
+    m_previously_in_poly = false;
+    m_poly_entry_made = false;
+  }
+  if((reset_str == "time") || (reset_str == "true")) {
+    m_first_time = true;  
+    m_breached_time_flags_posted = false;
+  }
+  if((reset_str == "altitude") || (reset_str == "true"))
+    m_breached_altitude_flags_posted = false;
+  if((reset_str == "altitude") || (reset_str == "true"))
+    m_breached_depth_flags_posted = false;
+}
+
+//-----------------------------------------------------------
+// Procedure: postBreachFlags()
+
+void BHV_OpRegion::postBreachFlags(string str)
+{
+  if((str == "poly") && m_breached_poly_flags_posted)
+    return;
+  if((str == "time") && m_breached_time_flags_posted)
+    return;
+  if((str == "altitude") && m_breached_altitude_flags_posted)
+    return;
+  if((str == "depth") && m_breached_depth_flags_posted)
+    return;
+
+  vector<VarDataPair> flags;
+  if(str == "poly") {
+    flags = m_breached_poly_flags;
+    m_breached_poly_flags_posted = true;
+  }
+  else if(str == "time") {
+    flags = m_breached_time_flags;
+    m_breached_time_flags_posted = true;
+  }
+  else if(str == "altitude") {
+    flags = m_breached_altitude_flags;
+    m_breached_altitude_flags_posted = true;
+  }
+  else if(str == "depth") {
+    flags = m_breached_depth_flags;
+    m_breached_depth_flags_posted = true;
+  }
+
+  unsigned int i, vsize = flags.size();
+  for(i=0; i<vsize; i++) {
+    string var = flags[i].get_var();
+    if(flags[i].is_string()) {
+      string sdata = flags[i].get_sdata();
+      sdata = findReplace(sdata, "$[OWNSHIP]", m_us_name);
+      sdata = findReplace(sdata, "$[BHVNAME]", m_descriptor);
+      postRepeatableMessage(var, sdata);
+    }
+    else {
+      double ddata = flags[i].get_ddata();
+      postRepeatableMessage(var, ddata);
+    }	
+  }    
+}
+
+//-----------------------------------------------------------
 // Procedure: handleVisualHint()
 
 void BHV_OpRegion::handleVisualHint(string hint)
@@ -538,8 +722,3 @@ void BHV_OpRegion::handleVisualHint(string hint)
   else if((param == "vertex_size") && isNumber(value) && (dval >= 0))
     m_hint_vertex_size = dval;
 }
-
-
-
-
-

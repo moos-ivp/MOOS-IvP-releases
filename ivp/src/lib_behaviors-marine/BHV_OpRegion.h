@@ -34,7 +34,7 @@ class BHV_OpRegion : public IvPBehavior {
   
   bool         setParam(std::string, std::string);
   IvPFunction* onRunState();
-  void         onIdleState()     {postErasablePolygon();};
+  void         onIdleState();
   void         onCompleteState() {postErasablePolygon();};
 
  protected:
@@ -44,11 +44,14 @@ class BHV_OpRegion : public IvPBehavior {
   void      altitudeVerify();
   void      timeoutVerify();
   void      setTimeStamps();
+  void      checkForReset();
   void      handleVisualHint(std::string);
   void      postViewablePolygon();
   void      postErasablePolygon();
+  void      postBreachFlags(std::string);
+  void      postTimeRemaining();
 
- protected: // Parameters
+ protected: // Configuration Variables
   std::vector<XYPolygon> m_polygons;
   XYPolygon m_polygon;
   double    m_max_depth;
@@ -58,11 +61,30 @@ class BHV_OpRegion : public IvPBehavior {
   double    m_trigger_exit_time;
   bool      m_trigger_on_poly_entry;
 
+  // Allow for possible reset once poly has been breached
+  std::string m_reset_var;
+
+  // Allow for possible posting of time_remaining
+  std::string m_time_remaining_var;
+
+  // Allow for flags to be posted when/if a breach is made
+  std::vector<VarDataPair>  m_breached_poly_flags;
+  std::vector<VarDataPair>  m_breached_time_flags;
+  std::vector<VarDataPair>  m_breached_altitude_flags;
+  std::vector<VarDataPair>  m_breached_depth_flags;
+
+  bool m_breached_poly_flags_posted;
+  bool m_breached_time_flags_posted;
+  bool m_breached_altitude_flags_posted;
+  bool m_breached_depth_flags_posted;
+
+
   // Visual hints affecting properties of polygons/points
   std::string m_hint_vertex_color;
   std::string m_hint_edge_color;
   double      m_hint_vertex_size;
   double      m_hint_edge_size;
+
 
  protected: // State Variables
   bool      m_poly_entry_made;
@@ -77,20 +99,8 @@ class BHV_OpRegion : public IvPBehavior {
 
   bool      m_first_time;
   bool      m_previously_in_poly;
-
-
 };
 #endif
-
-
-
-
-
-
-
-
-
-
 
 
 
