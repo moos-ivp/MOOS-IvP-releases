@@ -41,11 +41,23 @@ int main(int argc, char *argv[])
     return(0);
   }
   
-  bool verbose = true;
-  if(scanArgs(argc, argv, "--verbose", "-verbose"))
-    verbose = true;
-  if(scanArgs(argc, argv, "--quiet", "-quiet", "-q"))
-    verbose = false;
+  bool comments_retained = true;
+  if(scanArgs(argc, argv, "--no_comments", "-nc"))
+    comments_retained = false;
+  
+  bool badlines_retained = false;
+  if(scanArgs(argc, argv, "--keep_badlines", "-kb"))
+    badlines_retained = true;
+  
+  bool make_end_report = true;
+  if(scanArgs(argc, argv, "--no_report", "-nr"))
+    make_end_report = false;
+  
+  if(scanArgs(argc, argv, "--quiet", "-q")) {
+    comments_retained = false;
+    make_end_report = false;
+  }
+    
   
   bool file_overwrite = false;
   if(scanArgs(argc, argv, "-f", "--force", "-force"))
@@ -69,16 +81,21 @@ int main(int argc, char *argv[])
     cout << "  SRC      - The name of a MOOS process (source)           " << endl;
     cout << "                                                           " << endl;
     cout << "Options:                                                   " << endl;
-    cout << "  -h,--help     Displays this help message                 " << endl;
-    cout << "  -v,--version  Displays the current release version       " << endl;
-    cout << "  -f,--force    Force overwrite of existing file           " << endl;
-    cout << "  -q,--quiet    Verbose report suppressed at conclusion    " << endl;
+    cout << "  -h,--help         Displays this help message             " << endl;
+    cout << "  -v,--version      Displays the current release version   " << endl;
+    cout << "  -f,--force        Force overwrite of existing file       " << endl;
+    cout << "  -q,--quiet        Supress summary report, header comments" << endl;
+    cout << "  -nc,--no_comments Supress comment (header) lines         " << endl;
+    cout << "  -nr,--no_report   Supress summary report                 " << endl;
+    cout << "                                                           " << endl;
+    cout << "  --keep_badlines   Do not disscard lines that don't begin " << endl;
+    cout << "  -kb               with a timestamp or comment character. " << endl;
     cout << "                                                           " << endl;
     cout << "Further Notes:                                             " << endl;
     cout << "  (1) The second alog is the output file. Otherwise the    " << endl;
     cout << "      order of arguments is irrelevent.                    " << endl;
     cout << "  (2) VAR* matches any MOOS variable starting with VAR     " << endl;
-    cout << "  (3) See also: alogscan, alogrm, alogclip, alogview       " << endl;
+    cout << "  (3) See also: alogscan, alogrm, alogclip, alogsplit, alogview " << endl;
     cout << endl;
     return(0);
   }
@@ -89,7 +106,7 @@ int main(int argc, char *argv[])
 
   for(int i=1; i<argc; i++) {
     string sarg = argv[i];
-    if(strContains(sarg, ".alog")) {
+    if(strEnds(sarg, ".alog") || strEnds(sarg, ".klog")) {
       if(alogfile_in == "")
 	alogfile_in = sarg;
       else 
@@ -101,21 +118,25 @@ int main(int argc, char *argv[])
  
   if(alogfile_in == "") {
     cout << "No alog file given - exiting" << endl;
-    exit(0);
+    exit(1);
   }
-  else if(verbose)
+  else if(make_end_report)
     cout << "Processing on file : " << alogfile_in << endl;
   
   GrepHandler handler;
   handler.setFileOverWrite(file_overwrite);
+  handler.setCommentsRetained(comments_retained);
+  handler.setBadLinesRetained(badlines_retained);
 
   int ksize = keys.size();
   for(int i=0; i<ksize; i++)
     handler.addKey(keys[i]);
 
   bool handled = handler.handle(alogfile_in, alogfile_out);
-  
-  if(handled && verbose)
+  if(!handled)
+    exit(1);
+
+  if(handled && make_end_report)
     handler.printReport();
 }
 

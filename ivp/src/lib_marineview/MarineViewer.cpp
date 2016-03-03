@@ -181,6 +181,30 @@ bool MarineViewer::setParam(string param, string value)
 }
 
 //-------------------------------------------------------------
+// Procedure: handleNoTiff
+
+void MarineViewer::handleNoTiff()
+{
+  if(m_back_img.get_img_data() != 0)
+    return;
+
+  cout << "No Image Data found. Faking it...." << endl;
+
+  double lat_north = 0;
+  double lat_south = 0;
+  double lon_east  = 0;
+  double lon_west  = 0; 
+
+  bool ok1 = m_geodesy.LocalGrid2LatLong(400, 100, lat_north, lon_east);
+  bool ok2 = m_geodesy.LocalGrid2LatLong(-100, -400, lat_south, lon_west);
+
+  if(ok1 && ok2)
+    m_back_img.readTiffInfoEmpty(lat_north, lat_south, lon_east, lon_west);
+}
+
+
+
+//-------------------------------------------------------------
 // Procedure: setParam
 
 bool MarineViewer::setParam(string param, double v)
@@ -227,6 +251,12 @@ bool MarineViewer::setParam(string param, double v)
   }
   else if(param == "set_pan_y") {
     m_vshift_y = v;
+    cout << "set_pan_y:" << m_vshift_y << endl;
+  }
+  else if(param == "set_zoom") {
+    m_zoom = v;
+    if(m_zoom < 0.00001)
+      m_zoom = 0.00001;
     cout << "set_pan_y:" << m_vshift_y << endl;
   }
   else
@@ -556,13 +586,15 @@ void MarineViewer::drawGLPoly(double *points, unsigned int numPoints,
 //-------------------------------------------------------------
 // Procedure: drawCommonVehicle
 
-void MarineViewer::drawCommonVehicle(const NodeRecord& record, 
+void MarineViewer::drawCommonVehicle(const NodeRecord& record_mikerb, 
 				     const BearingLine& bng_line, 
 				     const ColorPack& body_color,
 				     const ColorPack& vname_color,
 				     bool  vname_draw, 
 				     unsigned int outer_line)
 {
+  NodeRecord record = record_mikerb;
+
   string vname    = record.getName();
   string vehibody = tolower(record.getType());
   double vlength  = record.getLength();
@@ -570,6 +602,12 @@ void MarineViewer::drawCommonVehicle(const NodeRecord& record,
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   glOrtho(0, w(), 0, h(), -1 ,1);
+
+  double heading = record.getHeading();
+  bool thrust_mode_reverse = record.getThrustModeReverse();
+  if(thrust_mode_reverse) {
+    heading = angle360(heading+180);
+  }
 
   // Determine position in terms of image percentage
   double vehicle_ix = meters2img('x', record.getX());
@@ -586,7 +624,7 @@ void MarineViewer::drawCommonVehicle(const NodeRecord& record,
   glTranslatef(vehicle_vx, vehicle_vy, 0); // theses are in pixel units
 
   glScalef(m_zoom, m_zoom, m_zoom);
-  glRotatef(-record.getHeading(),0,0,1);  
+  glRotatef(-heading,0,0,1);  
 
   ColorPack black(0,0,0);
   ColorPack gray(0.5, 0.5, 0.5);
@@ -725,7 +763,7 @@ void MarineViewer::drawCommonVehicle(const NodeRecord& record,
     projectPoint(bearing, range, 0, 0, bx, by);
 
     if(absolute)
-      glRotatef(record.getHeading(),0,0,1);  
+      glRotatef(heading,0,0,1);  
 
     glLineWidth(lwidth);
     glBegin(GL_LINE_STRIP);
@@ -2030,9 +2068,8 @@ void MarineViewer::drawCommsPulses(const vector<XYCommsPulse>& pulses,
   // true if nothing is known about the parameter.
   if(!m_geo_settings.viewable("comms_pulse_viewable_all", true))
     return;
-
+  
   unsigned int i, vsize = pulses.size();
-
   for(i=0; i<vsize; i++)
     if(pulses[i].active())
       drawCommsPulse(pulses[i], timestamp);
@@ -2321,6 +2358,31 @@ void MarineViewer::drawText(double px, double py, const string& text,
   px *= m_back_img.get_pix_per_mtr_x();
   py *= m_back_img.get_pix_per_mtr_y();
 
+  if(font_c.visible()) {
+    glColor3f(font_c.red(), font_c.grn(), font_c.blu());
+    gl_font(1, font_size);
+    glRasterPos3f(px, py, 0);
+    gl_draw(text.c_str());
+  }
+  glFlush();
+  glPopMatrix();
+}
+
+
+//-------------------------------------------------------------
+// Procedure: drawTextX
+
+void MarineViewer::drawTextX(double px, double py, const string& text,
+			    const ColorPack& font_c, double font_size) 
+{
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  glOrtho(0, w(), 0, h(), -1 ,1);
+  
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+  glLoadIdentity();
+  
   if(font_c.visible()) {
     glColor3f(font_c.red(), font_c.grn(), font_c.blu());
     gl_font(1, font_size);

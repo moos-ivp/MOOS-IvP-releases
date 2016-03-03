@@ -50,25 +50,28 @@ public:    // Virtual Function
 
   void   setDomain(IvPDomain);
   void   addOF(IvPFunction*);
-  void   setOwnerIPFs(bool v)    {m_owner_ofs = v;};
+  void   setOwnerIPFs(bool v)    {m_owner_ofs = v;}
   void   clearIPFs();
   bool   alignOFs();
   int    getDim();
-  int    getOFNUM() const        {return(m_ofnum);};
-  double getMaxWT()              {return(m_maxwt);};
-  void   setSilent(bool x)       {m_silent=x;};
+  int    getOFNUM() const        {return(m_ofnum);}
+  double getMaxWT()              {return(m_maxwt);}
+  void   setSilent(bool x)       {m_silent=x;}
   void   initialSolution1();
   void   initialSolution2();
   void   sortOFs(bool high_to_low=true);
   void   processInitSol(const IvPBox*);
-  void   setEpsilon(double v)    {if(v>=0) m_epsilon=v;};
-  double getEpsilon()            {return(m_epsilon);};
+  void   setEpsilon(double v)    {if(v>=0) m_epsilon=v;}
+  double getEpsilon()            {return(m_epsilon);}
   double getResult(const std::string&, bool *v=0);
+  double getPieceAvg() const; 
 
   IvPFunction* getOF(int);
 
-  const  IvPBox* getMaxBox()  {return(m_maxbox);};
+  IvPDomain getDomain() const {return(m_domain);}
 
+  const  IvPBox* getMaxBox()  {return(m_maxbox);}
+  
 protected:
   bool     universesInSync();
   void     newSolution(double, const IvPBox*);
@@ -87,9 +90,3 @@ protected:
 };
 
 #endif
-
-
-
-
-
-

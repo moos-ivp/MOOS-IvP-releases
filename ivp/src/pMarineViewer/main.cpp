@@ -79,8 +79,8 @@ int main(int argc, char *argv[])
 
   AppCastRepo appcast_repo;
 
-  int gui_wid = 0.80 * Fl::w();
-  int gui_hgt = 0.75 * Fl::h();
+  int gui_wid = 0.85 * Fl::w();
+  int gui_hgt = 0.85 * Fl::h();
   if(size_request != "") {
     string s_wid = biteStringX(size_request, 'x');
     string s_hgt = size_request;
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 
   // For document screen shots:
   // PMV_GUI* gui = new PMV_GUI(1100,640, "pMarineViewer");
-  string title_base = "pMarineViewer (MIT Version 14.7.x)";
+  string title_base = "pMarineViewer (MIT Version 15.5)";
   PMV_GUI* gui = new PMV_GUI(gui_wid, gui_hgt, title_base.c_str());
   if(!gui) {
     cout << "Unable to instantiate the GUI - exiting." << endl;
@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
   char * appFilename = const_cast<char*>(name.c_str());
 
   MOOSAppRunnerThread portAppRunnerThread(&thePort, appFilename, 
-					  mission_file.c_str());
+					  mission_file.c_str(), argc, argv);
 
   Fl::lock();
   

@@ -215,8 +215,8 @@ bool CMOOSGeodesy::LatLong2LocalGrid(double lat,
     double dY = dfRadius * sin(dYArcDeg);
 
     //This is the total distance traveled thus far, either North or East
-    MetersNorth = dX;
-    MetersEast  = dY;
+    MetersNorth = dY;
+    MetersEast  = dX;
     
     return true;
 }
@@ -233,7 +233,7 @@ bool CMOOSGeodesy::LatLong2LocalGrid(double lat,
 
 bool CMOOSGeodesy::LocalGrid2LatLong(double dfEast, double dfNorth, double &dfLat, double &dfLon) 
 {
-  if(std::isnan(dfEast) || std::isnan(dfNorth)) // changed to std::isnan, mikerb, AUG/04/14
+  if(std::isnan(dfEast) || std::isnan(dfNorth))  // changed to std::isnan, mikerb AUG/04/14
     return(false);
 
     //(semimajor axis)
@@ -258,3 +258,12 @@ bool CMOOSGeodesy::LocalGrid2LatLong(double dfEast, double dfNorth, double &dfLa
     return true;
 }
 
+
+double CMOOSGeodesy::DMS2DecDeg(double dfVal)
+{
+  int nDeg = (int)(dfVal/100.0);
+  
+  double dfTmpDeg = (100.0*(dfVal/100.0-nDeg))/60.0;
+  
+  return(dfTmpDeg+nDeg);
+}

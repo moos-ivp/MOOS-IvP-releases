@@ -48,6 +48,7 @@ PMV_MOOSApp::PMV_MOOSApp()
   m_appcast_repo             = 0;
   m_appcast_last_req_time    = 0;
   m_appcast_request_interval = 1.0;  // seconds
+  m_clear_geoshapes_received = 0;
 
   m_node_reports_received = 0;
   m_node_report_index     = 0;
@@ -213,6 +214,7 @@ void PMV_MOOSApp::registerVariables()
   m_Comms.Register("VIEW_GRID", 0);
   m_Comms.Register("VIEW_RANGE_PULSE", 0);
   m_Comms.Register("PMV_MENU_CONTEXT", 0);
+  m_Comms.Register("PMV_CLEAR", 0);
 
   unsigned int i, vsize = m_scope_vars.size();
   for(i=0; i<vsize; i++)
@@ -302,7 +304,11 @@ void PMV_MOOSApp::handleNewMail(const MOOS_event & e)
       m_gui->augmentTitle(sval);
       handled = true;
     }
-
+    
+    else if(key == "PMV_CLEAR") {
+      handled = handleMailClear(sval);
+    }
+      
     // PMV_MENU_CONTEXT = 
     // side=left, menukey=polyvert, post="POLY_VERT=x=$(XPOS),y=$(YPOS)"
     else if(key == "PMV_MENU_CONTEXT") {
@@ -657,13 +663,16 @@ void PMV_MOOSApp::handleStartUp(const MOOS_event & e) {
     }
   }
 
-
-  
+#if 0
   // If no images were specified, use the default images.
   if(!tiff_a_set && !tiff_b_set) {
     m_gui->mviewer->setParam("tiff_file", "Default.tif");
     m_gui->mviewer->setParam("tiff_file_b", "DefaultB.tif");
   }
+#endif
+
+  m_gui->mviewer->handleNoTiff();
+
 
   m_start_time = MOOSTime();
   m_gui->mviewer->setParam("time_warp", m_time_warp);
@@ -710,6 +719,34 @@ string PMV_MOOSApp::getContextKey(string str)
 }
 
 //------------------------------------------------------------
+// Procedure: handleMailClear
+//   Example: "vname=henry, shape=polygon, stype=hull*"
+//   Example: "vname=henry"
+//   Example: "shape=polygon"
+
+bool PMV_MOOSApp::handleMailClear(string str)
+{
+  m_clear_geoshapes_received++;
+  vector<string> svector = parseStringQ(str, ',');
+  unsigned int k, ksize = svector.size(); 
+  string vname, shape, stype;
+  for(k=0; k<ksize; k++) {
+    string param = tolower(biteStringX(svector[k], '='));
+    string value = svector[k];
+    if(param == "vname")
+      vname = value;
+    else if(param == "shape")
+      shape = value;
+    else if(param == "stype")
+      stype = value;
+    else
+      return(false);
+  }
+  m_gui->clearGeoShapes(vname, shape, stype);
+  return(true);
+}
+
+//------------------------------------------------------------
 // Procedure: postAppCastRequest
 //   Example: str = "node=henry,app=pHostInfo,duration=10,key=uMAC_438"
 
@@ -753,7 +790,18 @@ bool PMV_MOOSApp::buildReport()
 {
   // Nothing for now. AppCasting mostly to catch configuration warnings.
 
+  string tiff_file_a = m_gui->mviewer->getTiffFileA();
+  string info_file_a = m_gui->mviewer->getInfoFileA();
+  string tiff_file_b = m_gui->mviewer->getTiffFileB();
+  string info_file_b = m_gui->mviewer->getInfoFileB();
+
+  m_msgs << "Tiff File A:      " << tiff_file_a << endl;
+  m_msgs << "Info File A:      " << info_file_a << endl;
+  m_msgs << "Tiff File B:      " << tiff_file_b << endl;
+  m_msgs << "Info File B:      " << info_file_b << endl;
+  m_msgs << "------------------" << endl;
   m_msgs << "Total GeoShapes:  " << m_gui->mviewer->shapeCount("total_shapes") << endl;
+  m_msgs << "Clear GeoShapes:  " << m_clear_geoshapes_received << endl;
   m_msgs << "NodeReports Recd: " << m_node_reports_received << endl;
   m_msgs << "NodeReport Index: " << m_node_report_index << endl;
 
@@ -766,13 +814,23 @@ bool PMV_MOOSApp::buildReport()
   m_msgs << "Draw Count Rate:  " << drawrate  << endl; 
 
   double curr_time = m_gui->mviewer->getCurrTime();
-  m_msgs << "Curr Time:        " << doubleToString(curr_time,10) << endl;
+  m_msgs << "Curr Time:        " << doubleToString(curr_time,2) << endl;
 
   double time_warp = m_gui->mviewer->getTimeWarp();
   m_msgs << "Time Warp:        " << doubleToString(time_warp,3) << endl;
 
   double elapsed = m_gui->mviewer->getElapsed();
-  m_msgs << "Elapsed:        " << doubleToString(elapsed,5) << endl;
+  m_msgs << "Elapsed:          " << doubleToString(elapsed,5) << endl;
+
+  m_msgs << endl;
+  m_msgs << "Visual Settings: " << endl;
+  string panx_str = doubleToString(m_gui->getMarineViewer()->getPanX(), 2);
+  string pany_str = doubleToString(m_gui->getMarineViewer()->getPanY(), 2);
+  string zoom_str = doubleToString(m_gui->getMarineViewer()->getZoom(), 2);
+
+  m_msgs << "  pan_x:   " << panx_str << endl;
+  m_msgs << "  pan_y:   " << pany_str << endl;
+  m_msgs << "  zoom :   " << zoom_str << endl;
 
   return(true);
 }

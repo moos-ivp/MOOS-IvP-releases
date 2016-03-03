@@ -71,6 +71,7 @@ set(THIRDPARTY_SOURCES
   Thirdparty/PocoBits/src/Bugcheck.cpp
   Thirdparty/PocoBits/src/Debugger.cpp
   Thirdparty/AppCasting/AppCastingMOOSApp.cpp
+  Thirdparty/AppCasting/AppCastingMOOSInstrument.cpp
   Thirdparty/AppCasting/AppCast.cpp
 )
 
@@ -95,16 +96,14 @@ include(PlatformDefines)
 #do we want to use the new fast asynchronous client architecture?
 OPTION(USE_ASYNC_COMMS  "enable fast asynchronous comms architecture" ON)
 IF (USE_ASYNC_COMMS)
-    cache_internal_append_unique(PROJECT_EXPORT_DEFINES ASYNCHRONOUS_CLIENT)
-    ADD_DEFINITIONS(-DASYNCHRONOUS_CLIENT)
-ELSE (USE_ASYNC_COMMS)
-    message(STATUS "removing ASYNCHRONOUS_CLIENT")
-    cache_internal_remove(PROJECT_EXPORT_DEFINES ASYNCHRONOUS_CLIENT)
-    REMOVE_DEFINITIONS(-DASYNCHRONOUS_CLIENT)
+  set(ASYNCHRONOUS_CLIENT_DEFINE "#define ASYNCHRONOUS_CLIENT")
 ENDIF (USE_ASYNC_COMMS)
 
-
-
+#do we want to use the new fast asynchronous client architecture?
+OPTION(MOOS_DISABLE_XPCTCP_NAME_LOOKUP "Disable host name look ups" OFF)
+IF(MOOS_DISABLE_XPCTCP_NAME_LOOKUP)
+    ADD_DEFINITIONS(-DMOOS_DISABLE_XPCTCP_NAME_LOOKUP)
+ENDIF(MOOS_DISABLE_XPCTCP_NAME_LOOKUP)
 
 #do we want to turn on the experimental clock skew detection?
 OPTION(DETECT_CLOCK_DRIFT  "MOOSCommClient<->MOOSDB Clock drift detection (experimental)" OFF)
@@ -149,6 +148,8 @@ IF (ENABLE_V10_COMPATIBILITY)
     ENDIF()
 ENDIF ()
 
+CONFIGURE_FILE(${CMAKE_MODULE_PATH}/ClientDefines.h.in
+${CMAKE_CURRENT_SOURCE_DIR}/App/include/MOOS/libMOOS/App/ClientDefines.h @ONLY)
 
 
 ##########################
@@ -186,9 +187,9 @@ if(UNIX)
 endif(UNIX)
 
 IF(WIN32)
-  set(DEPENDENCIES wsock32 comctl32)
-  cache_internal_append_unique(PROJECT_EXPORT_DEFINES _WIN32_WINNT=0x501)
-  add_definitions(-D_WIN32_WINNT=0x501 )
+  set(DEPENDENCIES wsock32 comctl32 ws2_32) # adding ws2_32 to support IPv6
+  cache_internal_append_unique(PROJECT_EXPORT_DEFINES _WIN32_WINNT=0x600) # XP does not support IPv6. Moving to Vista and latter.
+  add_definitions(-D_WIN32_WINNT=0x600 )
 ENDIF(WIN32)
     
 
@@ -241,7 +242,7 @@ target_link_libraries(${LIBNAME} ${${LIBNAME}_DEPEND_LIBRARIES})
 
 #######################################
 # install headers
-install(DIRECTORY ${INCLUDE_ROOTS} DESTINATION ${CMAKE_INSTALL_PREFIX} FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY ${INCLUDE_ROOTS} DESTINATION ${CMAKE_INSTALL_PREFIX} FILES_MATCHING PATTERN "*.h" PATTERN "*.hxx")
 
 
 # install libraries

@@ -4,10 +4,9 @@ PROJECT(IVP)
 
 IF (${WIN32})
   # Define Windows Compiler flags here
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  SET(CMAKE_CXX_FLAGS " ")
 ELSE (${WIN32})
-  #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -g -Wall -Wextra")
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -g -Wall -Wno-long-long")
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 ENDIF (${WIN32})
 
 #===============================================================================
@@ -16,6 +15,11 @@ ENDIF (${WIN32})
 
 # moos - http://www.robots.ox.ac.uk/~mobile/MOOS/wiki/pmwiki.php
 find_package(MOOS 10.0)
+
+message("+++++++++++++++++++++++++++++++++++++++++")
+message("FIND_PACKAGE CONSIDERED:" ${MOOS_CONSIDERED_CONFIGS})
+message("+++++++++++++++++++++++++++++++++++++++++")
+
 
 if(NOT DEFINED MOOS_LIBRARIES)
   message("Defining MOOS_LIBRARIES")
@@ -28,10 +32,6 @@ message("+++++++++++++++++++++++++++++++++++++++++")
 message("MOOS_INCLUDE_DIRS:" ${MOOS_INCLUDE_DIRS})
 message("MOOS_LIBRARIES:   " ${MOOS_LIBRARIES})
 message("+++++++++++++++++++++++++++++++++++++++++")
-
-#include_directories(${PROJ4_INCLUDE_DIRS})
-#link_directories(${PROJ4_LIB_PATH})
-
 
 #===============================================================================
 # FINDING MOOSGeodesy' HEADERS AND LIBRARIES...  
@@ -53,7 +53,13 @@ message("+++++++++++++++++++++++++++++++++++++++++")
 #-------------------------------------------------------------------------------
 # Let users control whether or not GUI-related libraries/apps are built...
 #-------------------------------------------------------------------------------
-SET(IVP_BUILD_GUI_CODE OFF CACHE BOOL "Build IvP's GUI-related libraries and apps.")
+SET(IVP_BUILD_GUI_CODE ON CACHE BOOL "Build IvP's GUI-related libraries and apps.")
+SET(IVP_BUILD_BOT_CODE_ONLY OFF CACHE BOOL "Build IvP's minimal set of bot apps.")
+
+#-------------------------------------------------------------------------------
+# Let users control whether or UTM or Local Coords are used
+#-------------------------------------------------------------------------------
+SET(USE_UTM ON CACHE BOOL "Use UTM coordinates vs Local coordinates.")
 
 #-------------------------------------------------------------------------------
 # Tell CMake (and thus C++) where to find IvP's header files...
@@ -100,35 +106,27 @@ SET(IVP_NON_GUI_LIBS
    )
 
 IF (${WIN32})
-   SET(TIFF_SRC_DIR lib_tiff/tiff-3.8.2/libtiff)
-   # For Windows use the preconfigure headers provided by libtiff
-   # Use CONFIGURE_FILE to copy the supplied files to their approtiate
-   # locations.
-   CONFIGURE_FILE(${TIFF_SRC_DIR}/tif_config.h.vc 
-	   ${TIFF_SRC_DIR}/tif_config.h COPYONLY)
-   CONFIGURE_FILE(${TIFF_SRC_DIR}/tiffconf.h.vc 
-	   ${TIFF_SRC_DIR}/tiffconf.h COPYONLY)
-   # Add the libtiff headers directory
-   INCLUDE_DIRECTORIES( AFTER ${TIFF_SRC_DIR} )
-   # Set the IVP GUI libraries for Windows
-   SET(IVP_GUI_LIBS
-      lib_ipfview
-      lib_marineview
-      lib_tiff
-      )
-    
+  SET(TIFF_SRC_DIR lib_tiff/tiff-3.8.2/libtiff)
+  # For Windows use the preconfigure headers provided by libtiff
+  # Use CONFIGURE_FILE to copy the supplied files to their approtiate
+  # locations.
+  CONFIGURE_FILE(${TIFF_SRC_DIR}/tif_config.h.vc 
+    ${TIFF_SRC_DIR}/tif_config.h COPYONLY)
+  CONFIGURE_FILE(${TIFF_SRC_DIR}/tiffconf.h.vc 
+    ${TIFF_SRC_DIR}/tiffconf.h COPYONLY)
+  # Add the libtiff headers directory
+  INCLUDE_DIRECTORIES( AFTER ${TIFF_SRC_DIR} )
+  # Set the IVP GUI libraries for Windows
+  SET(IVP_GUI_LIBS lib_ipfview lib_marineview lib_tiff)
+  
 ELSE (${WIN32})
-   # Linux, Mac
-   SET(IVP_GUI_LIBS
-      lib_ipfview
-      lib_marineview
-      lib_navplot
-      lib_ulogview
-      )
-    
+  # Linux, Mac
+  SET(IVP_GUI_LIBS lib_ipfview lib_marineview)
 ENDIF (${WIN32})
 
+
 SET(IVP_LIBS_TO_BUILD ${IVP_NON_GUI_LIBS})
+
 IF("${IVP_BUILD_GUI_CODE}" STREQUAL "ON")
    LIST(APPEND IVP_LIBS_TO_BUILD ${IVP_GUI_LIBS})
 
@@ -137,6 +135,11 @@ IF("${IVP_BUILD_GUI_CODE}" STREQUAL "ON")
    message("+++++++++++++++++++++++++++++++++++++++++")
 
 ENDIF("${IVP_BUILD_GUI_CODE}" STREQUAL "ON")
+
+IF("${USE_UTM}" STREQUAL "ON")
+   ADD_DEFINITIONS(-DUSE_UTM)
+   message("USING UTM")
+ENDIF("${USE_UTM}" STREQUAL "ON")
 
 
 # If the environment hasn't explicitly set 'IVP_LIB_DIRECTORY', give it a good
@@ -148,8 +151,7 @@ IF("${IVP_LIB_DIRECTORY}" STREQUAL "")
 ENDIF("${IVP_LIB_DIRECTORY}" STREQUAL "")
 
 IF("${IVP_INC_DIRECTORY}" STREQUAL "")
-   # IVP_SOURCE_DIRECTORY is defined by CMake, because this project's name is
-   # IVP.
+   # IVP_SOURCE_DIRECTORY is defined by CMake, because this project's name is IVP
    GET_FILENAME_COMPONENT(IVP_INC_DIRECTORY "${IVP_SOURCE_DIR}/../../include" ABSOLUTE)
 ENDIF("${IVP_INC_DIRECTORY}" STREQUAL "")
 
@@ -167,33 +169,67 @@ FOREACH(L ${IVP_LIBS_TO_BUILD} )
 ENDFOREACH(L)
 
 
+#=====================================================================
+#  Build the list of Apps to be built
+#=====================================================================
+
 #---------------------------------------------------------------------
-#  Build the Applications
+# Part 1: ROBOT_APPS
+#         Minimal set of apps for running on a robot (with slower CPU)
 #---------------------------------------------------------------------
-  
-SET(IVP_NON_GUI_APPS
-  app_alogscan
-  app_alogeff
+
+SET(ROBOT_APPS
   app_aloggrep
-  app_alogsort
+  app_alogscan
   app_alogrm
   app_alogiter
   app_alogclip
   app_aloghelm
-  app_alogcheck
   app_nsplug
-  app_gen_hazards
   pEchoVar
-  pXRelay
   pHelmIvP
   pMarinePID
   pBasicContactMgr
+  pDeadManPost
   pNodeReporter
+  uFldMessageHandler
+  uFldNodeBroker
+  uHelmScope
+  uTimerScript
+  uProcessWatch
+  uLoadWatch
+  uTermCommand
+  uXMS
+  uMAC
+  uPokeDB
+  pHostInfo
+  iSay
+  )
+
+#---------------------------------------------------------------------
+# pSafetyRetreat is excluded in moos-ivp-aro downloads to check if the 
+# source code is present before adding it to the build list.
+IF( EXISTS pSafetyRetreat )
+  LIST(APPEND ROBOT_APPS pSafetyRetreat
+)  
+ENDIF( EXISTS pSafetyRetreat )
+
+
+#---------------------------------------------------------------------
+# Part 2 of 3: IVP_NON_GUI_APPS
+#              Larger set of apps but still, but still short of GUI apps.
+#---------------------------------------------------------------------
+
+SET(IVP_NON_GUI_APPS
+  app_alogsplit
+  app_alogsort
+  app_alogcheck
+  app_gen_hazards
+  app_bhv2graphviz
+  pXRelay
   uFldCollisionDetect
   uFldPathCheck
   uFldShoreBroker
-  uFldMessageHandler
-  uFldNodeBroker
   uFldScope
   uFldNodeComms
   uFldBeaconRangeSensor
@@ -204,27 +240,21 @@ SET(IVP_NON_GUI_APPS
   uFldGenericSensor
   uFldWrapDetect
   pSearchGrid
-  uTimerScript
-  uHelmScope
-  uProcessWatch
-  uLoadWatch
   uSimMarine
-  uTermCommand
-  uXMS
-  uMAC
-  uPokeDB
-  pHostInfo
-  iSay
   )
 
-IF( EXISTS pSafetyRetreat )
-  LIST(APPEND IVP_NON_GUI_APPS 
-  pSafetyRetreat
-  uSimCurrent
-)  
-ENDIF( EXISTS pSafetyRetreat )
+#---------------------------------------------------------------------
+# uSimCurrent is excluded in moos-ivp-aro downloads to check if the 
+# source code is present before adding it to the build list.
+IF( EXISTS uSimCurrent )
+  LIST(APPEND IVP_NON_GUI_APPS uSimCurrent)  
+ENDIF( EXISTS uSimCurrent )
 
 
+#---------------------------------------------------------------------
+# Part 3 of 3: IVP_GUI_APPS
+#              Include on the GUI applications
+#---------------------------------------------------------------------
 
 SET(IVP_GUI_APPS
   app_ffview
@@ -235,21 +265,20 @@ SET(IVP_GUI_APPS
   pMarineViewer
   uFunctionVis
   uMACView
-  uLogView
-  uLogViewIPF
-  uLogViewHelm
+  uPlotViewer
   )
 
-IF( EXISTS app_ivpcheck )
-  LIST(APPEND IVP_GUI_APPS 
-  app_ivpcheck
-  app_currview
-  uPlotViewer
-)  
-ENDIF( EXISTS app_ivpcheck )
+SET(IVP_APPS_TO_BUILD ${ROBOT_APPS})
 
-  
-SET(IVP_APPS_TO_BUILD ${IVP_NON_GUI_APPS})
+message("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+message(" IVP_BUILD_BOT_CODE_ONLY: ${IVP_BUILD_BOT_CODE_ONLY}")
+message("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+
+IF("${IVP_BUILD_BOT_CODE_ONLY}" STREQUAL "OFF")
+  LIST(APPEND IVP_APPS_TO_BUILD ${IVP_NON_GUI_APPS})
+ENDIF("${IVP_BUILD_BOT_CODE_ONLY}" STREQUAL "OFF")
+
+
 IF("${IVP_BUILD_GUI_CODE}" STREQUAL "ON")
    LIST(APPEND IVP_APPS_TO_BUILD ${IVP_GUI_APPS})
 ENDIF("${IVP_BUILD_GUI_CODE}" STREQUAL "ON")

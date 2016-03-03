@@ -135,6 +135,8 @@ vector<IvPFunction*> readFunctions(const string& str)
     // Pretend we care about the fscanf result to avoid compiler warning
     int result=0; 
     result = fscanf(f, "%c", &c);
+    if(result == 0)
+      cout << "matching failure" << endl;
     if(c == 'F') {
       int buff_ix = 0;
       while(c != '\n') {
@@ -214,6 +216,8 @@ PDMap* readPDMap(FILE *f, int dim, int boxCount, IvPDomain domain, int deg)
   int result = 0;
   char c;
   result = fscanf(f, "%c", &c);
+  if(result == 0)
+    cout << "matching failure" << endl;
   if(c == 'B') 
     ungetc(c, f);
   else

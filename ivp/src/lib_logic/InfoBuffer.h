@@ -31,14 +31,15 @@
 
 class InfoBuffer {
 public:
-  InfoBuffer()  {m_curr_time_utc=0;};
-  ~InfoBuffer() {};
+  InfoBuffer()  {m_curr_time_utc=0;}
+  ~InfoBuffer() {}
 
 public:
   std::string sQuery(std::string, bool&) const;
 
   double dQuery(std::string, bool&) const;
   double tQuery(std::string, bool elapsed=true) const;
+  double mtQuery(std::string, bool elapsed=true) const;
 
   std::vector<std::string> sQueryDeltas(std::string, bool&) const;
   
@@ -48,16 +49,17 @@ public:
   void   print() const;
 
 public:
-  bool   setValue(std::string, double);
-  bool   setValue(std::string, std::string);
+  bool   setValue(std::string, double, double msg_time=0);
+  bool   setValue(std::string, std::string, double msg_time=0);
   void   clearDeltaVectors();
-  void   setCurrTime(double t)         {m_curr_time_utc = t;};
-  double getCurrTime() const           {return(m_curr_time_utc);};
+  void   setCurrTime(double t)         {m_curr_time_utc = t;}
+  double getCurrTime() const           {return(m_curr_time_utc);}
 
 protected:
   std::map<std::string, std::string> smap;
   std::map<std::string, double>      dmap;
   std::map<std::string, double>      tmap;
+  std::map<std::string, double>      mtmap;
 
   std::map<std::string, std::vector<std::string> >  vsmap;
   std::map<std::string, std::vector<double> > vdmap;

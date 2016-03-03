@@ -159,23 +159,26 @@ bool CProcessConfigReader::GetConfiguration(std::string sAppName, STRING_LIST &P
                     // ignore if param = <empty string>
                     std::string sTmp(sLine);
                     std::string sTok = MOOSChomp(sTmp, "=");
-                    
+
+                    MOOSTrimWhiteSpace(sTok); // Handle potential whitespaces.
+                    MOOSTrimWhiteSpace(sTmp);
+
                     if (sTok.size() > 0) 
                     {
                         MOOSTrimWhiteSpace(sTmp);
                         
                         if (!sTmp.empty()) 
                         {
-                            Params.push_front(sLine);
+                            Params.push_front(sTok+std::string("=")+sTmp); // Was: sLine
                         }
                         else if(sLine.find("[")!=std::string::npos || sLine.find("]")!=std::string::npos) 
                         {
-                            Params.push_front(sLine);
+                            Params.push_front(sTok+std::string("=")+sTmp); // Was: sLine
                         }
                     } 
                     else 
                     {
-                        Params.push_front(sLine);
+                        Params.push_front(sTok+std::string("=")+sTmp); // Was: sLine
                     }
 #else            
                     Params.push_front(sLine);
@@ -394,6 +397,36 @@ bool CProcessConfigReader::GetConfigurationParam(std::string sAppName, std::stri
         nVal = (unsigned int) nIntVal;
     return bSuccess;
 }
+
+
+bool CProcessConfigReader::GetConfigurationParam(std::string sParam, unsigned short & nVal)
+{
+    if (!m_sAppName.empty())
+    {
+        return GetConfigurationParam(m_sAppName, sParam, nVal);
+    }
+    else
+    {
+        MOOSTrace("App Name not set in CProcessConfigReader::GetConfigurationParam()\n");
+    }
+
+    return false;
+}
+
+bool CProcessConfigReader::GetConfigurationParam(std::string sAppName, std::string sParam, unsigned short &nVal)
+{
+    std::string sTmp;
+
+    if (GetConfigurationParam(sAppName, sParam, sTmp)) {
+        nVal = atoi(sTmp.c_str());
+        return true;
+    }
+
+    return false;
+}
+
+
+
 
 ///                               READ VECTORS
 

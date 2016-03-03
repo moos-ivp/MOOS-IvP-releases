@@ -46,13 +46,14 @@ void MarineVehiGUI::augmentMenu()
   m_menubar->add("Vehicles/vehicles_viewable=false", 0,                (Fl_Callback*)MarineVehiGUI::cb_SetRadioVehiAttrib, (void*)11, FL_MENU_RADIO);
   m_menubar->add("Vehicles/    Toggle vehicles_viewable", FL_CTRL+'v', (Fl_Callback*)MarineVehiGUI::cb_SetRadioVehiAttrib, (void*)12, FL_MENU_DIVIDER);
 
+  m_menubar->add("Vehicles/    Toggle Vehicle Name Mode",      'n', (Fl_Callback*)MarineVehiGUI::cb_SetRadioVehiAttrib, (void*)29, FL_MENU_RADIO);
   m_menubar->add("Vehicles/vehicles_name_mode=names",            0, (Fl_Callback*)MarineVehiGUI::cb_SetRadioVehiAttrib, (void*)20, FL_MENU_RADIO);
   m_menubar->add("Vehicles/vehicles_name_mode=names+mode",       0, (Fl_Callback*)MarineVehiGUI::cb_SetRadioVehiAttrib, (void*)21, FL_MENU_RADIO);
   m_menubar->add("Vehicles/vehicles_name_mode=names+shortmode",  0, (Fl_Callback*)MarineVehiGUI::cb_SetRadioVehiAttrib, (void*)22, FL_MENU_RADIO);
   m_menubar->add("Vehicles/vehicles_name_mode=names+depth",      0, (Fl_Callback*)MarineVehiGUI::cb_SetRadioVehiAttrib, (void*)23, FL_MENU_RADIO);
   m_menubar->add("Vehicles/vehicles_name_mode=names+auxmode",    0, (Fl_Callback*)MarineVehiGUI::cb_SetRadioVehiAttrib, (void*)24, FL_MENU_RADIO);
-  m_menubar->add("Vehicles/vehicles_name_mode=off",              0, (Fl_Callback*)MarineVehiGUI::cb_SetRadioVehiAttrib, (void*)25, FL_MENU_RADIO);
-  m_menubar->add("Vehicles/    Toggle Vehicle Name Mode",      'n', (Fl_Callback*)MarineVehiGUI::cb_SetRadioVehiAttrib, (void*)29, FL_MENU_DIVIDER);
+  m_menubar->add("Vehicles/vehicles_name_mode=off",              0, (Fl_Callback*)MarineVehiGUI::cb_SetRadioVehiAttrib, (void*)25, FL_MENU_RADIO|FL_MENU_DIVIDER);
+
 
   m_menubar->add("Vehicles/vehicles_active_color=red",    0, (Fl_Callback*)MarineVehiGUI::cb_SetRadioVehiAttrib, (void*)40, FL_MENU_RADIO);
   m_menubar->add("Vehicles/vehicles_active_color=yellow", 0, (Fl_Callback*)MarineVehiGUI::cb_SetRadioVehiAttrib, (void*)41, FL_MENU_RADIO);
@@ -84,8 +85,8 @@ void MarineVehiGUI::augmentMenu()
 
   m_menubar->add("Vehicles/Cycle Vehicle Focus", 'v', (Fl_Callback*)MarineVehiGUI::cb_CycleFocus,(void*)0, FL_MENU_DIVIDER);
 
-  m_menubar->add("Vehicles/center_view = vehicle_average", 'c', (Fl_Callback*)MarineVehiGUI::cb_CenterView,  (void*)0, 0);
-  m_menubar->add("Vehicles/center_view = vehicle_active", FL_CTRL+'c', (Fl_Callback*)MarineVehiGUI::cb_CenterView,  (void*)1, FL_MENU_DIVIDER);
+  m_menubar->add("Vehicles/center_view = active", FL_CTRL+'c', (Fl_Callback*)MarineVehiGUI::cb_CenterView,  (void*)1, FL_MENU_RADIO);
+  m_menubar->add("Vehicles/center_view = average", 'c', (Fl_Callback*)MarineVehiGUI::cb_CenterView,  (void*)0, FL_MENU_DIVIDER);
 
   m_menubar->add("Vehicles/VehicleSize/vehicles_shape_scale = larger",    '+', (Fl_Callback*)MarineVehiGUI::cb_AltShapeScale, (void*)+1, 0);
   m_menubar->add("Vehicles/VehicleSize/vehicles_shape_scale = smaller",   '-', (Fl_Callback*)MarineVehiGUI::cb_AltShapeScale, (void*)-1, 0);

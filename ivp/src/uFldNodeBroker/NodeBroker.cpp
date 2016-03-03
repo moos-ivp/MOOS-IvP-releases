@@ -103,6 +103,14 @@ bool NodeBroker::Iterate()
 {
   AppCastingMOOSApp::Iterate();
 
+  bool resend_init_pshare_cmd = true;
+  for(unsigned int i=0; i<m_shore_pings_ack.size(); i++) {
+    if(m_shore_pings_ack[i] > 0)
+      resend_init_pshare_cmd = false;
+  }
+  if(resend_init_pshare_cmd)
+    registerPingBridges();
+  
   sendNodeBrokerPing();
 
   AppCastingMOOSApp::PostReport();
@@ -162,17 +170,23 @@ void NodeBroker::registerVariables()
 
 void NodeBroker::sendNodeBrokerPing()
 {
-  // If we know enough about ourself, then ping away!!
-  if((m_node_host_record.getPShareIRoutes() != "") &&
-     (m_node_host_record.getTimeWarp() != "")) {
+  // If we don't know enough about ourself, then don't send pings.
+  if((m_node_host_record.getPShareIRoutes() == "") ||
+     (m_node_host_record.getTimeWarp() == "")) 
+    return;
     
-    string iroutes = m_node_host_record.getPShareIRoutes();
-    string ipaddr  = m_node_host_record.getHostIP();
-    iroutes = findReplace(iroutes, "localhost", ipaddr);
-
-    string tstamp = doubleToString(m_curr_time, 2);
-    m_node_host_record.setTimeStamp(tstamp);
-    Notify("NODE_BROKER_PING", m_node_host_record.getSpec());
+  string iroutes = m_node_host_record.getPShareIRoutes();
+  string ipaddr  = m_node_host_record.getHostIP();
+  iroutes = findReplace(iroutes, "localhost", ipaddr);
+  
+  string tstamp = doubleToString(m_curr_time, 2);
+  m_node_host_record.setTimeStamp(tstamp);
+  string ping_msg = m_node_host_record.getSpec();
+  
+  for(unsigned int i=0; i<m_shore_routes.size(); i++) {
+    string aug_ping_msg = ping_msg + ",key=" + uintToString(i);
+    Notify("NODE_BROKER_PING_"+uintToString(i), aug_ping_msg);
+    m_shore_pings_sent[i]++;
     m_pings_posted++;
   }
 }
@@ -183,9 +197,8 @@ void NodeBroker::sendNodeBrokerPing()
 
 void NodeBroker::registerPingBridges()
 {
-  unsigned int i, vsize = m_shore_routes.size();
-  for(i=0; i<vsize; i++) {
-    string src  = "NODE_BROKER_PING";
+  for(unsigned int i=0; i<m_shore_routes.size(); i++) {
+    string src  = "NODE_BROKER_PING_"+uintToString(i);
     string dest = "NODE_BROKER_PING";
     string route = m_shore_routes[i];
     postPShareCommand(src, dest, route);
@@ -271,10 +284,19 @@ bool NodeBroker::handleConfigTryShoreHost(string original_line)
   
   m_shore_routes.push_back(pshare_route);
   m_shore_community.push_back("");
+  m_shore_pings_sent.push_back(0);
   m_shore_pings_ack.push_back(0);
   m_shore_ipaddr.push_back("");
   m_shore_timewarp.push_back("");
   m_shore_bridged.push_back(false);
+
+  // Keep track of actual (non localhost) IP Addresses found in routes
+  if(strContains(pshare_route, ':') && !strBegins(pshare_route, "localhost:")) {
+    string try_host_ip = biteString(pshare_route, ':');
+    if(isValidIPAddress(try_host_ip))
+      m_try_host_ips.push_back(try_host_ip);
+  }
+
   return(true);
 }
 
@@ -288,58 +310,25 @@ void NodeBroker::handleMailAck(string ack_msg)
   // Part 1: Build/validate the incoming Host Record
   HostRecord hrecord = string2HostRecord(ack_msg);
 
-  string pshare_iroutes = hrecord.getPShareIRoutes();
-  if(pshare_iroutes == "") {
-    m_bad_acks_received++;
+  string new_key = hrecord.getKey();
+  unsigned int key_ix = atoi(new_key.c_str());
 
+  if((new_key == "") || !isNumber(new_key) || (key_ix >= m_shore_routes.size())) {
+    m_bad_acks_received++;
+    
     string msg = "NODE_BROKER_ACK recvd from " + hrecord.getHostIP();
-    msg += " w/ null pshare_iroutes, for now.";
+    msg += " w/ null or bad key, for now.";
 
     reportRunWarning(msg);
     return;
   }
 
-  // Part 3: If the remote hostip != the local hostip, find/replace 
-  // "localhost" with remote hostip if localhost appears in the iroute.
+  m_shore_community[key_ix] = hrecord.getCommunity();
+  m_shore_ipaddr[key_ix]   = hrecord.getHostIP();
+  m_shore_timewarp[key_ix] = hrecord.getTimeWarp();
+  m_shore_pings_ack[key_ix]++;
 
-  string hostip_shore = hrecord.getHostIP();
-  string hostip_local = m_node_host_record.getHostIP();
-  if(hostip_shore != hostip_local) 
-    pshare_iroutes = findReplace(pshare_iroutes, "localhost", hostip_shore);
-
-  // Note the sender may be reporting more then one input route
-  vector<string> svector = parseString(pshare_iroutes, '&');
-  unsigned int i, vsize = svector.size();
-
-  for(i=0; i<vsize; i++) {
-    string iroute = stripBlankEnds(svector[i]);
-    // Now see if the incoming iroute matches one of the try_hosts
-    unsigned int j, jsize = m_shore_routes.size();
-    for(j=0; j<jsize; j++) {
-
-      // It's possible that the iroute received from the shore ack may read
-      // something like "10.0.0.7:9300" where the IP is the localhost IP.
-      // And tryhost read "localhost:9300". In this case we want the match
-      // to succeed. So we create a "modified shore route", mod_sroute below
-      // which will convert "localhost:9300" to "10.0.0.7.9300" and test 
-      // against that also
-      string mod_sroute = findReplace(m_shore_routes[j], "localhost", 
-				      m_node_host_record.getHostIP());
-
-      if((iroute == m_shore_routes[j]) ||
-	 (iroute == mod_sroute)) {
-	m_shore_community[j] = hrecord.getCommunity();
-	m_shore_pings_ack[j]++;
-	m_shore_ipaddr[j]    = hrecord.getHostIP();
-	m_shore_timewarp[j]  = hrecord.getTimeWarp();
-	m_ok_acks_received++;
-
-	string msg = "NODE_BROKER_ACK recvd from " + hrecord.getHostIP();
-	msg += " w/ null pshare_iroutes, for now.";
-	retractRunWarning(msg);
-      }
-    }
-  }
+  m_ok_acks_received++;
 
   // Set up the user-configured variable bridges.
   registerUserBridges();
@@ -411,6 +400,16 @@ bool NodeBroker::buildReport()
   m_msgs << "   Port MOOSDB: " << m_node_host_record.getPortDB()          << endl; 
   m_msgs << "     Time Warp: " << m_node_host_record.getTimeWarp()        << endl; 
 
+  string try_host_ips;
+  for(unsigned int i=0; i<m_try_host_ips.size(); i++) {
+    if(i!=0)
+      try_host_ips += ",";
+    try_host_ips += m_try_host_ips[i];
+  }
+  m_msgs << "   TryHost IPs: " << try_host_ips << endl;
+
+
+
   string iroutes = m_node_host_record.getPShareIRoutes();
   string ipaddr  = m_node_host_record.getHostIP();
   iroutes = findReplace(iroutes, "localhost", ipaddr);
@@ -431,7 +430,7 @@ bool NodeBroker::buildReport()
   for(k=0; k<ksize; k++) {
     actab << m_shore_community[k];
     actab << m_shore_routes[k];
-    actab << m_pings_posted;
+    actab << m_shore_pings_sent[k];
     actab << m_shore_pings_ack[k];
     actab << m_shore_ipaddr[k];
     actab << m_shore_timewarp[k];

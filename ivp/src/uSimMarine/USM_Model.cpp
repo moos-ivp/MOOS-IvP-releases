@@ -46,10 +46,15 @@ USM_Model::USM_Model()
   m_max_depth_rate       = 0.5;    // meters per second
   m_max_depth_rate_speed = 2.0;    // meters per second
 
+  m_max_rudder_degs_per_sec = 0;
+
   m_thrust_map.setThrustFactor(20);
 
   // Initalize the state variables
   m_rudder       = 0;
+  m_rudder_prev  = 0;
+  m_rudder_tstamp = 0;
+
   m_thrust       = 0;
   m_elevator     = 0;
   m_drift_x      = 0;
@@ -58,6 +63,11 @@ USM_Model::USM_Model()
   m_drift_fresh  = true;
   m_water_depth  = 0;    // zero means nothing known, no altitude reported
 
+  m_thrust_mode  = "normal";  // vs. "differential"
+  m_thrust_lft   = 0;
+  m_thrust_rgt   = 0;
+
+  m_thrust_mode_reverse = false;
 }
 
 //------------------------------------------------------------------------
@@ -139,11 +149,42 @@ bool USM_Model::setParam(string param, double value)
   return(true);
 }
 
+//------------------------------------------------------------------------
+// Procedure: setRudder()
+
+void USM_Model::setRudder(double desired_rudder, double tstamp)
+{
+  // Part 0: Copy the current rudder value to "previous" before overwriting
+  m_rudder_prev = m_rudder;
+
+
+  // Part 1: Calculate the maximum change in rudder
+  double max_rudder_change = 100;
+  if(m_max_rudder_degs_per_sec > 0) {
+    double delta_time = tstamp - m_rudder_tstamp;
+    max_rudder_change = (delta_time * m_max_rudder_degs_per_sec);
+  }
+
+  // Part 2: Handle the change requested
+  double change = desired_rudder - m_rudder_prev;
+  if(change > 0) { 
+    if(change > max_rudder_change)
+      change = max_rudder_change;
+    m_rudder += change;
+  }
+  else {
+    if(-change > max_rudder_change)
+      change = -max_rudder_change;
+    m_rudder += change;
+  }
+
+  m_thrust_mode = "normal";
+  m_rudder_tstamp = tstamp;
+}
 
 
 //------------------------------------------------------------------------
 // Procedure: propagate
-//      Note: 
 
 bool USM_Model::propagate(double g_curr_time)
 {
@@ -222,8 +263,19 @@ void USM_Model::magDriftVector(double pct)
 }
 
 //------------------------------------------------------------------------
+// Procedure: setMaxRudderDegreesPerSec()
+
+bool USM_Model::setMaxRudderDegreesPerSec(double v)
+{
+  if(v < 0)
+    return(false);
+
+  m_max_rudder_degs_per_sec = v;
+  return(true);
+}
+
+//------------------------------------------------------------------------
 // Procedure: setPaused
-//      Note: 
 
 void USM_Model::setPaused(bool g_paused)
 {
@@ -240,7 +292,6 @@ void USM_Model::setPaused(bool g_paused)
 
 //------------------------------------------------------------------------
 // Procedure: setThrustFactor
-//      Note: 
 
 void USM_Model::setThrustFactor(double value)
 {
@@ -253,6 +304,41 @@ void USM_Model::setThrustFactor(double value)
 void USM_Model::setThrustReflect(bool value)
 {
   m_thrust_map.setReflect(value);
+}
+
+//------------------------------------------------------------------------
+// Procedure: setThrustLeft
+
+void USM_Model::setThrustLeft(double val)
+{
+  if(val < -100)
+    val = -100;
+  else if(val > 100)
+    val = 100;
+
+    m_thrust_mode = "differential";
+
+  if(m_thrust_mode_reverse == false)  // The normal mode
+    m_thrust_lft  = val;
+  else
+    m_thrust_rgt  = -val;
+}
+
+//------------------------------------------------------------------------
+// Procedure: setThrustRight
+
+void USM_Model::setThrustRight(double val)
+{
+  if(val < -100)
+    val = -100;
+  else if(val > 100)
+    val = 100;
+
+  m_thrust_mode = "differential";
+  if(m_thrust_mode_reverse == false)  // The normal mode
+    m_thrust_rgt  = val;
+  else
+    m_thrust_lft  = -val;
 }
 
 //--------------------------------------------------------------------- 
@@ -365,13 +451,25 @@ void USM_Model::propagateNodeRecord(NodeRecord& record,
   double prior_spd = record.getSpeed();
   double prior_hdg = record.getHeading();
 
-  m_sim_engine.propagateSpeed(record, m_thrust_map, delta_time,
-			      m_thrust, m_rudder, m_max_acceleration,
-			      m_max_deceleration);
+  m_sim_engine.setThrustModeReverse(m_thrust_mode_reverse);
 
-  m_sim_engine.propagateHeading(record, delta_time, m_rudder, 
-				m_thrust, m_turn_rate, 
-				m_rotate_speed);
+  if(m_thrust_mode == "differential") {
+    m_sim_engine.propagateSpeedDiffMode(record, m_thrust_map, delta_time,
+					m_thrust_lft, m_thrust_rgt, m_max_acceleration,
+					m_max_deceleration);
+    m_sim_engine.propagateHeadingDiffMode(record, delta_time, m_thrust_lft, 
+					  m_thrust_rgt, m_turn_rate, 
+					  m_rotate_speed);
+  }
+  else {
+    m_sim_engine.propagateSpeed(record, m_thrust_map, delta_time,
+				m_thrust, m_rudder, m_max_acceleration,
+				m_max_deceleration);
+    m_sim_engine.propagateHeading(record, delta_time, m_rudder, 
+				  m_thrust, m_turn_rate, 
+				  m_rotate_speed);
+  }
+
 
   m_sim_engine.propagateDepth(record, delta_time, 
 			      m_elevator, m_buoyancy_rate, 

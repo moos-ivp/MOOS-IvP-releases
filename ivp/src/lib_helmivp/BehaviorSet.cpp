@@ -254,8 +254,16 @@ SpecBuild BehaviorSet::buildBehaviorFromSpec(BehaviorSpec spec,
     if(bhv)
       sbuild.setKindResult("dynamic");
     else {
+#if 1
+      string err = "BehaviorSpec: failed to load dynamic behavior " + bhv_kind;
+      cerr << err << endl;
+      addWarning(err);
+      addWarning("Check IVP_BEHAVIOR_DIRS Env Variable or ivp_behavior_dir param");
+#endif
+#if 0
       cerr << "BehaviorSpec: failed to load dynamic behavior "
 	   << bhv_kind << endl;
+#endif
       sbuild.setKindResult("failed");
       return(sbuild);
     }
@@ -357,6 +365,7 @@ bool BehaviorSet::handlePossibleSpawnings()
 
 	// Check for unique behavior name
 	string bname = tokStringParse(update_str, "name", '#', '=');
+	//	string fullname = m_behavior_specs[i].getNamePrefix() + bname;
 	if(m_bhv_names.count(bname)==0) {
 	  SpecBuild sbuild = buildBehaviorFromSpec(m_behavior_specs[i], 
 						   update_str);
@@ -512,7 +521,7 @@ IvPFunction* BehaviorSet::produceOF(unsigned int ix,
 //------------------------------------------------------------
 // Procedure: produceOFX
 
-#if 1
+#if 0
 BehaviorReport BehaviorSet::produceOFX(unsigned int ix, 
 				       unsigned int iteration, 
 				       string& new_activity_state)

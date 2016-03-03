@@ -43,15 +43,16 @@
 class VPlug_GeoShapes {
 public:
   VPlug_GeoShapes();
-  virtual ~VPlug_GeoShapes() {};
+  virtual ~VPlug_GeoShapes() {}
 
   bool setParam(const std::string& param, std::string value);
   
-  void    clear();
-  double  getXMin() const {return(m_xmin);};
-  double  getXMax() const {return(m_xmax);};
-  double  getYMin() const {return(m_ymin);};
-  double  getYMax() const {return(m_ymax);};
+  void    clear(std::string shape="", std::string stype="");
+
+  double  getXMin() const {return(m_xmin);}
+  double  getXMax() const {return(m_xmax);}
+  double  getYMin() const {return(m_ymin);}
+  double  getYMax() const {return(m_ymax);}
 
   void addPolygon(const XYPolygon&);
   void addSegList(const XYSegList&);
@@ -79,40 +80,53 @@ public:
   bool updateGrid(const std::string&);
   bool updateConvexGrid(const std::string&);
 
-  unsigned int sizePolygons() const    {return(m_polygons.size());};
-  unsigned int sizeSegLists() const    {return(m_seglists.size());};
-  unsigned int sizeCircles() const     {return(m_circles.size());};
-  unsigned int sizeHexagons() const    {return(m_hexagons.size());};
-  unsigned int sizePoints() const      {return(m_points.size());};
-  unsigned int sizeVectors() const     {return(m_vectors.size());};
-  unsigned int sizeGrids() const       {return(m_grids.size());};
-  unsigned int sizeConvexGrids() const {return(m_convex_grids.size());};
-  unsigned int sizeRangePulses() const {return(m_range_pulses.size());};
-  unsigned int sizeCommsPulses() const {return(m_comms_pulses.size());};
-  unsigned int sizeMarkers() const     {return(m_markers.size());};
+  unsigned int sizePolygons() const    {return(m_polygons.size());}
+  unsigned int sizeSegLists() const    {return(m_seglists.size());}
+  unsigned int sizeCircles() const     {return(m_circles.size());}
+  unsigned int sizeHexagons() const    {return(m_hexagons.size());}
+  unsigned int sizePoints() const      {return(m_points.size());}
+  unsigned int sizeVectors() const     {return(m_vectors.size());}
+  unsigned int sizeGrids() const       {return(m_grids.size());}
+  unsigned int sizeConvexGrids() const {return(m_convex_grids.size());}
+  unsigned int sizeRangePulses() const {return(m_range_pulses.size());}
+  unsigned int sizeCommsPulses() const {return(m_comms_pulses.size());}
+  unsigned int sizeMarkers() const     {return(m_markers.size());}
   unsigned int sizeTotalShapes() const;
 
-  std::vector<XYPolygon> getPolygons() const {return(m_polygons);};
-  std::vector<XYSegList> getSegLists() const {return(m_seglists);};
-  std::vector<XYHexagon> getHexagons() const {return(m_hexagons);};
-  std::vector<XYVector>  getVectors() const  {return(m_vectors);};
-  std::vector<XYGrid>    getGrids() const    {return(m_grids);};
-  std::vector<XYConvexGrid> getConvexGrids() const {return(m_convex_grids);};
-  std::vector<XYRangePulse> getRangePulses() const {return(m_range_pulses);};
-  std::vector<XYCommsPulse> getCommsPulses() const {return(m_comms_pulses);};
+  std::vector<XYPolygon> getPolygons() const {return(m_polygons);}
+  std::vector<XYSegList> getSegLists() const {return(m_seglists);}
+  std::vector<XYHexagon> getHexagons() const {return(m_hexagons);}
+  std::vector<XYVector>  getVectors() const  {return(m_vectors);}
+  std::vector<XYGrid>    getGrids() const    {return(m_grids);}
+  std::vector<XYConvexGrid> getConvexGrids() const {return(m_convex_grids);}
+  std::vector<XYRangePulse> getRangePulses() const {return(m_range_pulses);}
+  std::vector<XYCommsPulse> getCommsPulses() const {return(m_comms_pulses);}
 
-  const std::map<std::string, XYPoint>&  getPoints() const  {return(m_points);};
-  const std::map<std::string, XYCircle>& getCircles() const {return(m_circles);};
-  const std::map<std::string, XYMarker>& getMarkers() const {return(m_markers);};
+  const std::map<std::string, XYPoint>&  getPoints() const  {return(m_points);}
+  const std::map<std::string, XYCircle>& getCircles() const {return(m_circles);}
+  const std::map<std::string, XYMarker>& getMarkers() const {return(m_markers);}
 
-  XYPolygon& poly(unsigned int i)   {return(m_polygons[i]);};
-  XYSegList& segl(unsigned int i)   {return(m_seglists[i]);};
+  XYPolygon& poly(unsigned int i)   {return(m_polygons[i]);}
+  XYSegList& segl(unsigned int i)   {return(m_seglists[i]);}
 
   XYPolygon    getPolygon(unsigned int) const;
   XYSegList    getSegList(unsigned int) const;
 
  protected:
   void updateBounds(double xl, double xh, double yl, double yh);
+  void updateBounds();
+
+  void clearPolygons(std::string stype="");
+  void clearSegLists(std::string stype="");
+  void clearHexagons(std::string stype="");
+  void clearGrids(std::string  stype="");
+  void clearCircles(std::string stype="");
+  void clearPoints(std::string  stype="");
+  void clearVectors(std::string stype="");
+  void clearPulses(std::string  stype="");
+  void clearMarkers(std::string stype="");
+
+  bool typeMatch(XYObject*, std::string stype);
 
 protected:
   std::vector<XYPolygon>    m_polygons;

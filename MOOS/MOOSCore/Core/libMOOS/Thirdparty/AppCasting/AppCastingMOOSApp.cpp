@@ -25,6 +25,10 @@
 
 #ifndef _WIN32
 #include "unistd.h"
+#else
+#	include <stdio.h>
+#	include <io.h>
+#	define isatty _isatty  // MSVC define _isatty() instead of isatty()
 #endif
 
 using namespace std;
@@ -458,7 +462,7 @@ void AppCastingMOOSApp::reportUnhandledConfigWarning(const string& orig)
   MOOSTrimWhiteSpace(param);
   if((param == "APPTICK")      || (param == "COMMSTICK")            ||
      (param == "MAXAPPTICK")   || (param == "TERM_REPORT_INTERVAL") ||
-     (param == "MAX_APPCAST_EVENTS"))
+     (param == "ITERATEMODE")  || (param == "MAX_APPCAST_EVENTS"))
     return;
 
   reportConfigWarning("Unhandled config line: " + orig);

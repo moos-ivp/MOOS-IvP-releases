@@ -38,9 +38,10 @@ class Common_IPFViewer : public Fl_Gl_Window
 {
  public:
   Common_IPFViewer(int x,int y,int w,int h,const char *l=0);
-  virtual ~Common_IPFViewer() {};
+  virtual ~Common_IPFViewer() {}
 
   void   resize(int x, int y, int w, int h);
+  void   clear();
   void   draw();
   int    handle(int);
 
@@ -48,24 +49,24 @@ public:
   bool   setParam(std::string, std::string);
   bool   setParam(std::string, double);
   void   printParams();
-  void   setPiecesIPF(std::string s)   {m_active_ipf_pieces = s;};
-  void   setPriorityIPF(std::string s) {m_active_ipf_priority = s;};
-  void   setSubDomainIPF(IvPDomain v)  {m_active_ipf_subdomain = v;}; 
-  void   setIterIPF(std::string s)     {m_active_ipf_iter = s;};
-  void   setLabelColor(std::string s)  {m_label_color.setColor(s);};
-  void   setClearColor(std::string s)  {m_clear_color.setColor(s);};
-  void   setFrameColor(std::string s)  {m_frame_color.setColor(s);};
+  void   setPiecesIPF(std::string s)   {m_active_ipf_pieces = s;}
+  void   setPriorityIPF(std::string s) {m_active_ipf_priority = s;}
+  void   setSubDomainIPF(IvPDomain v)  {m_active_ipf_subdomain = v;} 
+  void   setIterIPF(std::string s)     {m_active_ipf_iter = s;}
+  void   setLabelColor(std::string s)  {m_label_color.setColor(s);}
+  void   setClearColor(std::string s)  {m_clear_color.setColor(s);}
+  void   setFrameColor(std::string s)  {m_frame_color.setColor(s);}
 
 protected:
   void   drawFrame(bool full=true);
   void   drawOwnPoint();
   void   drawMaxPoint(double, double);
   bool   drawIvPFunction();
-  bool   drawIvPFunction1D();
+  void   drawIvPFunction1D();
   bool   drawIvPFunction2D();
   void   drawQuad(Quad3D quad, double=1);
-  void   handleLeftMouse(int, int) {};
-  void   handleRightMouse(int, int) {};
+  void   handleLeftMouse(int, int) {}
+  void   handleRightMouse(int, int) {}
   
   void   draw1DAxes(const IvPDomain&);
   void   draw1DLabels(const IvPDomain&);
@@ -73,6 +74,8 @@ protected:
   void   draw1DLine(double val=0, std::string label="");
   void   draw1DLineX(double, std::string, int, ColorPack);
   void   drawText(int x, int y, std::string s);
+  void   drawText2(double px, double py, const std::string& text,
+		   const ColorPack& font_c, double font_size);
 
 protected:
   ColorPack    m_clear_color;

@@ -32,7 +32,7 @@ class MarinePID : public CMOOSApp
 {
 public:
   MarinePID();
-  virtual ~MarinePID() {};
+  virtual ~MarinePID() {}
   
   bool OnNewMail(MOOSMSG_LIST &NewMail);
   bool Iterate();
@@ -78,6 +78,8 @@ protected:
   double  m_start_time;
   bool    m_depth_control;
   bool    m_paused;
+
+  double  m_ok_skew;
 
   double  m_time_of_last_helm_msg;
   double  m_time_of_last_nav_msg;

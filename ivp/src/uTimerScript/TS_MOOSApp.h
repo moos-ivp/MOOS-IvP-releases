@@ -37,7 +37,7 @@ class TS_MOOSApp : public AppCastingMOOSApp
 {
  public:
   TS_MOOSApp();
-  virtual ~TS_MOOSApp() {};
+  virtual ~TS_MOOSApp() {}
 
  public: // Standard MOOSApp functions to overload
   bool OnNewMail(MOOSMSG_LIST &NewMail);
@@ -49,8 +49,8 @@ class TS_MOOSApp : public AppCastingMOOSApp
   bool   buildReport();
 
  public: // Public configuration functions
-  void setVerbose(bool val) {m_verbose = val;};
-  void setShuffle(bool val) {m_shuffle = val;};
+  void setVerbose(bool val) {m_verbose = val;}
+  void setShuffle(bool val) {m_shuffle = val;}
 
  protected: // Locally defined and locally used functions
   void   registerVariables();
@@ -126,6 +126,11 @@ class TS_MOOSApp : public AppCastingMOOSApp
   unsigned int  m_reset_count;
 
   InfoBuffer *m_info_buffer;
+
+  double m_nav_x;
+  double m_nav_x_set;
+  double m_nav_y;
+  double m_nav_y_set;
 
   std::list<std::string>   m_event_log;
   std::set<std::string>    m_block_apps;

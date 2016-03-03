@@ -62,7 +62,7 @@ extern "C" {
 
 
 typedef  std::vector<std::string>  STRING_VECTOR;
-template< class T > void GetPotNotUsed(const T &) {};
+template< class T > void GetPotNotUsed(const T &) {}
 
 #define victorate(TYPE, VARIABLE, ITERATOR)                        \
   std::vector<TYPE>::const_iterator ITERATOR = (VARIABLE).begin(); \

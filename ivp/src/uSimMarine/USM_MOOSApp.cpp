@@ -28,7 +28,8 @@
 #include "ACTable.h"
 #include "AngleUtils.h"
 
-#define USE_UTM
+// As of Release 15.4 this is now set in CMake, defaulting to be defined
+// #define USE_UTM 
 
 using namespace std;
 
@@ -50,6 +51,11 @@ USM_MOOSApp::USM_MOOSApp()
   last_report     = 0;
   report_interval = 5;
   pitch_tolerance = 5;
+
+  m_obstacle_hit  = false;
+
+  m_thrust_mode_reverse = false;
+  m_thrust_mode_differential = false;
 }
 
 //------------------------------------------------------------------------
@@ -66,15 +72,40 @@ bool USM_MOOSApp::OnNewMail(MOOSMSG_LIST &NewMail)
     double dval = msg.GetDouble();
     string sval = msg.GetString();
 
-    if(key == "DESIRED_THRUST")
-      m_model.setThrust(dval);
-    else if(key == "DESIRED_RUDDER")
-      m_model.setRudder(dval);
+    if(key == "DESIRED_THRUST") {
+      if(m_thrust_mode_differential == false)
+	m_model.setThrust(dval);
+    }
+    else if(key == "DESIRED_RUDDER") {
+      if(m_thrust_mode_differential == false)
+	m_model.setRudder(dval, MOOSTime());
+    }
+    else if(key == "DESIRED_THRUST_L") {
+      if(m_thrust_mode_differential == true)
+	m_model.setThrustLeft(dval);
+    }
+    else if(key == "DESIRED_THRUST_R") {
+      if(m_thrust_mode_differential == true)
+	m_model.setThrustRight(dval);
+    }
     else if(key == "DESIRED_ELEVATOR")
       m_model.setElevator(dval);
     else if(key == "USM_SIM_PAUSED")
       m_model.setPaused(toupper(sval) == "TRUE");
 
+    else if(key == "THRUST_MODE_REVERSE") {
+      m_thrust_mode_reverse = false;
+      if(tolower(sval) == "true") 
+	m_thrust_mode_reverse = true;
+      m_model.setThrustModeReverse(m_thrust_mode_reverse);
+    }
+    else if(key == "THRUST_MODE_DIFFERENTIAL") {
+      setBooleanOnString(m_thrust_mode_differential, sval);
+      if(m_thrust_mode_differential)
+	m_model.setThrustModeDiff("differential");
+      else
+	m_model.setThrustModeDiff("normal");
+    }
     else if((key == "USM_BUOYANCY_RATE") || // Deprecated
 	    (key == "BUOYANCY_RATE"))
       m_model.setParam("buoyancy_rate", dval);
@@ -124,8 +155,11 @@ bool USM_MOOSApp::OnNewMail(MOOSMSG_LIST &NewMail)
       Notify("USM_RESET_COUNT", m_reset_count);
       m_model.initPosition(sval);
     }
-
-
+    
+    else if(key == "OBSTACLE_HIT") {
+      if(dval != 0)
+	m_obstacle_hit = true;
+    }
 
     // Added buoyancy and trim control and sonar handshake. HS 2012-07-22
     else if (key == "BUOYANCY_CONTROL") {
@@ -231,6 +265,9 @@ bool USM_MOOSApp::OnStartUp()
       handled = m_model.setParam("max_depth_rate", dval);
     else if((param == "MAX_DEPTH_RATE_SPEED") && isNumber(value))
       handled = m_model.setParam("max_depth_rate_speed", dval);
+
+    else if((param == "MAX_RUDDER_DEGS_PER_SEC") && isNumber(value))
+      handled = m_model.setMaxRudderDegreesPerSec(dval);
 
     else if((param == "PREFIX") && !strContainsWhite(value)) {      
       m_sim_prefix = value;
@@ -360,6 +397,9 @@ void USM_MOOSApp::registerVariables()
   m_Comms.Register("DESIRED_THRUST", 0);
   m_Comms.Register("DESIRED_ELEVATOR", 0);
 
+  m_Comms.Register("DESIRED_THRUST_L", 0);
+  m_Comms.Register("DESIRED_THRUST_R", 0);
+
   m_Comms.Register("USM_BUOYANCY_RATE", 0);  // Deprecated
   m_Comms.Register("BUOYANCY_RATE", 0);
 
@@ -389,9 +429,14 @@ void USM_MOOSApp::registerVariables()
   m_Comms.Register("USM_SIM_PAUSED", 0); 
   m_Comms.Register("USM_RESET", 0);
 
+  m_Comms.Register("OBSTACLE_HIT", 0);
+
   // Added buoyancy and trim control and sonar handshake
   m_Comms.Register("TRIM_CONTROL",0);
   m_Comms.Register("BUOYANCY_CONTROL",0);
+
+  m_Comms.Register("THRUST_MODE_REVERSE",0);
+  m_Comms.Register("THRUST_MODE_DIFFERENTIAL",0);
 }
 
 //------------------------------------------------------------------------
@@ -401,11 +446,27 @@ void USM_MOOSApp::registerVariables()
 bool USM_MOOSApp::Iterate()
 {
   AppCastingMOOSApp::Iterate();
-  m_model.propagate(m_curr_time);
+
+  if(!m_obstacle_hit)
+    m_model.propagate(m_curr_time);
   
   NodeRecord record = m_model.getNodeRecord();
 
   double pitch_degrees = record.getPitch()*180.0/M_PI;
+
+#if 1
+  if(m_thrust_mode_reverse) {
+    record.setHeading(angle360(record.getHeading()+180));
+    record.setHeadingOG(angle360(record.getHeadingOG()+180));
+    record.setThrustModeReverse(true);
+
+    double pi = 3.1415926;
+    double new_yaw = record.getYaw() + pi;
+    if(new_yaw > (2* pi))
+      new_yaw = new_yaw - (2 * pi);
+    record.setYaw(new_yaw);
+  }
+#endif
 
   // buoyancy and trim control
   if(buoyancy_requested) {
@@ -436,38 +497,6 @@ bool USM_MOOSApp::Iterate()
       last_report = m_curr_time; 
     }
   }
-  
-#if 0 // gou
-  // buoyancy and trim control
-  if (buoyancy_requested) {
-    if ((m_curr_time - buoyancy_request_time) >= buoyancy_delay) {
-      std::string buoyancy_status="status=2,error=0,completed,buoyancy=0.0";
-      Notify("BUOYANCY_REPORT",buoyancy_status);
-      buoyancy_requested = false;
-    }
-    else {
-      std::string buoyancy_status="status=1,error=0,progressing,buoyancy=0.0";
-      Notify("BUOYANCY_REPORT",buoyancy_status);
-    }
-  }
-  
-  if (trim_requested) {
-    if ((fabs(pitch_degrees) <= pitch_tolerance 
-	 && (m_curr_time - trim_request_time) >= buoyancy_delay) 
-	|| (m_curr_time - trim_request_time) >= max_trim_delay) 
-      {
-	std::string trim_status="status=2,error=0,completed,trim_pitch="
-	  + doubleToString(pitch_degrees) + ",trim_roll=0.0";
-	Notify("TRIM_REPORT",trim_status);
-	trim_requested = false;
-      }
-    else {
-      std::string trim_status="status=1,error=0,progressing,trim_pitch="
-	+ doubleToString(pitch_degrees) + ",trim_roll=0.0";
-      Notify("TRIM_REPORT",trim_status);
-    }
-  }
-#endif // gou
   
   postNodeRecordUpdate(m_sim_prefix, record);
 
@@ -781,6 +810,15 @@ bool USM_MOOSApp::buildReport()
   string max_deceleration = doubleToStringX(m_model.getMaxDeceleration(),6);
   string posmap = m_model.getThrustMapPos();
   string negmap = m_model.getThrustMapNeg();
+  string thrust_mode = m_model.getThrustModeDiff();
+  string desired_thrust_l = "n/a";
+  string desired_thrust_r = "n/a";
+  if(thrust_mode == "differential") {
+    desired_thrust_l = doubleToStringX(m_model.getThrustLeft(),2);
+    desired_thrust_r = doubleToStringX(m_model.getThrustRight(),2);
+  }
+  string thrust_mode_reverse = boolToString(m_model.getThrustModeReverse());
+
   if(posmap == "")
     posmap = "n/a";
   if(negmap == "")
@@ -788,7 +826,14 @@ bool USM_MOOSApp::buildReport()
   m_msgs << "     Positive Thrust Map: " << posmap << endl;
   m_msgs << "     Negative Thrust Map: " << negmap << endl;
   m_msgs << "        Max Accereration: " << max_acceleration << endl;
-  m_msgs << "        Max Decereration: " << max_deceleration << endl;
+  m_msgs << "        Max Decereration: " << max_deceleration << endl << endl;
+
+  m_msgs << "             Thrust Mode: " << thrust_mode << endl;
+  m_msgs << "     Thrust Mode Reverse: " << thrust_mode_reverse << endl;
+  m_msgs << "        DESIRED_THRUST_L: " << desired_thrust_l << endl;
+  m_msgs << "        DESIRED_THRUST_R: " << desired_thrust_r << endl;
+
+
 
   // Part 5: Speed/Depth Change Info ===========================
   string max_depth_rate   = doubleToStringX(m_model.getMaxDepthRate(),6);

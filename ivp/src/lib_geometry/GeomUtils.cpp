@@ -32,6 +32,11 @@ using namespace std;
 //---------------------------------------------------------------
 // Procedure: distPointToPoint
 
+double distPointToPointXXX(double x1, double y1, double x2, double y2)
+{
+  return(hypot((x1-x2), (y1-y2)));
+}
+  
 double distPointToPoint(double x1, double y1, double x2, double y2)
 {
   return(hypot((x1-x2), (y1-y2)));
@@ -431,6 +436,188 @@ bool segmentsCross(double x1, double y1, double x2, double y2,
 }
 
 //---------------------------------------------------------------
+// Procedure: lineRayCross
+//     Cases: Ray Vert - Line Vert (1)
+//            Ray Horz - Line Horz (2)
+//            Ray Horz - Line Vert (3)
+//            Ray Vert - Line Horz (4)
+//
+//            Ray Vert - Line Norm (5)
+//            Ray Horz - Line Norm (6)
+//            Ray Norm - Line Vert (7)
+//            Ray Norm - Line Horz (8)
+//
+//            Ray Norm - Line Norm (9)
+
+#if 1
+bool lineRayCross(double x1, double y1, double ray_angle,
+		  double x3, double y3, double x4, double y4, 
+		  double& ix, double& iy) 
+{
+  ix = 0; 
+  iy = 0;
+  bool ray_vert  = ((ray_angle==0)  || (ray_angle==180));
+  bool ray_horz  = ((ray_angle==90) || (ray_angle==270));
+  bool line_vert = (x3==x4);
+  bool line_horz = (y3==y4);
+
+  // Case 1 - both ray and line vertical (intersection pt not unique)
+  if(ray_vert && line_vert) {
+    if(x1==x3) {
+      ix = x1; iy = 0;
+      return(true);
+    }
+    else
+      return(false);
+  }
+  // Case 2 - both ray and line horizontal (intersection pt not unique)
+  if(ray_horz && line_horz) {
+    if(y1==y3) {
+      iy = y1; ix = 0;
+      return(true);
+    }
+    else
+      return(false);
+  }
+
+  // Case 3 - ray horizontal line vertical
+  if(ray_horz && line_vert) {
+    if((x3 >= x1) && (ray_angle == 90)) {
+      ix = x3, iy = y1;
+      return(true);
+    }
+    if((x3 <= x1) && (ray_angle == 270)) {
+      ix = x3, iy = y1;
+      return(true);
+    }
+    return(false);
+  }
+
+  // Case 4 - ray vertical line horizontal
+  if(ray_vert && line_horz) {
+    if((y3 >= y1) && (ray_angle == 0)) {
+      ix = x1, iy = y3;
+      return(true);
+    }
+    if((y3 <= y1) && (ray_angle == 180)) {
+      ix = x1, iy = y3;
+      return(true);
+    }
+    return(false);
+  }
+
+  // Case 5 - ray vertical line normal
+  if(ray_vert && !line_horz & !line_vert) {
+    ix = x1;
+    double slope_b = (y4-y3) / (x4-x3);
+    double inter_b = y3 - (slope_b * x3);
+    iy = (slope_b * ix) + inter_b;
+    if((iy >= y1) && (ray_angle == 0))
+      return(true);
+    if((iy <= y1) && (ray_angle == 180))
+      return(true);
+    ix=0;iy=0;
+    return(false);
+  }
+
+  // Case 6 - ray horizontal line normal
+  if(ray_horz && !line_horz & !line_vert) {
+    iy = y1;
+    double slope_b = (y4-y3) / (x4-x3);
+    double inter_b = y3 - (slope_b * x3);
+    ix = (iy - inter_b) / slope_b;
+    if((ix >= x1) && (ray_angle == 90))
+      return(true);
+    if((ix <= x1) && (ray_angle == 270))
+      return(true);    
+    ix=0;iy=0;
+    return(false);
+  }
+
+  // Case 7 - ray normal line vertical
+  if(!ray_vert && !ray_horz & line_vert) {
+    // if "normal" ray create an artificial second vertex on the ray
+    double x2,y2;
+    projectPoint(ray_angle, 10, x1, y1, x2, y2);
+
+    ix = x3;
+    double slope_a = (y2-y1) / (x2-x1);
+    double inter_a = y1 - (slope_a * x1);
+    iy = (slope_a * ix) + inter_a;
+    if((ix >= x1) && (ray_angle > 0) && (ray_angle < 180))
+      return(true);
+    if((ix <= x1) && (ray_angle > 180) && (ray_angle < 360))
+      return(true);
+    return(false);
+  }
+
+  // Case 8 - ray normal line horizontal
+  if(!ray_horz && !ray_vert & line_horz) {
+    // if "normal" ray create an artificial second vertex on the ray
+    double x2,y2;
+    projectPoint(ray_angle, 10, x1, y1, x2, y2);
+
+    iy = y3;
+    double slope_a = (y2-y1) / (x2-x1);
+    double inter_a = y1 - (slope_a * x1);
+    ix = (iy - inter_a) / slope_a;
+    if((iy >= y1) && ((ray_angle < 90) || (ray_angle > 270)))
+      return(true);
+    if((iy <= y1) && (ray_angle > 90) && (ray_angle < 270))
+      return(true);
+    return(false);
+  }
+
+  // Case 9 - the general case
+  // First find slope and intercept of the two lines. (y = mx + b)
+  // if "normal" ray create an artificial second vertex on the ray
+  double x2,y2;
+  projectPoint(ray_angle, 10, x1, y1, x2, y2);
+  double slope_a = (y2-y1) / (x2-x1);
+  double slope_b = (y4-y3) / (x4-x3);
+  double inter_a = y1 - (slope_a * x1);
+  double inter_b = y3 - (slope_b * x3);
+
+  if(slope_a == slope_b) {    // Special case: parallel lines
+    if(inter_a == inter_b) {  // If identical/overlapping, just pick
+      ix = x1; iy = y1;       // any point. vertex of ray is fine.
+      return(true);
+    }
+    else
+      return(false);
+  }
+
+  // Then solve for x. m1(x) + b1 = m2(x) + b2.
+  ix = (inter_a - inter_b) / (slope_b - slope_a);
+
+  // Then plug ix into one of the line equations.
+  iy = (slope_a * ix) + inter_a;
+
+  if(ray_angle < 90) {
+    if((ix >= x1) && (iy >= y1))
+      return(true);
+  }
+  else if(ray_angle < 180) {
+    if((ix >= x1) && (iy <= y1))
+      return(true);
+  }
+  else if(ray_angle < 270) {
+    if((ix <= x1) && (iy <= y1))
+      return(true);
+  }
+  else if(ray_angle < 180) {
+    if((ix <= x1) && (iy >= y1))
+      return(true);
+  }
+
+  ix = 0;
+  iy = 0;
+  return(false);
+}
+#endif
+
+
+//---------------------------------------------------------------
 // Procedure: segmentAngle
 //   Purpose: Return the angle between the two segments given by
 //            the segment x1,y1 and x2,y2 and the segment x2,y2 
@@ -669,10 +856,110 @@ void addVectors(double deg1, double mag1, double deg2,
   rmag = distPointToPoint(x0, y0, x2, y2);
 }
 
+//---------------------------------------------------------------
+// Procedure: bearingMinMaxToPoly
+//   Purpose: From a point outside a convex polygons, determine the two 
+//            bearing angles to the polygon forming a pseudo tangent.
+//   Returns: true if x,y is NOT in the polygon, false otherwise.
 
+bool bearingMinMaxToPoly(double osx, double osy, const XYPolygon& poly,
+			 double& bmin, double& bmax)
+{
+  // Step 1: Sanity checks
+  if(poly.size() == 0)
+    return(false);
+  if(poly.is_convex() && poly.contains(osx, osy))
+    return(false);
+  
+  // Step 2: Determine all the angles, noting their quadrants.
+  bool quad_1 = false;    // [0-90)
+  bool quad_2 = false;    // [90-180)
+  bool quad_3 = false;    // [180-270)
+  bool quad_4 = false;    // [270-360)
 
+  vector<double> angles;
+  unsigned int i, psize = poly.size();
+  for(i=0; i<psize; i++) {
+    double angle = relAng(osx, osy, poly.get_vx(i), poly.get_vy(i));
+    angles.push_back(angle);
+    if((angle >= 0) && (angle < 90))
+      quad_1 = true;
+    else if((angle >= 90) && (angle < 180))
+      quad_2 = true;
+    else if((angle >= 180) && (angle < 270))
+      quad_3 = true;
+    else
+      quad_4 = true;
+  }
 
+  bool wrap_around = false;
+  // Step 3: Determine if we have an angle wrap-around situation
+  if(quad_1  &&  !quad_2  && !quad_3  &&  !quad_4)          // Case 1:  1
+    wrap_around = false;
+  else if(!quad_1 &&   quad_2  && !quad_3  &&  !quad_4)     // Case 2:  2
+    wrap_around = false;
+  else if(!quad_1 &&  !quad_2  &&  quad_3  &&  !quad_4)     // Case 3:  3
+    wrap_around = false;
+  else if(!quad_1 &&  !quad_2  && !quad_3  &&   quad_4)     // Case 4:  4
+    wrap_around = false;
 
+  else if(quad_1  &&   quad_2  && !quad_3  &&  !quad_4)     // Case 5:  1,2
+    wrap_around = false;
+  else if(!quad_1 &&   quad_2  &&  quad_3  &&  !quad_4)     // Case 6:  2,3
+    wrap_around = false;
+  else if(!quad_1 &&  !quad_2  &&  quad_3  &&   quad_4)     // Case 7:  3,4
+    wrap_around = false;
+  else if(quad_1  &&  !quad_2  && !quad_3  &&   quad_4)     // Case 8:  4,1   YYYY
+    wrap_around = true;
+  else if(quad_1  &&   quad_2  &&  quad_3  &&  !quad_4)     // Case 9:  1,2,3 
+    wrap_around = false;
+  else if(!quad_1 &&   quad_2  &&  quad_3  &&   quad_4)     // Case 10: 2,3,4 
+    wrap_around = false;
+  else if(quad_1  &&  !quad_2  &&  quad_3  &&   quad_4)     // Case 11: 3,4,1 YYYY
+    wrap_around = true;
+  else if(quad_1  &&   quad_2  && !quad_3  &&   quad_4)     // Case 12: 4,1,2 YYYY
+    wrap_around = true;
 
+  else if(quad_1  &&  !quad_2  &&  quad_3  &&  !quad_4) {   // Case 13: 1,3
+    double px, py;
+    poly.closest_point_on_poly(osx, osy, px, py);
+    double os_angle = relAng(osx, osy, px, py);
+    if((os_angle > 45) && (os_angle <= 225))
+      wrap_around = false;
+    else
+      wrap_around = true;
+  }
+  else if(!quad_1 &&   quad_2  && !quad_3  &&   quad_4) {   // Case 14: 2,4
+    double px, py;
+    poly.closest_point_on_poly(osx, osy, px, py);
+    double os_angle = relAng(osx, osy, px, py);
+    if((os_angle > 135) && (os_angle <= 315))
+      wrap_around = false;
+    else
+      wrap_around = true;
+  }
 
-
+  // Step 4: Now determine the "min" and "max" bearing angles
+  if(!wrap_around) {
+    bmin = 360;
+    bmax = 0;
+    for(i=0; i<psize; i++) {
+      if(angles[i] < bmin)
+	bmin = angles[i];
+      else if(angles[i] > bmax)
+	bmax = angles[i];
+    }
+  }
+  else {
+    bmin = 360;
+    bmax = 0;
+    for(i=0; i<psize; i++) {
+      if((angles[i] > 180) && (angles[i] < bmin))
+	bmin = angles[i];
+      else if((angles[i] <= 180) && (angles[i] > bmax))
+	bmax = angles[i];
+    }
+  }
+  
+  return(true);
+}

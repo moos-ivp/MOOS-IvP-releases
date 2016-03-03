@@ -203,7 +203,7 @@ void HostInfo::registerVariables()
 //            We're making the assumption that the caller is a user on 
 //            the system with a home directory with write permission
 
-void HostInfo::generateIPInfoFiles()
+int HostInfo::generateIPInfoFiles()
 {
   // First the various OS X system calls
   int result = 0;
@@ -213,6 +213,7 @@ void HostInfo::generateIPInfoFiles()
   string bgd = "";
 
   sys_call = "mkdir " + m_tmp_file_dir;
+  // Bogusly pay attention to system return vals, avoid compiler warnings
   result = system(sys_call.c_str());
 
   sys_call = "networksetup -getinfo Airport  > ";
@@ -237,6 +238,10 @@ void HostInfo::generateIPInfoFiles()
 
   sys_call = "networksetup -getinfo \"Ethernet 2\"  > ";
   sys_call += m_tmp_file_dir + "ipinfo_osx_ethernet2_" + name + ".txt" + bgd; 
+  result = system(sys_call.c_str());
+
+  sys_call = "ifconfig bridge100 | grep 'broadcast 192.168.2.255' | cut -d ' ' -f2 > ";
+  sys_call += m_tmp_file_dir + "ipinfo_osx_bridge100_" + name + ".txt" + bgd; 
   result = system(sys_call.c_str());
 
   // Next the various GNU/Linux system calls
@@ -276,6 +281,7 @@ void HostInfo::generateIPInfoFiles()
   result = system(sys_call.c_str());
 
   m_ip_info_files_generated = true;
+  return(result);
 }
 
 //---------------------------------------------------------
@@ -293,6 +299,7 @@ void HostInfo::gatherIPInfoFromFiles()
   m_ip_osx_ethernet    = readOSXInfoIP("ipinfo_osx_ethernet_" + name + ".txt");
   m_ip_osx_ethernet1   = readOSXInfoIP("ipinfo_osx_ethernet1_" + name + ".txt");
   m_ip_osx_ethernet2   = readOSXInfoIP("ipinfo_osx_ethernet2_" + name + ".txt");
+  m_ip_osx_bridge100   = readLinuxInfoIP("ipinfo_osx_bridge100_" + name + ".txt");
   m_ip_osx_usb_ethernet = readOSXInfoIP("ipinfo_osx_usb_ethernet_" + name + ".txt");
   m_ip_linux_wifi      = readLinuxInfoIP("ipinfo_linux_wifi_" + name + ".txt");
   m_ip_linux_ethernet0 = readLinuxInfoIP("ipinfo_linux_ethernet0_" + name + ".txt");
@@ -339,6 +346,7 @@ void HostInfo::postIPInfo()
     addIPInfo(m_ip_osx_usb_ethernet, "OSX_USB_ETHERNET");
     addIPInfo(m_ip_osx_ethernet1, "OSX_ETHERNET1");
     addIPInfo(m_ip_osx_ethernet2, "OSX_ETHERNET2");
+    addIPInfo(m_ip_osx_bridge100, "OSX_BRIDGE100");
     addIPInfo(m_ip_osx_wifi, "OSX_WIFI");
   }    
 
@@ -354,6 +362,7 @@ void HostInfo::postIPInfo()
   HostRecord hrecord;
   hrecord.setCommunity(m_host_community);
   hrecord.setHostIP(m_host_ip);
+  hrecord.setHostIPAlts(m_host_ip_all);
   hrecord.setPortDB(m_host_port_db);
   hrecord.setTimeWarp(doubleToStringX(m_time_warp,1));
   hrecord.setPShareIRoutes(m_pshare_iroutes);
@@ -452,8 +461,9 @@ string HostInfo::readLinuxInfoIP(string filename)
 //            files don't actually exist. Want to prevent using 
 //            stale information.
 
-void HostInfo::clearTempFiles()
+int HostInfo::clearTempFiles()
 {
+  // Bogusly pay attention to system return vals, avoid compiler warnings
   int res = 0;
   res = system("rm -f ~/.ipinfo_osx_airport.txt");     // OS X Snow Leopard
   res = system("rm -f ~/.ipinfo_osx_wifi.txt");        // OS X Lion
@@ -466,6 +476,7 @@ void HostInfo::clearTempFiles()
   res = system("rm -f ~/.ipinfo_linux_usb1.txt");      // Linux
   res = system("rm -f ~/.ipinfo_linux_usb2.txt");      // Linux
   res = system("rm -f ~/.ipinfo_linux_wifi.txt");      // Linux
+  return(res);
 }
 
 //---------------------------------------------------------

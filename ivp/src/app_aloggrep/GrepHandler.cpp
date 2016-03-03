@@ -46,9 +46,13 @@ GrepHandler::GrepHandler()
   m_chars_removed  = 0;
   m_chars_retained = 0;
 
+  m_comments_retained = true;
   m_var_condition_met = true;
-
   m_file_overwrite = false;
+  
+  // A "bad" line is a line that is not a comment, and does not begin
+  // with a timestamp. As found in entries with CRLF's like DB_VARSUMMARY
+  m_badlines_retained = false;
 }
 
 //--------------------------------------------------------
@@ -87,72 +91,81 @@ bool GrepHandler::handle(const string& alogfile, const string& new_alogfile)
     }
     m_file_out = fopen(new_alogfile.c_str(), "w");
   }
+
+  // If DB_VARSUMMARY is explicitly on the variable grep list, then
+  // retain all its bad lines (lines not starting with a timestamp)
+  for(unsigned int i=0; i<m_keys.size(); i++) {
+    if("DB_VARSUMMARY" == m_keys[i])
+      m_badlines_retained = true;
+  }
   
   bool done = false;
   while(!done) {
     string line_raw = getNextRawLine(m_file_in);
     
-    bool   line_is_comment = false;
-    if((line_raw.length() > 0) && (line_raw.at(0) == '%'))
-      line_is_comment = true;
-
-    if(line_raw == "eof") 
-      done = true;
-    else {
-      string varname = getVarName(line_raw);
-      string srcname = getSourceNameNoAux(line_raw);
-
-#if 1
-      if((m_var_condition != "") && (varname == m_var_condition)) {
-	string varval = getDataEntry(line_raw);
-	cout << "varval:" << varval << endl;
-	if(tolower(varval) == "true")
-	  m_var_condition_met = true;
-	else
-	  m_var_condition_met = false;
-      }
-#endif 
-      //string data = getDataEntry(line_raw);
-      //cout << "data: [" << data << "]" << endl;
-
-      int ksize = m_keys.size();
-      bool match = false;
-      for(int i=0; ((i<ksize) && !match); i++) {
-	if((varname == m_keys[i]) || (srcname == m_keys[i]))
-	  match = true;
-	else if(m_pmatch[i] && (strContains(varname, m_keys[i]) ||
-				strContains(srcname, m_keys[i])))
-	  match = true;
-      }
-
-
-      if(!m_var_condition_met)
-	match = false;
-      
-      if(match || line_is_comment) {
-	if(m_file_out)
-	  fprintf(m_file_out, "%s\n", line_raw.c_str());
-	else
-	  cout << line_raw << endl;
-      }
-      
-      if(match && !line_is_comment) {
-	m_lines_retained++;
-	m_chars_retained += line_raw.length();
-	m_vars_retained.insert(varname);
-      }
-
-      if(!match && !line_is_comment) {
-	m_lines_removed++;
-	m_chars_removed += line_raw.length();
-	m_vars_removed.insert(varname);
-      }
+    // Part 1: Check if the line is a comment and handle or ignore
+    if((line_raw.length() > 0) && (line_raw.at(0) == '%')) {
+      if(m_comments_retained)
+	outputLine(line_raw);
+      continue;
     }
+
+    // Part 2: Check for end of file
+    if(line_raw == "eof") 
+      break;
+
+    // Part 3: Handle lines that do not begin with a number (comment
+    // lines are already handled above)
+    if(!isNumber(line_raw.substr(0,1))) {
+      if(m_badlines_retained)
+	outputLine(line_raw);
+      else
+	ignoreLine(line_raw);
+      continue;
+    }
+
+    // Part 4: If there is a condition, see if it has been met
+    string varname = getVarName(line_raw);
+    if((m_var_condition != "") && (varname == m_var_condition)) {
+      string varval = getDataEntry(line_raw);
+      if(tolower(varval) == "true")
+	m_var_condition_met = true;
+      else
+	m_var_condition_met = false;
+    }
+
+    if(!m_var_condition_met) {
+      ignoreLine(line_raw, varname);
+      continue;
+    }
+      
+    // Part 5: Check if this line matches a named var or src
+    string srcname = getSourceNameNoAux(line_raw);
+
+    bool match = false;
+    for(unsigned int i=0; ((i<m_keys.size()) && !match); i++) {
+      if((varname == m_keys[i]) || (srcname == m_keys[i]))
+	match = true;
+      else if(m_pmatch[i] && (strContains(varname, m_keys[i]) ||
+			      strContains(srcname, m_keys[i])))
+	match = true;
+    }
+
+    // Part 6: Depending whether a match was made, output or ignore the line
+    if(match) 
+      outputLine(line_raw, varname);
+    else
+      ignoreLine(line_raw, varname);
+
   }
 
   if(m_file_out)
     fclose(m_file_out);
   m_file_out = 0;
+
+  if(m_file_in)
+    fclose(m_file_in);
+  m_file_in = 0;
 
   return(true);
 }
@@ -221,6 +234,33 @@ vector<string> GrepHandler::getUnMatchedKeys()
       rvector.push_back(m_keys[i]);
   }
   return(rvector);
+}
+
+//--------------------------------------------------------
+// Procedure: outputLine()
+
+void GrepHandler::outputLine(const string& line, const string& var)
+{
+  if(m_file_out)
+    fprintf(m_file_out, "%s\n", line.c_str());
+  else
+    cout << line << endl;
+
+  m_lines_retained++;
+  m_chars_retained += line.length();
+  if(var.length() > 0)
+    m_vars_retained.insert(var);
+}
+
+//--------------------------------------------------------
+// Procedure: ignoreLine()
+
+void GrepHandler::ignoreLine(const string& line, const string& var)
+{
+  m_lines_removed++;
+  m_chars_removed += line.length();
+  if(var.length() > 0)
+    m_vars_removed.insert(var);
 }
 
 

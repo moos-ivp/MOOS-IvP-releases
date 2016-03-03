@@ -51,6 +51,12 @@ void ShareHelp::PrintConfigurationExample()
 
 			<<YELLOW<<"  //setting up lots at once\n"<<NORMAL<<
 			"  input = route = localhost:9069 & multicast_9 & multicast_65\n"
+
+           <<YELLOW<<"  //setting up other config options (optional)\n"<<NORMAL<<
+            "  multicast_base_port = 9061\n"
+            "  multicast_address = 224.1.1.12\n"
+
+
 			"}\n"<<std::endl;
 
 }
@@ -66,7 +72,9 @@ void ShareHelp::PrintHelp()
 			"switches:\n"
 			"  -o=<outputs>: specify outputs from command line\n"
 			"  -i=<inputs> : specify inputs from command line\n"
-	        "  --verbose   : verbose operation\n";
+            "  --verbose   : verbose operation\n"
+            "  --multicast_base_port=<uint_16> multicast base port\n"
+            "  --multicast_address=<ip-address> multicast address\n";
 
 
 	std::cout<<YELLOW<<"\nExamples:\n\n"<<NORMAL;

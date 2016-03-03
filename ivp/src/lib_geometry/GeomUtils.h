@@ -25,8 +25,10 @@
 #define XY_GEOM_UTILS_HEADER
 
 #include "XYPoint.h"
+#include "XYPolygon.h"
 
 // Determines the distance between two points
+double distPointToPointXXX(double x1, double y1, double x2, double y2);
 double distPointToPoint(double x1, double y1, double x2, double y2);
 double distPointToPoint(const XYPoint& pt1, const XYPoint& pt2);
 
@@ -43,10 +45,15 @@ double distPointToSeg(double x1, double y1, double x2, double y2,
 double distSegToSeg(double x1, double y1, double x2, double y2, 
 		    double x3, double y3, double x4, double y4);
 
-// Determine where two lines intersect
+// Determine whether and where two lines intersect
 bool   linesCross(double x1, double y1, double x2, double y2,
 		  double x3, double y3, double x4, double y4,
 		  double &ix, double& iy);
+
+// Determine whether and where a given ray and line intersect
+bool   lineRayCross(double x1, double y1, double ray_angle,
+		    double x3, double y3, double x4, double y4,
+		    double &ix, double& iy);
 
 // Determine if two line segments intersect
 bool   segmentsCross(double x1, double y1, double x2, double y2,
@@ -77,6 +84,10 @@ XYPoint projectPoint(double ANGLE, double DIST, double cx, double cy);
 void   addVectors(double deg1, double mag1, double deg2, double mag2,
 		  double& rdeg, double& rmag); 
 
+bool   bearingMinMaxToPoly(double x, double y, const XYPolygon& poly,
+			   double& bmin, double& bmax);
+
+
 // DEPRECATED INTERFACES
 double distToPoint(double x1, double y1, double x2, double y2);
 
@@ -84,7 +95,3 @@ double distToSegment(double x1, double y1, double x2,
 		     double y2, double px, double py);
   
 #endif
-
-
-
-

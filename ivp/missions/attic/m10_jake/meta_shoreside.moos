@@ -72,7 +72,7 @@ ProcessConfig = uFldShoreBroker
   bridge   = src=UHZ_OPTIONS_SUMMARY
 
   qbridge  = DEPLOY, RETURN, NODE_REPORT, NODE_MESSAGE
-  qbridge  = MOOS_MANUAL_OVERIDE
+  qbridge  = MOOS_MANUAL_OVERRIDE
 
   bridge   = src=APPCAST_REQ 
 
@@ -176,7 +176,7 @@ ProcessConfig = pMarineViewer
   //ACTION = STATION_ALL = true
 
   BUTTON_ONE   = DEPLOY_ALL  # DEPLOY_ALL=true 
-  BUTTON_ONE   = MOOS_MANUAL_OVERIDE_ALL=false 
+  BUTTON_ONE   = MOOS_MANUAL_OVERRIDE_ALL=false 
   BUTTON_ONE   = RETURN_ALL=false
   BUTTON_ONE   = HAZARD_SEARCH_START=true
   BUTTON_TWO   = RETURN_ALL  # RETURN_ALL=true

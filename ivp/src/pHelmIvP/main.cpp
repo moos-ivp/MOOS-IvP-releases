@@ -89,6 +89,7 @@ int main(int argc, char *argv[])
   for(k=0; k<ksize; k++)
     helmIvP.addBehaviorFile(bhv_files[k]);
 
+  //  helmIvP.Run(run_command.c_str(), mission_file.c_str(), argc, argv);
   helmIvP.Run(run_command.c_str(), mission_file.c_str());
   
   return(0);

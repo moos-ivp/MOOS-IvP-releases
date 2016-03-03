@@ -42,6 +42,8 @@ std::vector<std::string> parseStringZ(const std::string&, char,
 
 std::vector<std::string> parseStringToWords(const std::string&, char c=0);
 
+std::vector<std::string> parseQuotedString(const std::string&, char separator);
+
 std::vector<std::string> chompString(const std::string&, char);
 std::vector<std::string> sortStrings(std::vector<std::string>);
 std::vector<std::string> mergeVectors(std::vector<std::string>,
@@ -100,6 +102,8 @@ bool  tokParse(const std::string&, const std::string&,
 		char, char, std::string&);
 bool  tokParse(const std::string&, const std::string&, 
 		char, char, double&);
+bool  tokParse(const std::string&, const std::string&, 
+		char, char, bool&);
 
 std::string tokStringParse(const std::string&, const std::string&, 
 			   char, char);
@@ -139,11 +143,16 @@ void  millipause(int milliseconds);
 std::string modeShorten(std::string, bool really_short=true);
 
 std::vector<std::string> tokenizePath(const std::string&);
+
 std::string parseAppName(const std::string&);
 
 bool isKnownVehicleType(const std::string&);
 
 unsigned int charCount(const std::string&, char);
+
+std::vector<std::string> justifyLen(const std::vector<std::string>&,
+				    unsigned int maxlen);
+std::vector<std::string> justifyLen(const std::string&, unsigned int maxlen);
 
 #endif
 

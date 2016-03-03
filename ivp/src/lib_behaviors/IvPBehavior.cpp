@@ -368,7 +368,7 @@ void IvPBehavior::postMessage(string var, string sdata, string key)
   }
   VarDataPair pair(var, sdata);
 
-  if(key != "repeatable") {
+  if(tolower(key) != "repeatable") {
     key = (m_descriptor + var + key);
     pair.set_key(key);
   }
@@ -397,7 +397,7 @@ void IvPBehavior::postMessage(string var, double ddata, string key)
   
   VarDataPair pair(var, ddata);
   
-  if(key != "repeatable") {
+  if(tolower(key) != "repeatable") {
     key = (m_descriptor + var + key);
     pair.set_key(key);
   }
@@ -977,6 +977,16 @@ double IvPBehavior::getBufferTimeVal(string varname)
 }
 
 //-----------------------------------------------------------
+// Procedure: getBufferMsgTimeVal()
+
+double IvPBehavior::getBufferMsgTimeVal(string varname)
+{
+  if(!m_info_buffer)
+    return(0);
+  return(m_info_buffer->mtQuery(varname));
+}
+
+//-----------------------------------------------------------
 // Procedure: getBufferDoubleVal()
 
 double IvPBehavior::getBufferDoubleVal(string varname, bool& ok)
@@ -996,7 +1006,7 @@ double IvPBehavior::getBufferDoubleVal(string varname, bool& ok)
     }
   }
   if((!ok) && !vectorContains(m_info_vars_no_warning, varname)) 
-    postWMessage(varname+" info not found in helm info_buffer");
+    postWMessage(varname + " dbl info not found in helm info_buffer");
   return(value);
 }
 
@@ -1020,7 +1030,7 @@ string IvPBehavior::getBufferStringVal(string varname, bool& ok)
     }
   }
   if((!ok) && !vectorContains(m_info_vars_no_warning, varname)) 
-    postWMessage(varname+" info not found in helm info_buffer");
+    postWMessage(varname + " str info not found in helm info_buffer");
   return(value);
 }
 

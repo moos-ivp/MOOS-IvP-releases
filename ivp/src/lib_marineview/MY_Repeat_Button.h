@@ -32,13 +32,14 @@
 class MY_Repeat_Button : public Fl_Repeat_Button {
 public:
   MY_Repeat_Button(int x, int y, int w, int h, const char *l=0) :
-  Fl_Repeat_Button(x, y, w, h, l) {};
+  Fl_Repeat_Button(x, y, w, h, l) {}
   
   int  handle(int event) {
     if((Fl::event_key()==FL_Up)   || 
        (Fl::event_key()==FL_Down) || 
        (Fl::event_key()==FL_Left) || 
-       (Fl::event_key()==FL_Right)) {
+       (Fl::event_key()==FL_Right) ||
+       (Fl::event_key()==32)) {
       return(0);
     }
     return(Fl_Repeat_Button::handle(event));

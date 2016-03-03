@@ -52,7 +52,10 @@ PMV_GUI::PMV_GUI(int g_w, int g_h, const char *g_l)
   m_brw_procs = new MY_Fl_Hold_Browser(0, 0, 1, 1); 
   m_brw_procs->callback(cb_SelectProc, 0);
   m_brw_casts = new MY_Fl_Hold_Browser(0, 0, 1, 1);
-  m_brw_casts->set_output();
+  m_brw_casts->clear_visible_focus();
+  
+  //m_brw_procs->callback(cb_SelectProc, 0);
+  //m_brw_casts->set_output();
   
   // Configure the DataField Widgets  
   v_nam = new Fl_Output(0, 0, 1, 1, "VName:"); 
@@ -222,8 +225,7 @@ void PMV_GUI::resize(int lx, int ly, int lw, int lh)
 
 //----------------------------------------------------------
 // Procedure: addButton
-//      Note: 
-//            
+
 bool PMV_GUI::addButton(string btype, string svalue) 
 {
   if((btype != "button_one") && (btype != "button_two") &&
@@ -408,6 +410,14 @@ bool PMV_GUI::syncNodesBtoA()
   return(true);
 }
 
+//----------------------------------------------------
+// Procedure: clearGeoShapes
+
+void PMV_GUI::clearGeoShapes(string vname, string shape, string stype)
+{
+  mviewer->clearGeoShapes(vname, shape, stype);
+}
+
 //----------------------------------------- UpdateXY
 void PMV_GUI::updateXY() 
 {
@@ -478,6 +488,8 @@ void PMV_GUI::updateXY()
   v_dep->redraw();
   v_ais->redraw();
 }
+
+
 
 //----------------------------------------- MOOS_Button
 inline void PMV_GUI::cb_MOOS_Button_i(unsigned int val) {  
@@ -1531,7 +1543,7 @@ void PMV_GUI::resizeWidgets()
 
   double pct_cast_wid = m_ac_settings.geosize("appcast_width")  / 100;
   double pct_cast_hgt = m_ac_settings.geosize("appcast_height") / 100;
-  double pct_view_wid = 1 - pct_cast_wid;
+  //double pct_view_wid = 1 - pct_cast_wid;
 
   double pct_view_hgt = 0.875;
   double pct_menu_hgt = 0.035;
@@ -1541,7 +1553,7 @@ void PMV_GUI::resizeWidgets()
   double now_hgt = h();
   double now_wid = w();
 
-  // Make sure the menu bar is at least 15 and 25
+  // Make sure the menu bar is at least 15 and at most 25
   if((pct_menu_hgt * now_hgt) < 15) 
     pct_menu_hgt = 15 / now_hgt;
   if((pct_menu_hgt * now_hgt) > 25) 
@@ -1558,7 +1570,7 @@ void PMV_GUI::resizeWidgets()
   // Make sure the appcasting pane is at least 300
   if((pct_cast_wid * now_wid) < 300) {
     pct_cast_wid = 300 / now_wid;
-    pct_view_wid = (1 - pct_cast_wid);
+    //pct_view_wid = (1 - pct_cast_wid);
   }
 
   
@@ -1683,7 +1695,7 @@ void PMV_GUI::resizeWidgets()
 
   m_brw_casts->color(color_back);
   m_brw_casts->textcolor(color_text);
-  m_brw_casts->position(0);
+  //m_brw_casts->position(0);
 
 
   // Part 5: Adjust the extents of the VIEWER window
@@ -1722,7 +1734,7 @@ void PMV_GUI::resizeWidgets()
   double dy = h()-dh;
   double dw = w();
 
-  double fld_hgt = dh * 0.24;
+  double fld_hgt = dh * 0.24; // height of data field output
 
   if(dw < 800) {
     resizeDataText(10);

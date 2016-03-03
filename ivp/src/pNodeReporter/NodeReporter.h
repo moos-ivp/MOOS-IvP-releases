@@ -34,7 +34,7 @@ class NodeReporter : public AppCastingMOOSApp
 {
 public:
   NodeReporter();
-  virtual ~NodeReporter() {};
+  virtual ~NodeReporter() {}
   
   bool OnNewMail(MOOSMSG_LIST &NewMail);
   bool Iterate();
@@ -88,6 +88,8 @@ public:
   bool         m_helm_switch_noted;
   unsigned int m_reports_posted;
   unsigned int m_reports_posted_alt_nav;
+  bool         m_thrust_mode_reverse;
+  bool         m_paused;
   
  protected: // Config and State Vars (Blackout Interval)
   double  m_blackout_interval;

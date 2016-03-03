@@ -28,22 +28,23 @@
 #include <FL/Fl.H>
 #include <FL/Fl_Button.H>
 
-
 class MY_Button : public Fl_Button {
 public:
   MY_Button(int x, int y, int w, int h, const char *l=0) :
-    Fl_Button(x, y, w, h, l) {};
+    Fl_Button(x, y, w, h, l) {}
 
   int  handle(int event) {
     if((Fl::event_key()==FL_Up)   || 
        (Fl::event_key()==FL_Down) || 
        (Fl::event_key()==FL_Left) || 
-       (Fl::event_key()==FL_Right)) {
+       (Fl::event_key()==FL_Right) ||
+       (Fl::event_key()==32)) {
       return(0);
     }
     return(Fl_Button::handle(event));
   }
 };
+
 #endif
 
 

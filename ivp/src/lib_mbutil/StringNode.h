@@ -30,14 +30,16 @@
 class StringNode
 {
 public:
-  StringNode(const std::string& s) {m_value = s;};
-  ~StringNode() {};
+  StringNode(const std::string& s) {m_value = s;}
+  ~StringNode() {}
 
   bool addParChild(const std::string& parent, 
 		   const std::string& child);
 
   void print(unsigned int indent=0);
   std::vector<std::string> getPrintableSet(unsigned int index=0);
+
+ void writeGraphviz(std::ostream& os);
 
 protected:
   std::string             m_value;

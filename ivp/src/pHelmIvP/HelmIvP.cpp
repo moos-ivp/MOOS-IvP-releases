@@ -73,6 +73,7 @@ HelmIvP::HelmIvP()
   m_last_heartbeat = 0;
   m_curr_time      = 0;
   m_start_time     = 0;
+  m_no_decisions   = 0;
 
   // The m_has_control correlates to helm status
   m_has_control     = false;
@@ -196,11 +197,11 @@ bool HelmIvP::OnNewMail(MOOSMSG_LIST &NewMail)
       if(moosvar == "HELM_MAP_CLEAR")
 	exception = true;
       if(!posted_by_this_helm && !exception) {
-	string msg = "Helm ignores MOOS msg due to skew: " + moosvar;
-	msg += " Source=" + source + " Skew=" + doubleToString(skew_time,2);
-	reportRunWarning(msg);
-	msg += " curr_time: " + doubleToString(m_curr_time,3);
-	Notify("IVPHELM_SKEW", msg);
+	string skew_msg = "Helm ignores MOOS msg due to skew: " + moosvar;
+	skew_msg += " Source=" + source + " Skew=" + doubleToString(skew_time,2);
+	reportRunWarning(skew_msg);
+	skew_msg += " curr_time: " + doubleToString(m_curr_time,3);
+	Notify("IVPHELM_SKEW", skew_msg);
 	continue;
       }
     }
@@ -370,7 +371,6 @@ bool HelmIvP::Iterate()
     m_bhvs_idle_list = bhvs_idle_list;
   }
 
-
   m_prev_helm_report = m_helm_report;
 
    string allstop_msg = "clear";
@@ -490,7 +490,7 @@ void HelmIvP::postBehaviorMessages()
 	Notify("BHV_IPF", sdata);
 #endif
 #if 1
-	string id = bhv_descriptor + intToString(m_helm_iteration);
+	string id = bhv_descriptor + "^" + intToString(m_helm_iteration);
 	vector<string> svector = IvPFunctionToVector(sdata, id, 2000);
 	for(unsigned int k=0; k<svector.size(); k++)
 	  Notify("BHV_IPF", svector[k], bhv_descriptor);
@@ -548,12 +548,12 @@ bool HelmIvP::buildReport()
     // doing so, turn off further reports to the terminal.
     if(m_iteration > 1)
       m_term_reporting = false;
-    m_msgs << "   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
-    m_msgs << "   !!                                             !!" << endl;
-    m_msgs << "   !!  The helm is in the MALCONFIG state due to  !!" << endl;
-    m_msgs << "   !!  unresolved configuration warnings.         !!" << endl;
-    m_msgs << "   !!                                             !!" << endl;
-    m_msgs << "   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+    m_msgs << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+    m_msgs << "!!                                             !!" << endl;
+    m_msgs << "!!  The helm is in the MALCONFIG state due to  !!" << endl;
+    m_msgs << "!!  unresolved configuration warnings.         !!" << endl;
+    m_msgs << "!!                                             !!" << endl;
+    m_msgs << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
     return(true);
   }
 
@@ -903,16 +903,17 @@ void HelmIvP::postCharStatus()
 
 bool HelmIvP::updateInfoBuffer(CMOOSMsg &msg)
 {
-  string moosvar = msg.m_sKey;
-  string src_aux = msg.GetSourceAux();
+  string moosvar  = msg.m_sKey;
+  string src_aux  = msg.GetSourceAux();
+  double msg_time = msg.GetTime();
   if(src_aux == "HELM_VAR_INIT")
     return(false);
     
   if(msg.IsDouble()) {
-    return(m_info_buffer->setValue(moosvar, msg.GetDouble()));
+    return(m_info_buffer->setValue(moosvar, msg.GetDouble(), msg_time));
   }
   else if(msg.IsString()) {
-    return(m_info_buffer->setValue(moosvar, msg.GetString()));
+    return(m_info_buffer->setValue(moosvar, msg.GetString(), msg_time));
   }
   return(false);
 }
@@ -949,8 +950,8 @@ void HelmIvP::registerVariables()
     registerSingleVariable(m_additional_override);
 
   // Register for node report variables, e.g., AIS_REPORT, NODE_REPORT
-  unsigned int i, vsize = m_node_report_vars.size();
-  for(i=0; i<vsize; i++) 
+  unsigned int vsize = m_node_report_vars.size();
+  for(unsigned int i=0; i<vsize; i++) 
     registerSingleVariable(m_node_report_vars[i]);
   
   if(m_bhv_set) {
@@ -1033,7 +1034,6 @@ bool HelmIvP::OnStartUp()
   if(!m_info_buffer)
     m_info_buffer = new InfoBuffer;
 
-
   bool bhv_dir_not_found_ok = false;
   // ownship xis name of MOOS community, set in AppCastingMOOSApp::OnStartUp()
   m_ownship = m_host_community;
@@ -1101,8 +1101,8 @@ bool HelmIvP::OnStartUp()
   Populator_BehaviorSet *p_bset;
   p_bset = new Populator_BehaviorSet(m_ivp_domain, m_info_buffer);
   p_bset->setBHVDirNotFoundOK(bhv_dir_not_found_ok);
-  unsigned int k, ksize = behavior_dirs.size();
-  for(k=0; k<ksize; k++)
+  unsigned int ksize = behavior_dirs.size();
+  for(unsigned int k=0; k<ksize; k++)
     p_bset->addBehaviorDir(behavior_dirs[k]);
   
   m_bhv_set = p_bset->populate(m_bhv_files);
@@ -1373,22 +1373,36 @@ bool HelmIvP::detectChangeOnKey(const string& key, double value)
 
 void HelmIvP::postAllStop(string msg)
 {
+  Notify("IVPHELM_ALLSTOP_DEBUG", msg);
+
   // Don't post all-stop info if the helm is on standby or disabled.
   if(!helmStatusEnabled())
     return;
 
-  if(msg == m_allstop_msg)  
+  if(msg == m_allstop_msg) 
     return;
 
   // Interpret empty message as request to re-post the current status
   if(msg != "")
     m_allstop_msg = msg;
 
+  if((msg == "NothingToDo") || strBegins(msg, "MissingDecVars"))
+    m_no_decisions++;
+  else
+    m_no_decisions = 0;
+
   MOOSDebugWrite("pHelmIvP AllStop: " + m_allstop_msg);
   Notify("IVPHELM_ALLSTOP", m_allstop_msg);
 
   if(tolower(m_allstop_msg) == "clear")
     return;
+
+  // Willing to hold off one iteration if simply no decision. To give helm
+  // chance to transition between modes.
+  if(m_no_decisions == 1) {
+    m_allstop_msg = "IncompleteOrEmptyDecision";
+    return;
+  }
 
   // Post all the Decision Variable Results
   unsigned int j, dsize = m_ivp_domain.size();

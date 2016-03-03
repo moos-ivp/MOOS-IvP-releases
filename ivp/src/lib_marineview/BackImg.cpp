@@ -29,7 +29,8 @@
 #include <cstdlib>
 #include <tiffio.h>
 
-#define USE_UTM
+// As of Release 15.4 this is now set in CMake, defaulting to be defined
+// #define USE_UTM 
 
 // See http://www.cmake.org/pipermail/cmake/2003-March/003482.html
 #ifdef _WIN32
@@ -343,6 +344,27 @@ bool BackImg::readTiffInfo(string filename)
 
   bool result = processConfiguration();
   // print();
+  return(result);
+}
+
+// ----------------------------------------------------------
+// Procedure: readTiffInfoEmpty
+
+bool BackImg::readTiffInfoEmpty(double lat_north, double lat_south, 
+				double lon_east, double lon_west)
+{
+  m_lat_north = lat_north;
+  m_lat_south = lat_south;
+  m_lon_east  = lon_east;
+  m_lon_west  = lon_west;
+  m_boundary_set = true;
+
+  m_img_pix_width  = 1000;
+  m_img_pix_height = 1000;
+  m_img_mtr_width  = 1000;
+  m_img_mtr_height = 1000;
+
+  bool result = processConfiguration();
   return(result);
 }
 

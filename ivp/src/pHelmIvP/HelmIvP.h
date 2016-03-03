@@ -95,7 +95,7 @@ public:
   void postAllStop(std::string msg="");
   bool processNodeReport(const std::string &);
 
-  std::string helmStatus() const {return(m_helm_status);};
+  std::string helmStatus() const {return(m_helm_status);}
   void        helmStatusUpdate(const std::string& val="");
   bool        helmStatusEnabled() const;
 
@@ -123,6 +123,8 @@ protected:
   bool          m_rejournal_requested;
   bool          m_init_vars_ready;
   bool          m_init_vars_done;
+
+  unsigned int  m_no_decisions;
 
   // The refresh vars handle the occasional clearing of the m_outgoing
   // maps. These maps will be cleared when MOOS mail is received for the
@@ -188,7 +190,3 @@ protected:
   std::map<std::string, double>  m_node_skews;
 };
 #endif 
-
-
-
-

@@ -52,7 +52,11 @@ BHV_OpRegion::BHV_OpRegion(IvPDomain gdomain) : IvPBehavior(gdomain)
   m_breached_altitude_flags_posted = false;
   m_breached_depth_flags_posted = false;
 
+  // Be explicit about this variable is empty string by default
   m_time_remaining_var = "";
+
+  // Be explicit about this variable is empty string by default
+  m_opregion_poly_var = "";
 
   // Keep track of whether the vehicle was in the polygon on the
   // previous invocation of the behavior. Initially assume false.
@@ -105,11 +109,6 @@ BHV_OpRegion::BHV_OpRegion(IvPDomain gdomain) : IvPBehavior(gdomain)
 
 //-----------------------------------------------------------
 // Procedure: setParam
-//     Notes: We expect the "waypoint" entries will be of the form
-//            "xposition,yposition,tag" where the tag is an optional
-//            descriptor of the waypoint.
-//            The "radius" parameter indicates what it means to have
-//            arrived at the waypoint.
 
 bool BHV_OpRegion::setParam(string param, string val) 
 {
@@ -211,6 +210,12 @@ bool BHV_OpRegion::setParam(string param, string val)
     m_trigger_exit_time = dval;
     return(true);
   }
+  else if(param == "opregion_poly_var") {
+    if(strContainsWhite(val))
+      return(false);
+    m_opregion_poly_var = val;
+    return(true);
+  }
   else if(param == "visual_hints")  {
     vector<string> svector = parseStringQ(val, ',');
     unsigned int i, vsize = svector.size();
@@ -219,6 +224,21 @@ bool BHV_OpRegion::setParam(string param, string val)
     return(true);
   }
   return(false);
+}
+
+//-----------------------------------------------------------
+// Procedure: onSetParamComplete()
+
+void BHV_OpRegion::onSetParamComplete()
+{
+  if(m_opregion_poly_var != "") {
+    if(m_polygon.size() > 0) {
+      string spec = m_polygon.get_spec_pts(2);
+      postMessage(m_opregion_poly_var, spec);
+    }
+  }
+
+  postConfigStatus();
 }
 
 //-----------------------------------------------------------
@@ -589,6 +609,15 @@ void BHV_OpRegion::postViewablePolygon()
 {
   if(m_polygon.size() == 0)
     return;
+
+  if(m_us_name == "")
+    return;
+
+  if(m_polygon.get_label() == "") {
+    string label = m_us_name + ":" + m_descriptor + ":opreg";
+    m_polygon.set_label(label);
+  }
+
   XYPolygon poly_duplicate = m_polygon;
   if(m_hint_vertex_color != "")
     poly_duplicate.set_color("vertex", m_hint_vertex_color);

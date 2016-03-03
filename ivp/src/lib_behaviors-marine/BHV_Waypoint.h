@@ -32,7 +32,7 @@
 class BHV_Waypoint : public IvPBehavior {
 public:
   BHV_Waypoint(IvPDomain);
-  ~BHV_Waypoint() {};
+  ~BHV_Waypoint() {}
   
   bool           setParam(std::string, std::string);
   IvPFunction*   onRunState();
@@ -41,7 +41,7 @@ public:
   BehaviorReport onRunState(std::string);
   void           onRunToIdleState();
   void           onSetParamComplete();
-  void           onCompleteState() {postErasables();};
+  void           onCompleteState() {postErasables();}
 
 protected:
   bool         updateInfoIn();
@@ -74,6 +74,8 @@ protected: // configuration parameters
   std::string m_var_index;
   std::string m_var_cyindex;
   std::string m_var_suffix;
+  std::string m_var_dist_to_prev;
+  std::string m_var_dist_to_next;
 
   // Var-Data flags for posting when behavior finishes cycle
   std::vector<VarDataPair> m_cycle_flags;
@@ -94,14 +96,23 @@ protected: // intermediate or object global variables.
   double    m_osx;  // Ownship x position
   double    m_osy;  // Ownship y position
   
-  // Odometry state information
+  // Time/Distance efficiency state information
   bool      m_odo_set_flag;
+  bool      m_odo_leg_disq;
+  double    m_odo_settime;
   double    m_odo_setx;
   double    m_odo_sety;
-  double    m_odo_distance;
   bool      m_odo_virgin;
+
+  double    m_dist_leg_odo;
+
   double    m_dist_total_odo;
   double    m_dist_total_linear;
+  double    m_time_total_odo;
+  double    m_time_total_linear;
+
+  double    m_course_pct;
+  double    m_speed_pct;
 
   double    m_osx_prev;
   double    m_osy_prev;

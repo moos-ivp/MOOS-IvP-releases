@@ -30,7 +30,8 @@
 #include "NodeRecord.h"
 #include "ACBlock.h"
 
-#define USE_UTM
+// As of Release 15.4 this is now set in CMake, defaulting to be defined
+// #define USE_UTM 
 
 using namespace std;
 
@@ -43,6 +44,7 @@ NodeReporter::NodeReporter()
 
   m_reports_posted         = 0;
   m_reports_posted_alt_nav = 0;
+  m_thrust_mode_reverse    = false;
 
   m_record.setType("unknown");
   m_record.setLength(0);
@@ -59,6 +61,7 @@ NodeReporter::NodeReporter()
   m_blackout_baseval  = 0;
   m_blackout_variance = 0;
   m_last_post_time    = -1;
+  m_paused            = false;
 
   // Below is a good alt_nav prefix suggestion,  but left blank to keep
   // feature off unless another app is generating the alt nav solution.
@@ -118,7 +121,10 @@ bool NodeReporter::OnNewMail(MOOSMSG_LIST &NewMail)
       m_record.setDepth(ddata);
     else if(key == "NAV_YAW") 
       m_record.setYaw(ddata);
-
+    else if(key == "THRUST_MODE_REVERSE") {
+      bool reverse = (tolower(sdata)=="true");
+      m_record.setThrustModeReverse(reverse);
+    }
     // BEGIN logic for checking for alternative nav reporting
     if(m_alt_nav_prefix != "") {
       bool record_gt_updated = true;
@@ -156,6 +162,9 @@ bool NodeReporter::OnNewMail(MOOSMSG_LIST &NewMail)
     
     if(key == "AUX_MODE") 
       m_record.setModeAux(sdata);
+
+    else if(key == "PNR_PAUSE") 
+      setBooleanOnString(m_paused, sdata);
 
     else if(key == "LOAD_WARNING") {
       string app = tokStringParse(sdata, "app", ',', '=');
@@ -220,33 +229,37 @@ void NodeReporter::registerVariables()
 
   Register("NAV_*", "*", 0);
 
-  m_Comms.Register("NAV_X", 0);
-  m_Comms.Register("NAV_Y", 0);
-  m_Comms.Register("NAV_LAT", 0);
-  m_Comms.Register("NAV_LONG", 0);
-  m_Comms.Register("NAV_SPEED", 0);
-  m_Comms.Register("NAV_HEADING", 0);
-  m_Comms.Register("NAV_YAW", 0);
-  m_Comms.Register("NAV_DEPTH", 0);
+  Register("NAV_X", 0);
+  Register("NAV_Y", 0);
+  Register("NAV_LAT", 0);
+  Register("NAV_LONG", 0);
+  Register("NAV_SPEED", 0);
+  Register("NAV_HEADING", 0);
+  Register("NAV_YAW", 0);
+  Register("NAV_DEPTH", 0);
 
   if(m_alt_nav_prefix != "") {
     if(!strEnds(m_alt_nav_prefix, "_"))
       m_alt_nav_prefix += "_";
-    m_Comms.Register(m_alt_nav_prefix + "X", 0);
-    m_Comms.Register(m_alt_nav_prefix + "Y", 0);
-    m_Comms.Register(m_alt_nav_prefix + "LAT", 0);
-    m_Comms.Register(m_alt_nav_prefix + "LONG", 0);
-    m_Comms.Register(m_alt_nav_prefix + "SPEED", 0);
-    m_Comms.Register(m_alt_nav_prefix + "HEADING", 0);
-    m_Comms.Register(m_alt_nav_prefix + "YAW", 0);
-    m_Comms.Register(m_alt_nav_prefix + "DEPTH", 0);
+    Register(m_alt_nav_prefix + "X", 0);
+    Register(m_alt_nav_prefix + "Y", 0);
+    Register(m_alt_nav_prefix + "LAT", 0);
+    Register(m_alt_nav_prefix + "LONG", 0);
+    Register(m_alt_nav_prefix + "SPEED", 0);
+    Register(m_alt_nav_prefix + "HEADING", 0);
+    Register(m_alt_nav_prefix + "YAW", 0);
+    Register(m_alt_nav_prefix + "DEPTH", 0);
   }  
 
-  m_Comms.Register("IVPHELM_SUMMARY", 0);
-  m_Comms.Register("IVPHELM_STATE", 0);
-  m_Comms.Register("IVPHELM_ALLSTOP", 0);
-  m_Comms.Register("AUX_MODE", 0);
-  m_Comms.Register("LOAD_WARNING", 0);
+  Register("IVPHELM_SUMMARY", 0);
+  Register("IVPHELM_STATE", 0);
+  Register("IVPHELM_ALLSTOP", 0);
+  Register("AUX_MODE", 0);
+  Register("LOAD_WARNING", 0);
+  Register("THRUST_MODE_REVERSE", 0);
+  
+  Register("PNR_PAUSE", 0);
+
 }
 
 //-----------------------------------------------------------------
@@ -334,6 +347,8 @@ bool NodeReporter::OnStartUp()
       m_group_name = value;
       handled = true;
     }
+    else if(param == "PAUSED")
+      handled = setBooleanOnString(m_paused, value);
     else if(param == "NOHELM_THRESHOLD") {
       if(isNumber(value) && (dval > 0)) {
 	m_nohelm_thresh = dval;
@@ -358,7 +373,7 @@ bool NodeReporter::OnStartUp()
   registerVariables();
   unsigned int k, ksize = m_plat_vars.size();
   for(k=0; k<ksize; k++)
-    m_Comms.Register(m_plat_vars[k], 0);
+    Register(m_plat_vars[k], 0);
 
   // If the length is unknown, put in some good guesses
   if(m_record.getLength() == 0) {
@@ -417,8 +432,10 @@ bool NodeReporter::Iterate()
     
     m_record.setIndex(m_reports_posted);
     string report = assembleNodeReport(m_record);    
-    Notify(m_node_report_var, report);
-    m_reports_posted++;
+    if(!m_paused) {
+      Notify(m_node_report_var, report);
+      m_reports_posted++;
+    }
 
     double elapsed_time = m_curr_time - m_record_gt_updated;
     if(elapsed_time < 5) {
@@ -428,8 +445,10 @@ bool NodeReporter::Iterate()
       
       m_record_gt.setIndex(m_reports_posted);
       string report_gt = assembleNodeReport(m_record_gt);
-      Notify(m_node_report_var, report_gt);
-      m_reports_posted_alt_nav++;
+      if(!m_paused) {
+	Notify(m_node_report_var, report_gt);
+	m_reports_posted_alt_nav++;
+      }
     }
 
     // Note the post time and apply it to the blackout calculation
@@ -449,9 +468,9 @@ bool NodeReporter::Iterate()
   }
 
   string platform_report = assemblePlatformReport();
-  if(platform_report != "")
+  if((platform_report != "") && !m_paused)
     Notify(m_plat_report_var, platform_report);
-
+  
   m_record.setLoadWarning("");
   AppCastingMOOSApp::PostReport();
   return(true);
@@ -772,6 +791,7 @@ bool NodeReporter::buildReport()
   string str_blackout = doubleToString(m_blackout_interval,2);
   string str_bovariance = doubleToString(m_blackout_variance,2);
 
+  m_msgs << "Paused: " << boolToString(m_paused) << endl; 
   m_msgs << "Vehicle Configuration:"                    << endl;
   m_msgs << "----------------------------"              << endl;
   m_msgs << "     Vehicle name: " << m_vessel_name      << endl;
@@ -796,6 +816,12 @@ bool NodeReporter::buildReport()
   string report = assembleNodeReport(m_record);    
   ACBlock block(" Latest Report: ", report, 50);
   m_msgs << block.getFormattedString();
+
+  if(m_record_gt_updated > 0) {
+    string report_gt = assembleNodeReport(m_record_gt);    
+    ACBlock block_gt(" Latest GT Report: ", report_gt, 50);
+    m_msgs << block_gt.getFormattedString();
+  }
 
   return(true);
 }

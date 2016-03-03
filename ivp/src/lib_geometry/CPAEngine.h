@@ -24,13 +24,17 @@
 #ifndef CPA_ENGINE_HEADER
 #define CPA_ENGINE_HEADER
 
+#include <vector>
+
 class IvPDomain;
 class CPAEngine {
 public:
   CPAEngine();
   CPAEngine(double cnY, double cnX, double cnh, double cnv, 
 	    double osY, double osX);
-  ~CPAEngine() {};
+  void setContactCacheTimeDelta(double);
+  void setContactCache(double secs);
+  ~CPAEngine() {}
 
 public:    
   double evalCPA(double osh, double osv, double ostol, double* calc_roc=0) const;
@@ -60,11 +64,11 @@ public:
 
   double minMaxROC(double, double, double&, double&) const;
 
-  double getcnLAT() const {return(cnLAT);};
-  double getcnLON() const {return(cnLON);};
-  double getcnCRS() const {return(cnCRS);};
-  double getcnSPD() const {return(cnSPD);};
-  double getK0() const    {return(statK0);};
+  double getcnLAT() const {return(cnLAT);}
+  double getcnLON() const {return(cnLON);}
+  double getcnCRS() const {return(cnCRS);}
+  double getcnSPD() const {return(cnSPD);}
+  double getK0() const    {return(statK0);}
   
  protected:
   void   setStatic();
@@ -100,6 +104,10 @@ public:
   double gamCN;   // cnCRS in radians. 
   double cgamCN;  // Cosine of  cnCRS.
   double sgamCN;  // Sine  of   cnCRS.
+
+  std::vector<double> m_cn_cache_x;
+  std::vector<double> m_cn_cache_y;
+  double m_cn_cache_tdelta;
 };
 
 #endif

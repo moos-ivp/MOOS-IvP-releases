@@ -27,7 +27,6 @@
 #include <string>
 #include <vector>
 #include "MOOS/libMOOSGeodesy/MOOSGeodesy.h"
-//#include "MOOSGeodesy.h"
 #include "FL/Fl.H"
 #include "FL/Fl_Gl_Window.H"
 #include "FL/gl.h"
@@ -67,17 +66,22 @@ class MarineViewer : public Fl_Gl_Window
   bool   setTexture();
   std::string geosetting(const std::string& s);
   std::string vehisetting(const std::string& s);
+  void   clear(std::string vname, std::string shape, std::string stype);
 
-  double getStaleReportThresh() {return(m_vehi_settings.getStaleReportThresh());};
-  double getStaleRemoveThresh() {return(m_vehi_settings.getStaleRemoveThresh());};
+  void   handleNoTiff();
 
-  std::string getTiffFileA() {return(m_back_img.getTiffFile());};
-  std::string getInfoFileA() {return(m_back_img.getInfoFile());};
+  double getStaleReportThresh() {return(m_vehi_settings.getStaleReportThresh());}
+  double getStaleRemoveThresh() {return(m_vehi_settings.getStaleRemoveThresh());}
+
+  std::string getTiffFileA() {return(m_back_img.getTiffFile());}
+  std::string getInfoFileA() {return(m_back_img.getInfoFile());}
   
-  std::string getTiffFileB() {return(m_back_img_b.getTiffFile());};
-  std::string getInfoFileB() {return(m_back_img_b.getInfoFile());};
+  std::string getTiffFileB() {return(m_back_img_b.getTiffFile());}
+  std::string getInfoFileB() {return(m_back_img_b.getInfoFile());}
 
-  double getZoom() {return(m_zoom);};
+  double getZoom() {return(m_zoom);}
+  double getPanX() {return(m_vshift_x);}
+  double getPanY() {return(m_vshift_y);}
 
 protected:
   bool   readTiff(std::string);
@@ -137,6 +141,8 @@ protected:
   void  drawDropPoints();
   void  drawText(double px, double py, const std::string&, 
 		 const ColorPack&, double font_size);
+  void  drawTextX(double px, double py, const std::string&, 
+		  const ColorPack&, double font_size);
 
   void  drawHexagons();
 

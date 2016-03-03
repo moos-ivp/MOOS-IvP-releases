@@ -52,6 +52,8 @@ string HostRecord::getSpec() const
     str += ",status=" + m_timewarp;
   if(m_timestamp != "")
     str += ",time=" + m_timestamp;
+  if(m_key != "")
+    str += ",key=" + m_key;
 
   return(str);
 }
@@ -72,6 +74,13 @@ string HostRecord::getSpecTerse() const
     str += ",pshare_iroutes=" + m_pshare_iroutes;
   if(m_keyword != "")
     str += ",keyword=" + m_keyword;
+
+  if(m_hostip_alts != "") {
+    string hostip_alts = m_hostip_alts;
+    hostip_alts = findReplace(hostip_alts, m_hostip+",", "");
+    hostip_alts = findReplace(hostip_alts, m_hostip, "");
+    str += ",hostip_alts=" + hostip_alts;
+  }
 
   return(str);
 }

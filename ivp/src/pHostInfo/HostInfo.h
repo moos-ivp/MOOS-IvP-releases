@@ -33,7 +33,7 @@ class HostInfo : public AppCastingMOOSApp
 {
  public:
   HostInfo();
-  virtual ~HostInfo() {};
+  virtual ~HostInfo() {}
 
  public: // Standard MOOSApp functions to overload
   bool OnNewMail(MOOSMSG_LIST &NewMail);
@@ -46,14 +46,14 @@ class HostInfo : public AppCastingMOOSApp
 
  protected:
   void registerVariables();
-  void generateIPInfoFiles();
+  int  generateIPInfoFiles();
   void gatherIPInfoFromFiles();
   void postIPInfo();
 
  protected: 
   std::string readOSXInfoIP(std::string);
   std::string readLinuxInfoIP(std::string);
-  void clearTempFiles();
+  int  clearTempFiles();
   bool handleMailPShareInput(const std::string&);
   
   void addIPInfo(std::string ip, std::string ip_source);
@@ -71,6 +71,7 @@ class HostInfo : public AppCastingMOOSApp
   std::string   m_ip_osx_usb_ethernet;
   std::string   m_ip_osx_ethernet1;
   std::string   m_ip_osx_ethernet2;
+  std::string   m_ip_osx_bridge100;
   std::string   m_ip_linux_wifi;
   std::string   m_ip_linux_ethernet0;
   std::string   m_ip_linux_ethernet1;

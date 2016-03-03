@@ -37,8 +37,8 @@ ProcessConfig = pMOOSBridge
   SHARE = [UP_LOITER_1] -> $(VNAME1) @ localhost:$(VPORT1) [UP_LOITER]
   SHARE = [UP_LOITER_2] -> $(VNAME2) @ localhost:$(VPORT2) [UP_LOITER]
 
-  SHARE = [MOOS_MANUAL_OVERIDE_ALL] -> $(VNAME1) @ localhost:$(VPORT1) [MOOS_MANUAL_OVERIDE]
-  SHARE = [MOOS_MANUAL_OVERIDE_ALL] -> $(VNAME2) @ localhost:$(VPORT2) [MOOS_MANUAL_OVERIDE]
+  SHARE = [MOOS_MANUAL_OVERRIDE_ALL] -> $(VNAME1) @ localhost:$(VPORT1) [MOOS_MANUAL_OVERRIDE]
+  SHARE = [MOOS_MANUAL_OVERRIDE_ALL] -> $(VNAME2) @ localhost:$(VPORT2) [MOOS_MANUAL_OVERRIDE]
 }
 
 //--------------------------------------------------------
@@ -67,7 +67,7 @@ ProcessConfig = pMarineViewer
   ACTION = STATION_ALL = true
 
   BUTTON_ONE   = DEPLOY  # DEPLOY_ALL=true 
-  BUTTON_ONE   = MOOS_MANUAL_OVERIDE_ALL=false 
+  BUTTON_ONE   = MOOS_MANUAL_OVERRIDE_ALL=false 
   BUTTON_ONE   = RETURN_ALL=false
   BUTTON_TWO   = RETURN  # RETURN_ALL=true
   BUTTON_THREE = PERMUTE-NOW   # UTS_FORWARD=0

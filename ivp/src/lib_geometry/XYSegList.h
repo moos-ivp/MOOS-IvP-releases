@@ -28,17 +28,19 @@
 #include <string>
 #include "XYObject.h"
 #include "XYPoint.h"
+#include <iostream>
 
 class XYSegList : public XYObject {
 public:
-  XYSegList() {};
-  virtual ~XYSegList() {};
+  XYSegList() {}
+  virtual ~XYSegList() {}
 
   // XYSegList create and edit functions
   void   add_vertex(const XYPoint&, std::string s="");
   void   add_vertex(double, double, double=0, std::string s="");       
   void   alter_vertex(double, double, double=0, std::string s="");
   void   delete_vertex(double, double);
+  void   delete_vertex(unsigned int);
   void   insert_vertex(double, double, double=0, std::string s="");
   void   clear();
 
@@ -49,13 +51,14 @@ public:
   void   grow_by_amt(double amt);
   void   apply_snap(double snapval);
   void   rotate(double degrees);
+  void   rotate(double degrees, double cx, double cy);
   void   reverse();
   void   new_center(double x, double y);
   void   new_centroid(double x, double y);
   bool   valid() const;
 
 public:
-  unsigned int size() const     {return(m_vx.size());};
+  unsigned int size() const     {return(m_vx.size());}
 
   double get_vx(unsigned int) const;
   double get_vy(unsigned int) const;
@@ -81,9 +84,10 @@ public:
   std::string get_spec(unsigned int vertex_prec, std::string param) const;
   std::string get_spec_pts(unsigned int vertex_prec=1) const;
 
-protected:
   unsigned int closest_vertex(double, double) const; 
-  unsigned int closest_segment(double, double) const;
+  unsigned int closest_segment(double, double, bool implseg=true) const;
+
+protected:
   void   grow_pt_by_pct(double, double, double, double&, double&);
   void   grow_pt_by_amt(double, double, double, double&, double&);
   void   rotate_pt(double, double, double, double&, double&);
@@ -99,9 +103,3 @@ protected:
 };
 
 #endif
-
-
-
-
-
-

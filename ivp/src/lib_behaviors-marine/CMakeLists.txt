@@ -7,7 +7,8 @@ SET(SRC
   BHV_AbortToPoint.cpp
   BHV_Attractor.cpp
   BHV_AvoidCollision.cpp
-  BHV_AvoidObstacles.cpp
+#  BHV_AvoidObstacles.cpp
+  BHV_AvoidObstacle.cpp
   BHV_ConstantDepth.cpp
   BHV_ConstantHeading.cpp
   BHV_MaxDepth.cpp
@@ -43,6 +44,7 @@ SET(HEADERS
   BHV_Attractor.h
   BHV_AvoidCollision.h
   BHV_AvoidObstacles.h
+  BHV_AvoidObstacle.h
   BHV_ConstantDepth.h
   BHV_ConstantHeading.h
   BHV_ConstantSpeed.h
@@ -76,6 +78,7 @@ ADD_LIBRARY(behaviors-marine ${SRC})
 
 TARGET_LINK_LIBRARIES(behaviors-marine
    mbutil
+   helmivp
    behaviors
    geometry
    )

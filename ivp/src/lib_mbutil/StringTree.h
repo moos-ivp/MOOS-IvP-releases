@@ -31,10 +31,10 @@
 class StringTree
 {
 public:
-  StringTree() {};
-  ~StringTree() {};
+  StringTree() {}
+  ~StringTree() {}
 
-  void setKey(std::string s) {m_key=s;};
+  void setKey(std::string s) {m_key=s;}
 
   bool addParChild(const std::string& parent, 
 		   const std::string& child, 
@@ -42,7 +42,9 @@ public:
   
   void print();
   std::vector<std::string> getPrintableSet();
-
+  
+  void writeGraphviz(std::ostream& os, std::string metadata = "");
+ 
   bool allHandled();
 
  protected:

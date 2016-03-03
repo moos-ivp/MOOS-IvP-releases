@@ -6,16 +6,21 @@
  */
 
 
+#if !defined(_WIN32)
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/select.h>
-#include <string>
-#include <cstring>
 #include <arpa/inet.h>
+#else
+#include <winsock2.h>
+#include <Ws2tcpip.h>
+#include <stdio.h>
+#include <stdlib.h>
+#endif
 #include <stdexcept>
-
+#include <string.h>
 
 
 #include "MOOS/libMOOS/Utils/CommsTools.h"
@@ -127,14 +132,14 @@ bool MulticastNode::ReadLoop()
         int socket_rx_ = socket(AF_INET, SOCK_DGRAM, 0);
         if(socket_rx_<0)
         {
-            throw std::runtime_error("FullDuplexUDPChannel::WriteLoop()::socket()");
+            throw std::runtime_error("MulticastNode::ReadLoop()::socket()");
         }
 
         //we want to be able to resuse it (multiple folk are interested)
         int reuse = 1;
-        if (setsockopt(socket_rx_, SOL_SOCKET,SO_REUSEADDR/* SO_REUSEPORT*/, &reuse, sizeof(reuse)) == -1)
+        if (setsockopt(socket_rx_, SOL_SOCKET,SO_REUSEADDR/* SO_REUSEPORT*/, (const char*)&reuse, sizeof(reuse)) == -1)
         {
-            throw std::runtime_error("FullDuplexUDPChannel::WriteLoop()::setsockopt::reuse");
+            throw std::runtime_error("MulticastNode::ReadLoop()::reuse");
         }
 
         /* construct a multicast address structure */
@@ -146,16 +151,16 @@ bool MulticastNode::ReadLoop()
 
         if (bind(socket_rx_, (struct sockaddr*) &mc_addr, sizeof(mc_addr)) == -1)
         {
-            throw std::runtime_error("SetupAndJoinMulticast()::setsockopt::bind");
+            throw std::runtime_error(" MulticastNode::ReadLoop()::bind failed");
         }
 
         //join the multicast group
         struct ip_mreq mreq;
         mreq.imr_multiaddr.s_addr = inet_addr(ipv4_address_.host().c_str());
         mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-        if(setsockopt(socket_rx_, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq))==-1)
+        if(setsockopt(socket_rx_, IPPROTO_IP, IP_ADD_MEMBERSHIP,  (const char*)&mreq, sizeof(mreq))==-1)
         {
-            throw std::runtime_error("FullDuplexUDPChannel::WriteLoop()::setsockopt::ADD_MEMBERSHIP");
+            throw std::runtime_error("MulticastNode::ReadLoop()::setsockopt::ADD_MEMBERSHIP");
         }
 
 
@@ -170,7 +175,7 @@ bool MulticastNode::ReadLoop()
                 socklen_t sendsize = sizeof(sender);
                 memset(&sender,0, sizeof(sender));
 
-                int n = recvfrom(socket_rx_, t, sizeof(t),
+                int n = recvfrom(socket_rx_, (char*)t, sizeof(t),
                                  0,
                                  (struct sockaddr*)&sender,
                                  &sendsize);
@@ -192,7 +197,7 @@ bool MulticastNode::ReadLoop()
     }
     catch(std::exception & e)
     {
-        std::cerr<<"issue with socket creation :"<<e.what()<<"\n";
+        std::cerr<<"MulticastNode::ReadLoop issue with socket creation :"<<e.what()<<"\n";
         return false;
     }
 
@@ -215,14 +220,14 @@ bool MulticastNode::WriteLoop()
 
         //we want to be able to resuse it (multiple folk are interested)
         int reuse = 1;
-        if (setsockopt(socket_tx, SOL_SOCKET,SO_REUSEADDR/* SO_REUSEPORT*/, &reuse, sizeof(reuse)) == -1)
+        if (setsockopt(socket_tx, SOL_SOCKET,SO_REUSEADDR/* SO_REUSEPORT*/, (const char*)&reuse, sizeof(reuse)) == -1)
         {
-            throw std::runtime_error("FullDuplexUDPChannel::WriteLoop()::setsockopt::reuse");
+            throw std::runtime_error("MulticastNode::WriteLoop()::setsockopt::reuse");
         }
 
-        if(setsockopt(socket_tx, IPPROTO_IP, IP_MULTICAST_TTL, &hops_, sizeof(hops_))==-1)
+        if(setsockopt(socket_tx, IPPROTO_IP, IP_MULTICAST_TTL, (const char*)&hops_, sizeof(hops_))==-1)
         {
-            throw std::runtime_error("FullDuplexUDPChannel::WriteLoop()::setsockopt::reuse");
+            throw std::runtime_error("MulticastNode::WriteLoop()::setsockopt::reuse");
         }
 
         /* construct a multicast address structure */
@@ -241,14 +246,15 @@ bool MulticastNode::WriteLoop()
             {
                 outbox_.Pull(v);
                 int nSent = sendto(socket_tx,
-                           v.data(),
+                           (char*)v.data(),
                            v.size(),
                            0,
                            (struct sockaddr *)&mc_addr,
                            sizeof(mc_addr));
                 if(nSent!=(int)v.size())
                 {
-                    std::cerr<<"FullDuplexUDPChannel::WriteLoop() failed to send complete telegram\n";
+                    std::cerr<<"MulticastNode::WriteLoop() failed to send complete telegram\n";
+                    std::cerr<<"wrote "<<nSent<<" of "<<(int)v.size()<<"\n";
                 }
                 else
                 {

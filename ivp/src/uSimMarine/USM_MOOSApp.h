@@ -33,7 +33,7 @@ class USM_MOOSApp : public AppCastingMOOSApp
 {
 public:
   USM_MOOSApp();
-  virtual ~USM_MOOSApp() {};
+  virtual ~USM_MOOSApp() {}
 
  public: // Standard MOOSApp functions to overload
   bool OnNewMail(MOOSMSG_LIST &NewMail);
@@ -59,6 +59,8 @@ protected:
 
   CMOOSGeodesy m_geodesy;
   bool         m_geo_ok;
+  bool         m_thrust_mode_reverse;
+  bool         m_thrust_mode_differential;
 
   // A cache of starting info to facilitate generation of reports.
   std::string m_start_nav_x;
@@ -88,12 +90,8 @@ protected:
   double last_report;
   double report_interval;
   double pitch_tolerance;
+  
+  bool   m_obstacle_hit;
 };
+
 #endif
-
-
-
-
-
-
-

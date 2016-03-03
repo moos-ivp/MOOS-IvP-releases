@@ -82,18 +82,32 @@ void XYSegList::delete_vertex(double x, double y)
   if(vsize == 0)
     return;
 
-  unsigned int i, ix = closest_vertex(x, y); 
+  unsigned int ix = closest_vertex(x, y); 
+
+  delete_vertex(ix);
+}
+
+//---------------------------------------------------------------
+// Procedure: delete_vertex
+//   Purpose: Given a valid vertex index, delete that vertex from
+//            the SegList.
+
+void XYSegList::delete_vertex(unsigned int ix)
+{
+  unsigned int vsize = m_vx.size();
+  if(ix >= vsize)
+    return;
 
   vector<double> new_x;
   vector<double> new_y;
   vector<double> new_z;
   
-  for(i=0; i<ix; i++) {
+  for(unsigned int i=0; i<ix; i++) {
     new_x.push_back(m_vx[i]);
     new_y.push_back(m_vy[i]);
     new_z.push_back(m_vz[i]);
   }
-  for(i=ix+1; i<vsize; i++) {
+  for(unsigned int i=ix+1; i<vsize; i++) {
     new_x.push_back(m_vx[i]);
     new_y.push_back(m_vy[i]);
     new_z.push_back(m_vz[i]);
@@ -209,14 +223,22 @@ void XYSegList::grow_by_amt(double amt)
 //---------------------------------------------------------------
 // Procedure: rotate
 
+void XYSegList::rotate(double degval, double cx, double cy)
+{
+  unsigned int i, vsize = m_vy.size();
+  for(i=0; i<vsize; i++)
+    rotate_pt(degval, cx, cy, m_vx[i], m_vy[i]);
+}
+
+//---------------------------------------------------------------
+// Procedure: rotate
+
 void XYSegList::rotate(double degval)
 {
   double cx = get_centroid_x();
   double cy = get_centroid_y();
 
-  unsigned int i, vsize = m_vy.size();
-  for(i=0; i<vsize; i++)
-    rotate_pt(degval, cx, cy, m_vx[i], m_vy[i]);
+  rotate(degval, cx, cy);
 }
 
 //---------------------------------------------------------------
@@ -428,7 +450,7 @@ double XYSegList::get_min_x() const
 
 //---------------------------------------------------------------
 // Procedure: get_max_x
-//   Purpose: Return the min of the x values
+//   Purpose: Return the max of the x values
 
 double XYSegList::get_max_x() const
 {
@@ -445,7 +467,7 @@ double XYSegList::get_max_x() const
 
 //---------------------------------------------------------------
 // Procedure: get_min_y
-//   Purpose: Return the min of the x values
+//   Purpose: Return the min of the y values
 
 double XYSegList::get_min_y() const
 {
@@ -462,7 +484,7 @@ double XYSegList::get_min_y() const
 
 //---------------------------------------------------------------
 // Procedure: get_max_y
-//   Purpose: Return the min of the x values
+//   Purpose: Return the max of the x values
 
 double XYSegList::get_max_y() const
 {
@@ -748,7 +770,8 @@ unsigned int XYSegList::closest_vertex(double x, double y) const
 //            given point.
 //      Note: Returns the "leading" index of the segment. 
 
-unsigned int XYSegList::closest_segment(double x, double y) const
+unsigned int XYSegList::closest_segment(double x, double y,
+					bool check_implied_seg) const
 {
   unsigned int vsize = m_vx.size();
   if(vsize <= 1)
@@ -769,10 +792,12 @@ unsigned int XYSegList::closest_segment(double x, double y) const
   }
  
   // Check the "implied" segment from vertex n-1 to vertex zero.
-  double edist = distPointToSeg(m_vx[vsize-1], m_vy[vsize-1], 
-				m_vx[0], m_vy[0], x, y);
-  if(edist < dist)
-    ix = vsize-1;
+  if(check_implied_seg) {
+    double edist = distPointToSeg(m_vx[vsize-1], m_vy[vsize-1], 
+				  m_vx[0], m_vy[0], x, y);
+    if(edist < dist)
+      ix = vsize-1;
+  }
  
   return(ix);
 }

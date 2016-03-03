@@ -60,6 +60,10 @@ int main(int argc ,char * argv[])
       theXMS.ignoreFileVars(true);
     else if((argi == "-a") || (argi == "--all"))
       theXMS.setDispAll(true);
+    else if(argi == "--alll") {
+      theXMS.setDispAll(true);
+      theXMS.setDispAllReally(true);
+    }
     else if(argi == "-t")
       theXMS.setTruncData("25");    
     else if(argi == "-p")
@@ -152,8 +156,9 @@ int main(int argc ,char * argv[])
   }
 
   // start the XMS in its own thread
-  MOOSAppRunnerThread appRunner(&theXMS, (char*)(run_command.c_str()), 
-				mission_file.c_str());
+  MOOSAppRunnerThread appRunner(&theXMS, 
+				(char*)(run_command.c_str()), 
+				mission_file.c_str(), argc, argv);
   
   bool quit = false;
   while(!quit) {

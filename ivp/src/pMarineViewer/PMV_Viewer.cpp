@@ -30,7 +30,8 @@
 #include "ColorParse.h"
 #include "BearingLine.h"
 
-#define USE_UTM
+// As of Release 15.4 this is now set in CMake, defaulting to be defined
+// #define USE_UTM 
 
 #ifdef _WIN32
 #   include <float.h>
@@ -65,6 +66,8 @@ PMV_Viewer::PMV_Viewer(int x, int y, int w, int h, const char *l)
   VarDataPair rgt_pair("MVIEWER_RCLICK", str);
   lft_pair.set_key("any_left");
   rgt_pair.set_key("any_right");
+  lft_pair.set_ptype("left");
+  rgt_pair.set_ptype("right");
   m_var_data_pairs_all.push_back(lft_pair);
   m_var_data_pairs_all.push_back(rgt_pair);
 }
@@ -91,8 +94,7 @@ void PMV_Viewer::draw()
     calculateDrawHash();
 
   vector<string> vnames = m_geoshapes_map.getVehiNames();
-  unsigned int i, vsize = vnames.size();
-  for(i=0; i<vsize; i++) {
+  for(unsigned int i=0; i<vnames.size(); i++) {
     vector<XYPolygon> polys   = m_geoshapes_map.getPolygons(vnames[i]);
     vector<XYGrid>    grids   = m_geoshapes_map.getGrids(vnames[i]);
     vector<XYConvexGrid> cgrids = m_geoshapes_map.getConvexGrids(vnames[i]);
@@ -519,7 +521,7 @@ void PMV_Viewer::handleLeftMouse(int vx, int vy)
 
   // If the mouse is clicked while holding down either the SHIFT or
   // CONTROL keys, this is interpreted as a request for a drop-point.
-  if((Fl::event_state(FL_SHIFT)) || (Fl::event_state(FL_CTRL))) {
+  if((Fl::event_state(FL_SHIFT)) || (Fl::event_state(FL_ALT))) {
     XYPoint dpt(mx, my);
     string latlon, localg, native;
     localg = "(" + intToString(mx) + ", " + intToString(my) + ")";
@@ -532,6 +534,8 @@ void PMV_Viewer::handleLeftMouse(int vx, int vy)
     dpt.set_vertex_size(3);
     m_drop_points.addPoint(dpt, latlon, localg, native);
   }
+  else if(Fl::event_state(FL_CTRL))
+    return(handleRightMouse(vx, vy));
   // Otherwise (no SHIFT/CONTROL key), the left click will be 
   // interpreted as a "mouse-poke". 
   else {
@@ -549,6 +553,8 @@ void PMV_Viewer::handleLeftMouse(int vx, int vy)
 	    string str = m_var_data_pairs_all[i].get_sdata();
 	    if(strContains(str, "$(XPOS)")) 
 	      str = findReplace(str, "$(XPOS)", doubleToString(sx,1));
+	    if(strContains(str, "$[XPOS]")) 
+	      str = findReplace(str, "$[XPOS]", doubleToString(sx,1));
 	    if(strContains(str, "$(X)")) 
 	      str = findReplace(str, "$(X)", doubleToString(sx,0));
 	    
@@ -559,11 +565,19 @@ void PMV_Viewer::handleLeftMouse(int vx, int vy)
 	    
 	    if(strContains(str, "$(YPOS)")) 
 	      str = findReplace(str, "$(YPOS)", doubleToString(sy,1));
+	    if(strContains(str, "$[YPOS]")) 
+	      str = findReplace(str, "$[YPOS]", doubleToString(sy,1));
+
 	    if(strContains(str, "$(IX)"))
 	      str = findReplace(str, "$(IX)", intToString(m_lclick_ix));
+	    if(strContains(str, "$[IX]"))
+	      str = findReplace(str, "$[IX]", intToString(m_lclick_ix));
 	    
 	    if(strContains(str, "$(Y)")) 
 	      str = findReplace(str, "$(Y)", doubleToString(sy,0));
+	    if(strContains(str, "$[Y]")) 
+	      str = findReplace(str, "$[Y]", doubleToString(sy,0));
+
 	    if(strContains(str, "$(Y:1)")) 
 	      str = findReplace(str, "$(Y:1)", doubleToString(sy,1));
 	    if(strContains(str, "$(Y:2)")) 
@@ -571,11 +585,21 @@ void PMV_Viewer::handleLeftMouse(int vx, int vy)
 	    
 	    if(strContains(str, "$(LAT)")) 
 	      str = findReplace(str, "$(LAT)", doubleToString(dlat,8));
+	    if(strContains(str, "$[LAT]")) 
+	      str = findReplace(str, "$[LAT]", doubleToString(dlat,8));
+
 	    if(strContains(str, "$(LON)")) 
 	      str = findReplace(str, "$(LON)", doubleToString(dlon,8));
+	    if(strContains(str, "$[LON]")) 
+	      str = findReplace(str, "$[LON]", doubleToString(dlon,8));
+
 	    if(strContains(str, "$(VNAME)")) {
 	      string vname = getStringInfo("active_vehicle_name");
 	      str = findReplace(str, "$(VNAME)", vname);
+	    }
+	    if(strContains(str, "$[VNAME]")) {
+	      string vname = getStringInfo("active_vehicle_name");
+	      str = findReplace(str, "$[VNAME]", vname);
 	    }
 	    pair.set_sdata(str);
 	  }
@@ -934,6 +958,14 @@ unsigned int PMV_Viewer::shapeCount(const string& gtype,
 				    const string& vname) const
 {
   return(m_geoshapes_map.size(gtype, vname));
+}
+
+//-------------------------------------------------------------
+// Procedure: clearGeoShapes()
+
+void PMV_Viewer::clearGeoShapes(string vname, string shape, string stype) 
+{
+  m_geoshapes_map.clear(vname, shape, stype);
 }
 
 //-------------------------------------------------------------
