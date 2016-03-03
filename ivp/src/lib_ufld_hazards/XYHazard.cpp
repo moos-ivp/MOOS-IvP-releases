@@ -32,15 +32,117 @@ using namespace std;
 
 XYHazard::XYHazard()
 {
-  m_x     = 0;
-  m_y     = 0;
-  m_hr    = 0.5;
-  m_width = -1;  // Indicates unspecified by the user
+  m_x  = 0;
+  m_y  = 0;
+  m_hr = 0.5;
 
-  m_hr_set = false;
+  m_aspect = 0;
+  m_aspect_rng_min = 0;
+  m_aspect_rng_max = 0;
+
   m_x_set  = false;
   m_y_set  = false;
-  m_type_set = false;
+  m_hr_set = false;
+
+  m_aspect_set = false;
+  m_aspect_rng_min_set = false;
+  m_aspect_rng_max_set = false;
+
+  // Drawing hints
+  m_width  = -1;  // Indicates unspecified by the user
+
+}
+
+//-----------------------------------------------------------
+// Procedure: setAspect
+
+bool XYHazard::setAspect(double aspect)
+{
+  if((aspect < 0) || (aspect >= 360))
+    return(false);
+
+  m_aspect = aspect;
+  m_aspect_set = true;
+  return(true);
+}
+
+//-----------------------------------------------------------
+// Procedure: setAspectRange
+//      Note: Rather than call the individual setRange* functions, we
+//            handle this way to make sure that if one of the two 
+//            ranges is faulty, no action whatsoever is taken.
+//
+// Constraints: min >= 0
+//              max >= 0
+//              min <= max
+//              (min+max) <= 90
+
+bool XYHazard::setAspectRange(double min, double max)
+{
+  if(min < 0)
+    return(false);
+  if(max < 0)
+    return(false);
+  if(min > max)
+    return(false);
+  if((min+max) > 90)
+    return(false);
+  
+  m_aspect_rng_min = min;
+  m_aspect_rng_max = max;
+  m_aspect_rng_min_set = true;
+  m_aspect_rng_max_set = true;
+  return(true);
+}
+
+//-----------------------------------------------------------
+// Procedure: setAspectRangeMin
+// 
+// Constraints: min >= 0
+//              max >= 0
+//              min <= max
+//              (min+max) <= 90
+
+bool XYHazard::setAspectRangeMin(double min)
+{
+  if((min < 0) || (min > 90))
+    return(false);
+  
+  if(m_aspect_rng_max_set) {
+    if(min > m_aspect_rng_max)
+      return(false);
+    if((min + m_aspect_rng_max) > 90)
+      return(false);
+  }
+
+  m_aspect_rng_min = min;
+  m_aspect_rng_min_set = true;
+  return(true);
+}
+
+//-----------------------------------------------------------
+// Procedure: setAspectRangeMax
+// 
+// Constraints: min >= 0
+//              max >= 0
+//              min <= max
+//              (min+max) <= 90
+
+bool XYHazard::setAspectRangeMax(double max)
+{
+  if((max < 0) || (max > 90))
+    return(false);
+
+  if(m_aspect_rng_min_set) {
+    if(max < m_aspect_rng_min)
+      return(false);
+    if((max + m_aspect_rng_min) > 90)
+      return(false);
+  }
+
+  m_aspect_rng_max = max;
+  m_aspect_rng_max_set = true;
+  return(true);
 }
 
 //-----------------------------------------------------------
@@ -117,79 +219,20 @@ string XYHazard::getSpec(string noshow) const
   if((m_type!="hazard") && m_hr_set && !strContains(noshow,"hr"))
     str += ",hr=" + doubleToStringX(m_hr);
 
+  if(m_aspect_set && !strContains(noshow,"aspect"))
+    str += ",aspect=" + doubleToStringX(m_aspect);
+  
+  if(!strContains(noshow,"aspect_range")) {
+    if(m_aspect_rng_min_set)
+      str += ",aspect_min=" + doubleToStringX(m_aspect_rng_min);
+    if(m_aspect_rng_max_set)
+      str += ",aspect_max=" + doubleToStringX(m_aspect_rng_max);
+  }
+
   unsigned int strlen = str.length();
   if((strlen > 0) && (str[0] == ','))
     str = str.substr(1, strlen-1);
 
   return(str);
 }
-
-
-//-----------------------------------------------------------
-// Procedure: getSpec()
-//      Note: The noshow argument contains a list of comma-separated
-//            fields to NOT include in the string specification
-
-#if 0
-string XYHazard::getSpec(string noshow) const
-{
-  bool no_type  = false;
-  bool no_shape = false;
-  bool no_label = false;
-  bool no_width = false;
-  bool no_color = false;
-  bool no_hr    = false;
-  bool no_x    = false;
-  bool no_y    = false;
-
-  vector<string> svector = parseString(noshow, ',');
-  unsigned int i, vsize = svector.size();
-  for(i=0; i<vsize; i++) {
-    svector[i] = stripBlankEnds(svector[i]);
-    if(svector[i] == "type")
-      no_type = true;
-    else if(svector[i] == "label")
-      no_label = true;
-    else if(svector[i] == "width")
-      no_width = true;
-    else if(svector[i] == "shape")
-      no_shape = true;
-    else if(svector[i] == "color")
-      no_color = true;
-    else if(svector[i] == "hr")
-      no_hr = true;
-  }
-
-  string str;
-  str += "x=" + doubleToStringX(m_x,2);
-  str += ",y=" + doubleToStringX(m_y,2);
-
-  if((m_type != "") && (no_type == false))
-    str += ",type=" + m_type;
-
-  if((m_label != "") && (no_label == false))
-    str += ",label=" + m_label;
-
-  if((m_color != "") && (no_color == false))
-    str += ",color=" + m_color;
-
-  if((m_shape != "") && (no_shape == false))
-    str += ",shape=" + m_color;
-
-  if((m_width >= 0) && (no_width == false))
-    str += ",width=" + doubleToStringX(m_width);
-
-  if((m_type!="hazard") && m_hr_set && (no_hr == false))
-    str += ",hr=" + doubleToStringX(m_hr);
-
-  if(no_type == false) {
-    if(m_type=="hazard")
-      str += ",hazard=true";
-    else
-      str += ",hazard=false";
-  }
-
-  return(str);
-}
-#endif
 

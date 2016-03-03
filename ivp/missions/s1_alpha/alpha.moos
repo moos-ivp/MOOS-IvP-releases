@@ -1,11 +1,14 @@
-l// Alpha Configuration file: M. Benjamin
+//-------------------------------------------------
+// NAME: M. Benjamin, MIT CSAIL
+// FILE: bravo.moos
+//-------------------------------------------------
 
 ServerHost = localhost
 ServerPort = 9005
 Community  = alpha
 
 MOOSTimeWarp = 1
-//TERM_REPORTING = false
+TERM_REPORTING = true
 
 // Forest Lake
 LatOrigin  = 43.825300 
@@ -39,8 +42,6 @@ ProcessConfig = uProcessWatch
 {
   AppTick   = 4
   CommsTick = 4
-
-  term_report_interval = 0.8
 
   summary_wait = 5
 
@@ -100,6 +101,11 @@ ProcessConfig = pHelmIvP
   MaxAppTick = 10
   AppTick    = 4
   CommsTick  = 4
+
+  term_report_interval=0
+
+  bhv_dir_not_found_ok = true
+  ivp_behavior_dir = /Users/ddmikerb
 
   behaviors  = alpha.bhv
   domain     = course:0:359:360

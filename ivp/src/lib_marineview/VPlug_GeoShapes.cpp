@@ -79,6 +79,10 @@ bool VPlug_GeoShapes::setParam(const string& param, string value)
     return(addPolygon(value));
   else if((param ==  "segl") || (param == "seglist"))
     return(addSegList(value));
+  else if((param ==  "marker") || (param == "view_marker")) {
+    cout << "adding marker%%%%%%%%%%: " << value << endl;
+    return(addMarker(value));
+  }
   else if((param ==  "grid") || (param == "xygrid"))
     return(addGrid(value));
   else if(param ==  "convex_grid")
@@ -346,7 +350,7 @@ void VPlug_GeoShapes::addCircle(const XYCircle& new_circle,
   if(new_label == "")
     new_label = uintToString(m_circles.size());
   m_circles[new_label] = new_circle;
-  m_circles[new_label].setPointCache(drawpts);
+  m_circles[new_label].setPointCacheAuto(drawpts);
 #endif
 
 #if 0

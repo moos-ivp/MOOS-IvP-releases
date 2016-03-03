@@ -88,9 +88,11 @@ bool FldNodeComms::OnNewMail(MOOSMSG_LIST &NewMail)
     string key    = msg.GetKey();
     string sval   = msg.GetString(); 
 
-    bool handled = false;
+    bool   handled = false;
+    string whynot;
+
     if((key == "NODE_REPORT") || (key == "NODE_REPORT_LOCAL")) 
-      handled = handleMailNodeReport(sval);
+      handled = handleMailNodeReport(sval, whynot);
     else if(key == "NODE_MESSAGE") 
       handled = handleMailNodeMessage(sval);
     else if(key == "UNC_STEALTH") 
@@ -100,8 +102,12 @@ bool FldNodeComms::OnNewMail(MOOSMSG_LIST &NewMail)
     else if(key == "UNC_EARANGE") 
       handled = handleEarange(sval);
 
-    if(!handled)
-      reportRunWarning("Unhandled Mail: " + key);
+    if(!handled) {
+      string warning = "Unhandled Mail: " + key;
+      if(whynot != "")
+	warning += " " + whynot;
+      reportRunWarning(warning);
+    }
 
   }
   return(true);
@@ -239,12 +245,12 @@ void FldNodeComms::registerVariables()
 //------------------------------------------------------------
 // Procedure: handleMailNodeReport
 
-bool FldNodeComms::handleMailNodeReport(const string& str)
+bool FldNodeComms::handleMailNodeReport(const string& str, string& whynot)
 {
   NodeRecord new_record = string2NodeRecord(str);
-  if(!new_record.valid())
+  if(!new_record.valid("x,y,name", whynot))
     return(false);
-
+  
   string upp_name = toupper(new_record.getName());
   string grp_name = toupper(new_record.getGroup());
 
@@ -483,7 +489,7 @@ void FldNodeComms::distributeNodeMessageInfo(const string& src_name)
   set<string> dest_names;
 
   string dest_name  = toupper(message.getDestNode());
-  string dest_group = message.getDestGroup();
+  string dest_group = toupper(message.getDestGroup());
   
   // If destination name(s) given add each one in the colon-separated list
   vector<string> svector = parseString(dest_name, ':');
@@ -500,7 +506,7 @@ void FldNodeComms::distributeNodeMessageInfo(const string& src_name)
     for(p=m_map_vgroup.begin(); p!=m_map_vgroup.end(); p++) {
       string vname = p->first;
       string group = p->second;
-      if((dest_group == group) || (dest_group == "all") || (dest_name=="ALL"))
+      if((dest_group == toupper(group)) || (dest_group == "ALL") || (dest_name=="ALL"))
 	dest_names.insert(vname);
     }
   }

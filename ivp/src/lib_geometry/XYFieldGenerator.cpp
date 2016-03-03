@@ -42,7 +42,7 @@ bool XYFieldGenerator::addPolygon(string spec)
 {
   XYPolygon poly = string2Poly(spec);
   
-  if(!poly.valid())
+  if(!poly.is_convex())
     return(false);
   
   m_polygons.push_back(poly);
@@ -72,6 +72,21 @@ bool XYFieldGenerator::addPolygon(string spec)
 
   return(true);
 }
+
+//---------------------------------------------------------
+// Procedure: getPolygon
+
+XYPolygon XYFieldGenerator::getPolygon(unsigned int ix)
+{
+  if(ix >= m_polygons.size()) {
+    XYPolygon null_poly;
+    return(null_poly);
+  }
+
+  return(m_polygons[ix]);
+}
+  
+
 
 //---------------------------------------------------------
 // Procedure: generatePoint

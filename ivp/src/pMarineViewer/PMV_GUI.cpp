@@ -40,6 +40,7 @@ PMV_GUI::PMV_GUI(int g_w, int g_h, const char *g_l)
   this->size_range(600,400);
 
   m_curr_time = 0;
+  m_clear_stale_timestamp = 0;
 
   mviewer   = new PMV_Viewer(0, 0, 1, 1);
   m_mviewer = mviewer;
@@ -145,22 +146,25 @@ void PMV_GUI::augmentMenu()
   m_menubar->add("AppCasting/refresh_mode=events",    FL_CTRL+'e', (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)51, FL_MENU_RADIO);
   m_menubar->add("AppCasting/refresh_mode=streaming", FL_CTRL+'s', (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)52, FL_MENU_RADIO|FL_MENU_DIVIDER);
 
+  m_menubar->add("AppCasting/nodes_font_size=xlarge",  0, (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)64, FL_MENU_RADIO);
   m_menubar->add("AppCasting/nodes_font_size=large",  0, (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)63, FL_MENU_RADIO);
   m_menubar->add("AppCasting/nodes_font_size=medium", 0, (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)62, FL_MENU_RADIO);
   m_menubar->add("AppCasting/nodes_font_size=small",  0, (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)61, FL_MENU_RADIO);
   m_menubar->add("AppCasting/nodes_font_size=xsmall", 0, (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)60, FL_MENU_RADIO|FL_MENU_DIVIDER); 
 
+  m_menubar->add("AppCasting/procs_font_size=xlarge", 0, (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)74, FL_MENU_RADIO);
   m_menubar->add("AppCasting/procs_font_size=large",  0, (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)73, FL_MENU_RADIO);
   m_menubar->add("AppCasting/procs_font_size=medium", 0, (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)72, FL_MENU_RADIO);
   m_menubar->add("AppCasting/procs_font_size=small",  0, (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)71, FL_MENU_RADIO);
   m_menubar->add("AppCasting/procs_font_size=xsmall", 0, (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)70, FL_MENU_RADIO|FL_MENU_DIVIDER); 
 
+  m_menubar->add("AppCasting/appcast_font_size=xlarge", 0, (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)84, FL_MENU_RADIO);
   m_menubar->add("AppCasting/appcast_font_size=large",  0, (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)83, FL_MENU_RADIO);
   m_menubar->add("AppCasting/appcast_font_size=medium", 0, (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)82, FL_MENU_RADIO);
   m_menubar->add("AppCasting/appcast_font_size=small",  0, (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)81, FL_MENU_RADIO);
   m_menubar->add("AppCasting/appcast_font_size=xsmall", 0, (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)80, FL_MENU_RADIO); 
-  m_menubar->add("AppCasting/appcast_font_size bigger",  '}', (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)85, FL_MENU_RADIO); 
-  m_menubar->add("AppCasting/appcast_font_size smaller", '{', (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)84, FL_MENU_RADIO|FL_MENU_DIVIDER); 
+  m_menubar->add("AppCasting/appcast_font_size bigger",  '}', (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)89, FL_MENU_RADIO); 
+  m_menubar->add("AppCasting/appcast_font_size smaller", '{', (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)88, FL_MENU_RADIO|FL_MENU_DIVIDER); 
 
   m_menubar->add("AppCasting/appcast_color_scheme=white",     0, (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)300, FL_MENU_RADIO);
   m_menubar->add("AppCasting/appcast_color_scheme=indigo",      0, (Fl_Callback*)PMV_GUI::cb_AppCastSetting, (void*)301, FL_MENU_RADIO);
@@ -202,6 +206,8 @@ void PMV_GUI::augmentMenu()
   m_menubar->add("MOOS-Scope/Add Variable", 'A',      (Fl_Callback*)PMV_GUI::cb_Scope, (void*)0, FL_MENU_DIVIDER);
     
   m_menubar->add("Vehicles/ClearHistory/All Vehicles", FL_CTRL+'9', (Fl_Callback*)PMV_GUI::cb_FilterOut, (void*)-1, FL_MENU_DIVIDER);
+  m_menubar->add("Vehicles/ClearHistory/Selected", FL_CTRL+'k', (Fl_Callback*)PMV_GUI::cb_DeleteActiveNode, (void*)0, FL_MENU_DIVIDER);
+  m_menubar->add("Vehicles/ClearHistory/Reset All", FL_ALT+'k', (Fl_Callback*)PMV_GUI::cb_DeleteActiveNode, (void*)1, FL_MENU_DIVIDER);
 }
 
 //----------------------------------------------------------
@@ -353,8 +359,57 @@ bool PMV_GUI::showingAppCasts() const
   return(true);
 }
 
+//----------------------------------------- augmentTitle
+void PMV_GUI::augmentTitle(string ip_str)
+{
+  string new_title = m_title_base + " " + ip_str;
+  label(new_title.c_str());
+}
+
+//----------------------------------------------------
+// Procedure: syncNodesAtoB
+//   Purpose: Used when the user toggles the "active vehicle" shown in the 
+//            panes at the bottom of the window. If the new active vehicle
+//            is also a known appcast node, adjust the appcast browsers
+//            accordingly.
+
+bool PMV_GUI::syncNodesAtoB()
+{
+  string vname = mviewer->getStringInfo("active_vehicle_name");
+
+  bool valid_node = m_repo->setCurrentNode(vname);
+  if(!valid_node)
+    return(false);
+
+  updateNodes(true);
+  updateProcs(true);
+  updateAppCast();
+  return(true);
+}
+
+//----------------------------------------------------
+// Procedure: syncNodesBtoA
+//   Purpose: Used when the user selects a new new in the appcast browsers.
+//            If the new node is a known vehicle, i.e., we have received
+//            node reports for it, then make it the active vehicle in the 
+//            panes at the bottom of the window. 
+
+bool PMV_GUI::syncNodesBtoA()
+{
+  string curr_node = m_repo->getCurrentNode();
+  if(curr_node == "")
+    return(false);
+
+  //  vector<string> vnames = m_vehiset.getVehiNames();
+  //if(vectorContains(vnames, curr_node))
+    mviewer->setParam("active_vehicle_name", curr_node);
+
+  return(true);
+}
+
 //----------------------------------------- UpdateXY
-void PMV_GUI::updateXY() {
+void PMV_GUI::updateXY() 
+{
   double dwarp = GetMOOSTimeWarp();
   string time_str = doubleToString(m_curr_time, 1);
   time->value(time_str.c_str());
@@ -362,6 +417,7 @@ void PMV_GUI::updateXY() {
   string scope_var  = mviewer->getStringInfo("scope_var");
   string scope_time = mviewer->getStringInfo("scope_time");
   string scope_val  = mviewer->getStringInfo("scope_val");
+  string swarp      = dstringCompact(doubleToString(dwarp,2));
 
   m_scope_variable->value(scope_var.c_str());
   m_scope_time->value(scope_time.c_str());
@@ -369,7 +425,7 @@ void PMV_GUI::updateXY() {
 
   string vname = mviewer->getStringInfo("active_vehicle_name");
 
-  if(vname == "") {
+  if((vname == "") || (vname == "error")) {
     v_nam->value(" n/a");
     v_typ->value(" n/a");
     x_mtr->value(" n/a");
@@ -380,12 +436,12 @@ void PMV_GUI::updateXY() {
     v_lon->value(" n/a");
     v_dep->value(" n/a");
     v_ais->value(" n/a");
+    warp->value(swarp.c_str());
     //v_range->value(" n/a");
     //v_bearing->value(" n/a");
     return;
   }
 
-  string swarp = dstringCompact(doubleToString(dwarp,2));
   string vtype = mviewer->getStringInfo("body");
   string xpos = mviewer->getStringInfo("xpos", 1);
   string ypos = mviewer->getStringInfo("ypos", 1);
@@ -526,18 +582,21 @@ inline void PMV_GUI::cb_AppCastSetting_i(unsigned int v) {
   else if(v==61)  setRadioCastAttrib("nodes_font_size", "small");
   else if(v==62)  setRadioCastAttrib("nodes_font_size", "medium");
   else if(v==63)  setRadioCastAttrib("nodes_font_size", "large");
+  else if(v==64)  setRadioCastAttrib("nodes_font_size", "xlarge");
   // Handle procs browser pane font size
   else if(v==70)  setRadioCastAttrib("procs_font_size", "xsmall");
   else if(v==71)  setRadioCastAttrib("procs_font_size", "small");
   else if(v==72)  setRadioCastAttrib("procs_font_size", "medium");
   else if(v==73)  setRadioCastAttrib("procs_font_size", "large");
+  else if(v==74)  setRadioCastAttrib("procs_font_size", "xlarge");
   // Handle appcast browser pane font size
   else if(v==80)  setRadioCastAttrib("appcast_font_size", "xsmall");
   else if(v==81)  setRadioCastAttrib("appcast_font_size", "small");
   else if(v==82)  setRadioCastAttrib("appcast_font_size", "medium");
   else if(v==83)  setRadioCastAttrib("appcast_font_size", "large");
-  else if(v==84)  setRadioCastAttrib("appcast_font_size", "smaller");
-  else if(v==85)  setRadioCastAttrib("appcast_font_size", "bigger");
+  else if(v==84)  setRadioCastAttrib("appcast_font_size", "xlarge");
+  else if(v==88)  setRadioCastAttrib("appcast_font_size", "smaller");
+  else if(v==89)  setRadioCastAttrib("appcast_font_size", "bigger");
   // Handle pane width relative adjustment
   else if(v==100) setRadioCastAttrib("appcast_width", "delta:-5");
   else if(v==101) setRadioCastAttrib("appcast_width", "delta:5");
@@ -629,6 +688,9 @@ inline void PMV_GUI::cb_FilterOut_i(int i) {
   else {
     string str = m_filter_tags[i];
     mviewer->setParam("filter_out_tag", str);
+    if(m_repo)
+      m_repo->removeNode(str);
+    updateNodes(true);
   }
 }
 
@@ -636,6 +698,62 @@ void PMV_GUI::cb_FilterOut(Fl_Widget* o, int v) {
   ((PMV_GUI*)(o->parent()->user_data()))->cb_FilterOut_i(v);
 }
 
+
+//----------------------------------------- DeleteActiveNode
+inline void PMV_GUI::cb_DeleteActiveNode_i(int i) {  
+  if(!m_repo)
+    return;
+  if(i==0) {
+    string active_node = m_repo->getCurrentNode();
+    if(active_node == "")
+      return;
+  
+    mviewer->setParam("filter_out_tag", active_node);
+    m_repo->removeNode(active_node);
+    updateNodes(true);
+    updateProcs(true);
+    m_clear_stale_timestamp = m_curr_time;
+  }
+  if(i==1)
+    clearStaleVehicles(true);
+}
+
+void PMV_GUI::cb_DeleteActiveNode(Fl_Widget* o, int v) {
+  ((PMV_GUI*)(o->parent()->user_data()))->cb_DeleteActiveNode_i(v);
+}
+
+
+//----------------------------------------------------------
+// Procedure: clearStaleVehicles
+
+bool PMV_GUI::clearStaleVehicles(bool force) 
+{
+  if(!m_repo)
+    return(false);
+
+  double stale_report_thresh = mviewer->getStaleReportThresh();
+  double stale_remove_thresh = mviewer->getStaleRemoveThresh();
+
+  if(!force && (stale_remove_thresh < 0))
+    return(false);
+
+  double total_thresh = stale_report_thresh + stale_remove_thresh;
+  if(force)
+    total_thresh = stale_report_thresh;
+
+  vector<string> vnames = mviewer->getStaleVehicles(total_thresh);
+
+  for(unsigned int i=0; i<vnames.size(); i++) {
+    mviewer->setParam("filter_out_tag", vnames[i]);
+    m_repo->removeNode(vnames[i]);
+    updateNodes(true);
+    updateProcs(true);
+  }
+
+  if(vnames.size() > 0)
+    m_clear_stale_timestamp = m_curr_time;
+  return(true);
+}
 
 //----------------------------------------------------
 // Procedure: cb_SelectNode_i()
@@ -667,6 +785,8 @@ inline void PMV_GUI::cb_SelectNode_i()
   updateNodes();
   updateProcs(true);
   updateAppCast();
+  syncNodesBtoA();
+  updateXY();
 }
 
 //----------------------------------------------------
@@ -1015,13 +1135,25 @@ void PMV_GUI::updateNodes(bool clear)
   // Part 2: Build up the browser lines from the previously gen'ed table.
   if(clear)
     m_brw_nodes->clear();
+  
+  double stale_thresh = mviewer->getStaleReportThresh();
+  vector<string> stale_names = mviewer->getStaleVehicles(stale_thresh);
 
   unsigned int   curr_brw_size = m_brw_nodes->size();
   vector<string> browser_lines = actab.getTableOutput();
+
   for(unsigned int j=0; j<browser_lines.size(); j++) {
     string line = browser_lines[j];
     if(j>=2) {
-      if(node_has_run_warning[j-2])
+
+      string line_copy = line;
+      string node  = biteString(line_copy, ' ');
+      bool   stale = vectorContains(stale_names, node);
+      
+      if(stale) // Draw as yellow if the node is stale
+      	line = "@B" + uintToString(m_color_stlw) + line;
+      
+      else if(node_has_run_warning[j-2])
 	line = "@B" + uintToString(m_color_runw) + line;
       else if(node_has_cfg_warning[j-2])
 	line = "@B" + uintToString(m_color_cfgw) + line;
@@ -1190,16 +1322,19 @@ void PMV_GUI::setMenuItemColors()
   setMenuItemColor("AppCasting/refresh_mode=events");
   setMenuItemColor("AppCasting/refresh_mode=streaming");
 
+  setMenuItemColor("AppCasting/nodes_font_size=xlarge");
   setMenuItemColor("AppCasting/nodes_font_size=large");
   setMenuItemColor("AppCasting/nodes_font_size=medium");
   setMenuItemColor("AppCasting/nodes_font_size=small");
   setMenuItemColor("AppCasting/nodes_font_size=xsmall");
 
+  setMenuItemColor("AppCasting/procs_font_size=xlarge");
   setMenuItemColor("AppCasting/procs_font_size=large");
   setMenuItemColor("AppCasting/procs_font_size=medium");
   setMenuItemColor("AppCasting/procs_font_size=small");
   setMenuItemColor("AppCasting/procs_font_size=xsmall");
 
+  setMenuItemColor("AppCasting/appcast_font_size=xlarge");
   setMenuItemColor("AppCasting/appcast_font_size=large");
   setMenuItemColor("AppCasting/appcast_font_size=medium");
   setMenuItemColor("AppCasting/appcast_font_size=small");
@@ -1478,11 +1613,13 @@ void PMV_GUI::resizeWidgets()
     m_brw_procs->resize(node_wid, menu_hgt, proc_wid, proc_hgt);
     m_brw_casts->resize(bx, by+node_hgt, cast_wid, cast_hgt);
     
+    int font_xlarge  = 16;
     int font_large  = 14;
     int font_medium = 12;
     int font_small  = 10;
     int font_xsmall = 8;
     if(bw < 400) {
+      font_xlarge = 14;
       font_large  = 12;
       font_medium = 10;
       font_small  = 8;
@@ -1496,17 +1633,20 @@ void PMV_GUI::resizeWidgets()
     if(nodes_font_size == "xsmall")      m_brw_nodes->textsize(font_xsmall);
     else if(nodes_font_size == "small")  m_brw_nodes->textsize(font_small);
     else if(nodes_font_size == "medium") m_brw_nodes->textsize(font_medium);
-    else                                 m_brw_nodes->textsize(font_large);
+    else if(nodes_font_size == "large")  m_brw_nodes->textsize(font_large);
+    else                                 m_brw_nodes->textsize(font_xlarge);
     
     if(procs_font_size == "xsmall")      m_brw_procs->textsize(font_xsmall);
     else if(procs_font_size == "small")  m_brw_procs->textsize(font_small);
     else if(procs_font_size == "medium") m_brw_procs->textsize(font_medium);
-    else                                 m_brw_procs->textsize(font_large);
+    else if(procs_font_size == "large")  m_brw_procs->textsize(font_large);
+    else                                 m_brw_procs->textsize(font_xlarge);
     
     if(appcast_font_size == "xsmall")      m_brw_casts->textsize(font_xsmall);
     else if(appcast_font_size == "small")  m_brw_casts->textsize(font_small);
     else if(appcast_font_size == "medium") m_brw_casts->textsize(font_medium);
-    else                                   m_brw_casts->textsize(font_large);
+    else if(appcast_font_size == "large")  m_brw_casts->textsize(font_large);
+    else                                   m_brw_casts->textsize(font_xlarge);
   }
 
   // Part 4: Adjust the color scheme of the APPCAST browsers
@@ -1517,6 +1657,7 @@ void PMV_GUI::resizeWidgets()
   Fl_Color color_text = fl_rgb_color(0, 0, 0);        // black
   m_color_runw = fl_rgb_color(205, 71, 71);           // redish
   m_color_cfgw = fl_rgb_color(50, 189, 149);          // greenish
+  m_color_stlw = fl_rgb_color(125, 125, 0);           // yellowish
 
   if(appcast_color_scheme == "indigo") {
     color_back = fl_rgb_color(95, 117, 182);   // indigo-lighter (65,87,152)
@@ -1618,5 +1759,3 @@ void PMV_GUI::resizeWidgets()
   m_user_button_3->resize(dw*0.82, row1, dw*0.09, fld_hgt);
   m_user_button_4->resize(dw*0.82, row2, dw*0.09, fld_hgt);
 }
-
-

@@ -1,4 +1,88 @@
 ------------------------------------------------------------------------------
+TODO
+------------------------------------------------------------------------------
+pHelmIvP
+  - Better support for BEHAVIOR_DIRS 
+    relative path in behavior files? (../../)
+    support for ~ in behavior files? (~/mybhvs)
+
+uXMS
+  - should have an optional config where (S) (T) (C) are not shown, to 
+    maximize column width for the value info
+
+uFldHazardSensor
+  - should send a heartbeat/status message to the vehicle to indicate that 
+    it's sensor is off (e.g. due to turning etc)
+
+uFldPathCheck
+  - Should monitor top speed and disqualify (to uFldHazardMetric) if top 
+    vehicle speed is violated.
+
+pMarineViewer
+  - should be able to click on a vehicle in an appcast window and DELETE it. 
+    all node report histories gone, all geometry objects erased etc.
+
+pNodeReporter
+  - should detect when a key component has become stale and post a run warning
+  
+uPokeDB 
+  - should allow a time warp argument (if it's needed?)
+
+nsplug
+  - If an undefined macro is found on a particular line, along with other well-defined
+    macros, the well-defined macros should be filled in, rather than just ignoring
+    the entire line.
+
+------------------------------------------------------------------------------
+13.5
+------------------------------------------------------------------------------
+pMarineViewer
+  - fixed bug in handling marker configurations
+  - Improved runwarning information when receiving a partial/bad node report
+
+pHelmIvP
+  - HSLine behavior - fixed bug where empty VIEW_SEGLIST was being posted on 
+    startup and triggering a warning in pMarineViewer
+
+  - Fixed bug in the helm appcasting scope output. Elements of type double 
+    incorrectly posting zero regardless of actual value. Did not affect the
+    behavior of the vehicle, but was confusing if using the appcast scoping
+    output for debugging or mission monitoring.
+
+uFldHazardSensor
+  - Added further options for interaction with the classify queue. Users now
+    have the option to specify a priority along with the classify request, and
+    the ability to request an emergency request, and the ability to simply
+    clear the queue of all prior requests.
+  - Added ability to handle aspect-sensitive objets. Sensor will degrade the
+    when a vehicle is not approaching an object at its optimal aspect angle
+  - Fixed bug in setting the max limits to swath width settings.
+
+gen_hazards
+  - Added ability to generate hazards with aspect sensitivity
+
+uFldNodeComms
+  - Modification to make the handling of groups names be case insensitive.
+
+uFldHazardMetric
+  - Fixed a bug in initializing the normalized score range.
+
+uFldShoreBroker
+  - Does not post a run warning when/if it detects a stale vehicle, unless
+    explicitly configured with warning_on_stale=true
+  - Corrected the --interface output to reflect usage with pShare instead of
+    pMOOSBridge
+
+
+uFldNodeBroker
+  - Corrected the --interface output to reflect usage with pShare instead of
+    pMOOSBridge
+
+alogscan
+  - Fixed bug where alog file name was converted to lower case and thus not 
+    working in Linux.
+
+------------------------------------------------------------------------------
 13.2.2
 ------------------------------------------------------------------------------
 uFldHazardSensor 

@@ -23,12 +23,15 @@
 #ifndef UFLD_HAZARD_SENSOR_MOOSAPP_HEADER
 #define UFLD_HAZARD_SENSOR_MOOSAPP_HEADER
 
+#include <list>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
 #include "XYPolygon.h"
 #include "NodeRecord.h"
 #include "XYHazard.h"
 #include "HeadingHistory.h"
 #include "VarDataPair.h"
+#include "ClassifyQueue.h"
+#include <list>
 
 class HazardSensor_MOOSApp : public AppCastingMOOSApp
 {
@@ -67,13 +70,15 @@ class HazardSensor_MOOSApp : public AppCastingMOOSApp
   bool    handleSensorConfig(const std::string&, const std::string&);
 
  protected: // Outgoing mail utility
-  void    addQueueMessage(const std::string&, const std::string&, const std::string&);
-  void    postQueueMessages();
-  void    postHazardDetectionReport(std::string hlabel, std::string vname);
-  void    postHazardClassifyReport(std::string hlabel, std::string vname);
+  void    processClassifyQueue();
+  void    postHazardDetectionReport(std::string hlabel, unsigned int vix);
+  void    postHazardDetectionAspect(std::string hlabel);
 
  protected: // Utilities
   bool    updateVehicleHazardStatus(unsigned int vix, std::string);
+  bool    rollDetectionDiceNormal(unsigned int vix, std::string, double);
+  bool    rollDetectionDiceAspect(unsigned int vix, std::string, double);
+
   bool    setVehicleSensorSetting(std::string, double, double, bool v=false);
   bool    setVehicleSensorSettingPD(std::string, double);
   bool    processHazardFile(std::string filename);
@@ -83,7 +88,6 @@ class HazardSensor_MOOSApp : public AppCastingMOOSApp
   void    calcSwathGeometry(double, double&, double&);
   void    postConfigurationAck(std::string vname);
 
-
   unsigned int sensorSwathCount(double, std::string vname);
 
  protected: // State variables
@@ -91,8 +95,9 @@ class HazardSensor_MOOSApp : public AppCastingMOOSApp
 
   // map of hazard-labels to hazards
   std::map<std::string, XYHazard>     m_map_hazards;
-  std::map<std::string, unsigned int> m_map_hazard_hits;
   std::map<std::string, unsigned int> m_map_hazard_class_queries;
+
+  std::map<std::string, std::list<double> > m_map_hazard_passes;
 
   std::string  m_hazard_file;
   unsigned int m_hazard_file_hazard_cnt;
@@ -126,8 +131,8 @@ class HazardSensor_MOOSApp : public AppCastingMOOSApp
   std::map<std::string, unsigned int> m_map_classify_answ;
 
   // Limited-Frequency msgs to be posted to the MOOSDB
-  std::map<std::string, std::list<VarDataPair> >  m_map_msgs_queued;
-  std::map<std::string, double>                   m_map_msg_last_queue_time;
+  std::map<std::string, ClassifyQueue>            m_map_classify_queue;
+  std::map<std::string, double>                   m_map_classify_last_time;
 
  protected: // Configuration variables
   double      m_min_reset_interval;
