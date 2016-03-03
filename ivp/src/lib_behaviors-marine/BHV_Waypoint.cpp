@@ -114,6 +114,9 @@ bool BHV_Waypoint::setParam(string param, string param_val)
 {
   double dval = atof(param_val.c_str());
 
+  cout << "param" << param << endl;
+  cout << "param_val" << param_val << endl;
+
   if((param == "polygon") || (param == "points")) {
     XYSegList new_seglist = string2SegList(param_val);
     if(new_seglist.size() == 0) {
@@ -177,12 +180,21 @@ bool BHV_Waypoint::setParam(string param, string param_val)
     return(true);
   }
   else if(param == "cycleflag") {
-    string variable = stripBlankEnds(biteString(param_val, '='));
-    string value    = stripBlankEnds(param_val);
+    string variable = biteStringX(param_val, '=');
+    string value    = param_val;
     if((variable=="") || (value==""))
       return(false);
     VarDataPair pair(variable, value, "auto");
     m_cycle_flags.push_back(pair);
+    return(true);
+  }
+  else if(param == "wptflag") {
+    string variable = biteStringX(param_val, '=');
+    string value    = param_val;
+    if((variable=="") || (value=="")) 
+      return(false);
+     VarDataPair pair(variable, value, "auto");
+    m_wpt_flags.push_back(pair);
     return(true);
   }
   else if(param == "ipf-type") {
@@ -316,8 +328,10 @@ IvPFunction *BHV_Waypoint::onRunState()
   // Update things if the waypoint was indeed incremented
   double next_x = m_waypoint_engine.getPointX();
   double next_y = m_waypoint_engine.getPointY();
-  if((next_x != this_x) || (next_y != this_y))
+  if((next_x != this_x) || (next_y != this_y)) {
     m_prevpt.set_vertex(this_x, this_y);
+    postWptFlags(this_x, this_y);
+  }
 
 
   // We want to report the updated cycle info regardless of the 
@@ -417,6 +431,10 @@ bool BHV_Waypoint::setNextWaypoint()
     postCycleFlags();
 
     if(feedback_msg == "completed") {
+      double this_x = m_waypoint_engine.getPointX();
+      double this_y = m_waypoint_engine.getPointY();
+      postWptFlags(this_x, this_y);
+
       setComplete();
       m_markpt.set_active(false);
       if(m_perpetual)
@@ -627,6 +645,32 @@ void BHV_Waypoint::postCycleFlags()
       postRepeatableMessage(var, sdata);
     else
       postRepeatableMessage(var, ddata);
+  }
+}
+
+//-----------------------------------------------------------
+// Procedure: postWptFlags()
+
+void BHV_Waypoint::postWptFlags(double x, double y)
+{
+  string xpos = doubleToStringX(x,2);
+  string ypos = doubleToStringX(y,2);
+
+  int vsize = m_wpt_flags.size();
+  for(int i=0; i<vsize; i++) {
+    string var   = m_wpt_flags[i].get_var();
+    if(m_wpt_flags[i].is_string()) {
+      string sdata = m_wpt_flags[i].get_sdata();
+      sdata = findReplace(sdata, "$(X)", xpos);
+      sdata = findReplace(sdata, "$(Y)", ypos);
+      sdata = findReplace(sdata, "$[X]", xpos);
+      sdata = findReplace(sdata, "$[Y]", ypos);
+      postRepeatableMessage(var, sdata);
+    }
+    else {
+      double ddata = m_wpt_flags[i].get_ddata();
+      postRepeatableMessage(var, ddata);
+    }
   }
 }
 

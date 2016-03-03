@@ -25,4 +25,4 @@ addons:
 
 script:
   - ./build-moos.sh -j 2
-  - ./build-ivp.sh -m -f -j 2
+  - ./build-ivp.sh -j 2

@@ -27,6 +27,7 @@
 #include <cmath>
 #include <iterator>
 #include <vector>
+#include "LinearExtrapolator.h"
 #include "BasicContactMgr.h"
 #include "MBUtils.h"
 #include "ColorParse.h"
@@ -47,7 +48,9 @@ BasicContactMgr::BasicContactMgr()
   m_nav_hdg = 0;
   m_nav_spd = 0;
 
-  m_contact_max_age = 3600;   // units in seconds 3600 = 1 hour
+  m_alert_verbose = false;
+
+  m_contact_max_age = 600;   // units in seconds 600 = 10 mins
   m_display_radii   = false;
 
   m_default_alert_rng           = 1000;
@@ -57,7 +60,13 @@ BasicContactMgr::BasicContactMgr()
 
   m_use_geodesy = false;
 
+  m_decay_start = 15;
+  m_decay_end   = 30;
+
   m_contact_local_coords = "verbatim"; // Or lazy_lat_lon, or force_lat_lon
+
+  m_contacts_recap_interval = 0;
+  m_contacts_recap_posted = 0;
 }
 
 //---------------------------------------------------------
@@ -156,6 +165,26 @@ bool BasicContactMgr::OnStartUp()
       if(!ok) 
 	reportConfigWarning("Failed alert config: " + value);
     }
+
+
+    else if(param == "decay") {
+      string left  = biteStringX(value, ',');
+      string right = value;
+      bool   handled = false;
+      if(isNumber(left) && isNumber(right)) {
+	double start = atof(left.c_str());
+	double end   = atof(right.c_str());
+	if((start >= 0) && (start <= end)) {
+	  m_decay_start = start;
+	  m_decay_end   = end;
+	  handled = true;
+	}
+      }
+      if(!handled)
+	reportConfigWarning("Unhandled decay config: " + orig);	
+    }  
+
+
     else if(param == "display_radii")
       setBooleanOnString(m_display_radii, value);
     else if(param == "contact_local_coords") {
@@ -179,8 +208,21 @@ bool BasicContactMgr::OnStartUp()
 	reportConfigWarning("default_alert_range_cpa must be > zero: " + value);
     }
     
+    else if(param == "contacts_recap_interval") {
+      if(dval >= 0)
+	m_contacts_recap_interval = dval;
+      else
+	reportConfigWarning("contacts_recap_interval must be >= zero: " + value);
+    }
+    
     else if(param=="alert_cpa_time") {
       reportConfigWarning("alert_cpa_time parameter has been deprecated.");
+    }
+    
+    else if(param=="alert_verbose") {
+      bool ok = setBooleanOnString(m_alert_verbose, value);
+      if(!ok)
+	reportConfigWarning("alert_verbose must be either true or false");
     }
     
     else if(param == "default_alert_range_color") {
@@ -316,6 +358,11 @@ void BasicContactMgr::handleMailNodeReport(const string& report)
     m_map_node_alerts_total[vname]    = 0;
     m_map_node_alerts_active[vname]   = 0;
     m_map_node_alerts_resolved[vname] = 0;
+
+    m_map_node_ranges_actual[vname] = 0;
+    m_map_node_ranges_extrap[vname] = 0;
+    m_map_node_ranges_cpa[vname]    = 0;
+
     m_par.addVehicle(vname);
   }
 }
@@ -449,19 +496,21 @@ void BasicContactMgr::postSummaries()
     contacts_list += contact_name;
 
     double age = m_curr_time - node_record.getTimeStamp();
+
+    // If retired
     if(age > m_contact_max_age) {
-      if(contacts_retired == "")
+      if(contacts_retired != "")
 	contacts_retired += ",";
       contacts_retired += contact_name;
+    }    
+    else { // Else if not retired
+      double range = m_map_node_ranges[contact_name];
+      if(contacts_recap != "")
+	contacts_recap += " # ";
+      contacts_recap += "vname=" + contact_name;
+      contacts_recap += ",range=" + doubleToString(range, 2);
+      contacts_recap += ",age=" + doubleToString(age, 2);
     }
-
-    double range = m_map_node_ranges[contact_name];
-
-    if(contacts_recap != "")
-      contacts_recap += " # ";
-    contacts_recap += "vname=" + contact_name;
-    contacts_recap += ",range=" + doubleToString(range, 2);
-    contacts_recap += ",age=" + doubleToString(age, 2);
   }
 
   if(m_prev_contacts_list != contacts_list) {
@@ -486,11 +535,13 @@ void BasicContactMgr::postSummaries()
     m_prev_contacts_retired = contacts_retired;
   }
 
-  if(m_prev_contacts_recap != contacts_recap) {
+  double time_since_last_recap = m_curr_time - m_contacts_recap_posted;
+
+  if(time_since_last_recap > m_contacts_recap_interval) {
+    m_contacts_recap_posted = m_curr_time;
     Notify("CONTACTS_RECAP", contacts_recap);
     m_prev_contacts_recap = contacts_recap;
   }
-  
 }
 
 
@@ -508,12 +559,14 @@ bool BasicContactMgr::postAlerts()
     double     contact_range = m_map_node_ranges[contact_name];
     double     age = m_curr_time - node_record.getTimeStamp();
 
+    // For each alert_id
     map<string,string>::iterator q;
     for(q=m_map_alert_varname.begin(); q!=m_map_alert_varname.end(); q++) {
       string alert_id = q->first;
       bool alerted = m_par.getValue(contact_name, alert_id);
       if(!alerted) {
-	double alert_range = getAlertRange(alert_id);
+	double alert_range     = getAlertRange(alert_id);
+	double alert_range_cpa = getAlertRangeCPA(alert_id);
 	if((age <= m_contact_max_age) && (contact_range <= alert_range)) {
 	  new_alerts = true;
 
@@ -560,6 +613,28 @@ bool BasicContactMgr::postAlerts()
 	  m_par.setValue(contact_name, alert_id, true);
 	  reportEvent(var + "=" + msg);
 
+
+	  if(m_alert_verbose) {
+	    string mvar = "ALERT_VERBOSE";
+	    string mval = "contact=" + contact_name;
+	    mval += ",config_alert_range=" + doubleToString(alert_range,1);
+
+	    mval += ",config_alert_range_cpa=" + doubleToString(alert_range_cpa,1);
+
+	    mval += ",range_used=" + doubleToString(contact_range,1);
+
+	    double range_actual = m_map_node_ranges_actual[contact_name];
+	    mval += ",range_actual=" + doubleToString(range_actual,1);
+
+	    double range_extrap = m_map_node_ranges_actual[contact_name];
+	    mval += ",range_extrap=" + doubleToString(range_extrap,1);
+
+	    double range_cpa = m_map_node_ranges_cpa[contact_name];
+	    mval += ",range_cpa=" + doubleToString(range_cpa,1);
+
+	    Notify(mvar, mval);
+	  }
+
 	  m_map_node_alerts_total[contact_name]++;
 	  m_map_node_alerts_active[contact_name]++;
 	}
@@ -575,6 +650,8 @@ bool BasicContactMgr::postAlerts()
 
 void BasicContactMgr::updateRanges()
 {
+  double alert_range_cpa_time = 36000; // 10 hours
+
   map<string, NodeRecord>::iterator p;
   for(p=m_map_node_records.begin(); p!=m_map_node_records.end(); p++) {
     string     vname = p->first;
@@ -583,30 +660,61 @@ void BasicContactMgr::updateRanges()
     // First figure out the raw range to the contact
     double cnx = node_record.getX();
     double cny = node_record.getY();
-    // Extrapolation from last node report added by henrik
     double cnh = node_record.getHeading();
     double cns = node_record.getSpeed();
     double cnt = node_record.getTimeStamp();
-    double ang = (90.0-cnh)*M_PI;
 
-    cnx += cns*(m_curr_time - cnt)*cos(ang);
-    cny += cns*(m_curr_time - cnt)*sin(ang);
+    // #1 Determine and store the actual point-to-point range between ownship
+    // and the last absolute known position of the contact
+    double range_actual = hypot((m_nav_x - cnx), (m_nav_y - cny));
+    m_map_node_ranges_actual[vname] = range_actual;
 
-    double range = hypot((m_nav_x - cnx), (m_nav_y - cny));
-    m_map_node_ranges[vname] = range;
+    // #2 Determine and store the extrapolated range between ownship and the
+    // contact position determined by its last known range and extrapolation.
+    LinearExtrapolator linex;
+    linex.setDecay(m_decay_start, m_decay_end);
+    linex.setPosition(cnx, cny, cns, cnh, cnt);
 
-    // If the raw range exceeds the minimum threshold, but is less
-    // than the alert_cpa threshold, calculate the CPA and uses this
-    // as the range instead.
-    double alert_range = getAlertRange(vname);
-    double alert_range_cpa = getAlertRangeCPA(vname);
-    double alert_range_cpa_time = 36000; // 10 hours
-    if((range > alert_range) && (range < alert_range_cpa)) {
-      CPAEngine engine(cny, cnx, cnh, cns, m_nav_y, m_nav_x);
-      
-      double cpa = engine.evalCPA(m_nav_hdg, m_nav_spd, alert_range_cpa_time);
-      m_map_node_ranges[vname] = cpa;
+    double extrap_x = cnx;
+    double extrap_y = cny;
+    double range_extrap = range_actual;
+
+    bool ok = linex.getPosition(extrap_x, extrap_y, m_curr_time);
+    if(ok) {
+      cnx = extrap_x;
+      cny = extrap_y;
+      range_extrap = hypot((m_nav_x - cnx), (m_nav_y - cny));
     }
+    m_map_node_ranges_extrap[vname] = range_extrap;
+
+    //XYPoint point_mb(cnx, cny);
+    //point_mb.set_label(node_record.getName() + "xpt_mb");
+    //m_Comms.Notify("VIEW_POINT", point_mb.get_spec());
+
+    // #3 Determine and store the cpa range between ownship and the
+    // contact position determined by the contact's extrapolated position
+    // and it's last known heading and speed.
+    CPAEngine engine(cny, cnx, cnh, cns, m_nav_y, m_nav_x);      
+    double range_cpa = engine.evalCPA(m_nav_hdg, m_nav_spd, alert_range_cpa_time);
+    m_map_node_ranges_cpa[vname] = range_cpa;
+    
+    // Now we have set:
+    //   1. m_map_node_ranges_actual[vname]  (range_actual)
+    //   2. m_map_node_ranges_extrap[vname]  (range_extrap)
+    //   3. m_map_node_ranges_cpa[vname]     (range_cpa)
+    // We just need to decide which one to use for the purposes of 
+    // determining whether an alert should be generated.
+
+    // If the extrapolated (non-cpa) range exceeds the minimum threshold, 
+    // but is less than the alert_cpa threshold, calculate the CPA and 
+    // uses this as the range instead. 
+
+    double alert_range = getAlertRange(vname);          // min threshold
+    double alert_range_cpa = getAlertRangeCPA(vname);   // cpa threshold
+
+    m_map_node_ranges[vname] = range_extrap;
+    if((range_extrap > alert_range) && (range_extrap < alert_range_cpa)) 
+      m_map_node_ranges[vname] = range_cpa;
   }
 }
 

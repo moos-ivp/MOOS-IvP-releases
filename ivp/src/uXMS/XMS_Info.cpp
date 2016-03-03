@@ -84,9 +84,9 @@ void showHelpAndExit()
   blk("    Determine display mode. Paused: scope updated only on user  ");
   blk("    request. Events: data updated only on change to a scoped    "); 
   blk("    variable. Streaming: updates continuously on each app-tick. ");
-  mag("  --server_host","=<IPAddress>                                  ");
+  mag("  --serverhost","=<IPAddress>                                   ");
   blk("    Connect to MOOSDB at IP=value, not from the .moos file.     ");
-  mag("  --server_port","=<PortNumber>                                 "); 
+  mag("  --serverport","=<PortNumber>                                  "); 
   blk("    Connect to MOOSDB at port=value, not from the .moos file.   ");
   mag("  --show","=[source,time,community,aux]                         ");
   blk("    Turn on data display in the named column, source, time, or  ");
@@ -143,8 +143,8 @@ void showExampleConfigAndExit()
   blk("                                                                ");
   blk("  term_report_interval  = 0.6     // default (seconds)          ");
   blk("                                                                ");
-  blk("  color_map    = pHelmIvP, red   // All postings by pHelmIvP red");
-  blk("  color_map    = NAV_SPEED, blue // Only var NAV_SPEED is blue  ");
+  blk("  colormap    = pHelmIvP, red   // All postings by pHelmIvP red ");
+  blk("  colormap    = NAV_SPEED, blue // Only var NAV_SPEED is blue   ");
   blk("                                                                ");
   blk("  refresh_mode = events     // default (or streaming/paused)    ");
   blk("  content_mode = scoping    // default (or history,procs)       ");
