@@ -48,7 +48,6 @@ public:
   void     set_vertex_color(const std::string& s) {set_color("vertex", s);};
   void     set_edg_color(const std::string& s)    {set_color("edge", s);};
   //-----Soon To Be Deprecated/Removed ----------------------------------- 
-
   void      set_color(const std::string& key, const std::string& color);
   void      set_color(const std::string& key, const ColorPack& color);
   ColorPack get_color(const std::string& key) const;

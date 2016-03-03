@@ -1,8 +1,8 @@
 /*****************************************************************/
 /*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
 /*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
-/*    FILE: MBUtils.cpp                                          */
-/*    DATE: (1996-2005)                                          */
+/*    FILE: UTC_ExampleConfig.h                                  */
+/*    DATE: Aug 25th 2011                                        */
 /*                                                               */
 /* This program is free software; you can redistribute it and/or */
 /* modify it under the terms of the GNU General Public License   */
@@ -19,28 +19,10 @@
 /* Software Foundation, Inc., 59 Temple Place - Suite 330,       */
 /* Boston, MA 02111-1307, USA.                                   */
 /*****************************************************************/
+ 
+#ifndef UTC_EXAMPLE_CONFIG_HEADER
+#define UTC_EXAMPLE_CONFIG_HEADER
 
-#include <iostream>
-#include "ReleaseInfo.h"
-#include "MBUtils.h"
+void showExampleConfig();
 
-using namespace std;
-
-//----------------------------------------------------------------
-// Procedure: showReleaseInfo
-// 
-
-void showReleaseInfo(string app, string license_info)
-{
-  string pad = padString("", (16-app.length()));
-  cout << "************************************************************************" << endl;
-  cout << "* " + app + " - MOOS-IvP Release Bundle - VERSION 4.2.1" + pad + "  r3531 *" << endl;
-  cout << "* M.Benjamin, H.Schmidt and J.Leonard (MIT), P.Newman (Oxford)         *" << endl;
-  if(license_info == "gpl") {
-    cout << "* Copyright (C) 2008 Free Software Foundation, Inc.                    *" << endl;
-    cout << "* This is free software; see the source for copying conditions.        *" << endl;
-  }
-  cout << "************************************************************************" << endl;
-  cout << "" << endl;
-}
-
+#endif

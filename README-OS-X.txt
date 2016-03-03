@@ -72,6 +72,7 @@ for installing CMake:
 
    2) MacPorts has an available package for CMake, which can be installed
       by using the following command:
+
          # sudo port install cmake
 
 We currently support CMake version 2.4 through version 2.8. However, it is
@@ -95,6 +96,7 @@ Website: http://libtiff.org
 The Tiff package installed the tiff development libraries that allow graphical
 applications to display tiff images. To install the package, use the following
 command:
+
    # sudo port install jpeg zlib tiff +universal
 NOTE: The jpeg and zlib packages are dependencies of the tiff package. 
       Normally, dependencies are automatically resolved by MacPorts. However,

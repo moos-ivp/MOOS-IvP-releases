@@ -1,8 +1,8 @@
 /*****************************************************************/
 /*    NAME: Michael Benjamin, Henrik Schmidt, and John Leonard   */
 /*    ORGN: Dept of Mechanical Eng / CSAIL, MIT Cambridge MA     */
-/*    FILE: SIMAS_ExampleConfig.cpp                              */
-/*    DATE: July 7th 2011                                        */
+/*    FILE: UTC_ExampleConfig.cpp                                */
+/*    DATE: Aug 25th 2011                                        */
 /*                                                               */
 /* This program is free software; you can redistribute it and/or */
 /* modify it under the terms of the GNU General Public License   */
@@ -21,7 +21,7 @@
 /*****************************************************************/
  
 #include <iostream>
-#include "SIMAS_ExampleConfig.h"
+#include "UTC_ExampleConfig.h"
 #include "ColorParse.h"
 
 using namespace std;
@@ -31,34 +31,32 @@ using namespace std;
 
 void showExampleConfig()
 {
-  blk("                                                                ");
   blk("=============================================================== ");
-  blk("uSimActiveSonar Example MOOS Configuration                      ");
+  blk("uTermCommand Example MOOS Configuration                         ");
   blk("=============================================================== ");
-  blu("Blue lines:     ","Default configuration                        ");
-  mag("Magenta lines:  ","Non-default configuration                    ");
   blk("                                                                ");
-  blk("ProcessConfig = uSimActiveSonar                                 ");
+  blk("ProcessConfig = uTermCommand                                    ");
   blk("{                                                               ");
   blu("  AppTick   = 4                                                 ");
   blu("  CommsTick = 4                                                 ");
   blk("                                                                ");
-  blk("  // Configuring aspects of the vehicles in the sim             ");
-  blu("  reach_distance = default = 100  // in meters or {nolimit}     ");
-  blu("  reply_distance = default = 100  // in meters or {nolimit}     ");
-  blu("  ping_wait      = default = 30   // in seconds                 ");
+  blk("  CMD  =  1 -->  DEPLOY -->               false                 ");
+  blk("  CMD  =  2 -->  DEPLOY -->               false                 ");
+  blk("  CMD  =  3 -->  MOOS_MANUAL_OVERIDE -->  true                  ");
+  blk("  CMD  =  4 -->  MOOS_MANUAL_OVERIDE -->  false                 ");
+  blk("  CMD  =  5 -->  STATION_KEEP -->         true                  ");
+  blk("  CMD  =  6 -->  STATION_KEEP -->         false                 ");
+  blk("  CMD  =  7 -->  RETURN -->               true                  ");
+  blk("  CMD  =  8 -->  RETURN -->               false                 ");
   blk("                                                                ");
-  blk("  // Configuring manner of reporting                            ");
-  blu("  report_vars    = short // or {long, both}                     ");
-  blu("  ground_truth   = true  // or {false}                          ");
-  blu("  verbose        = true  // or {false}                          ");
+  blk("  CMD  =  px --> PERMUTATIONS -->         false                 ");
+  blk("  CMD  =  pg --> PERMUTATIONS -->         true                  ");
+  blk("  CMD  =  pr --> LOITER_REMAP -->         true                  ");
   blk("                                                                ");
-  blk("  // Configuring visual artifacts                               ");
-  blu("  ping_color     = white                                        ");
-  blu("  reply_color    = chartreuse                                   ");
-  blk("                                                                ");
-  blk("  // Configuring Artificial Noise                               ");
-  blu("  rn_algorithm   = uniform,pct=0                                ");
+  blk("  CMD  =  hv --> HELM_VERBOSE -->         verbose               ");
+  blk("  CMD  =  ht --> HELM_VERBOSE -->         terse                 ");
+  blk("  CMD  =  hq --> HELM_VERBOSE -->         quiet                 ");
   blk("}                                                               ");
   blk("                                                                ");
 }
+
