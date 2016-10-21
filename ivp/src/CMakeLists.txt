@@ -69,16 +69,27 @@ IF (${APPLE})
    # If Mac users installed libtiff using 'MacPorts', it will likely appear
    # under the '/opt/local' directory, which is not in the CMake search path.
    IF( EXISTS /opt/local/include AND EXISTS /opt/local/lib )
+      message(STATUS "Detected use of 'MacPorts' for dependencies")
       INCLUDE_DIRECTORIES(/opt/local/include)
       LINK_DIRECTORIES(/opt/local/lib)
-   ENDIF( EXISTS /opt/local/include AND EXISTS /opt/local/lib )
+   ENDIF()
 
    # If Mac users installed libtiff using 'fink', it will likely appear
    # under the '/sw' directory, which is not in the CMake search path.
    IF( EXISTS /sw/include AND EXISTS /sw/lib )
+      message(STATUS "Detected use of 'fink' for dependencies")
       INCLUDE_DIRECTORIES(/sw/include)
       LINK_DIRECTORIES(/sw/lib)
-   ENDIF( EXISTS /sw/include AND EXISTS /sw/lib )
+   ENDIF()
+
+   # If Mac users installed libtiff using 'Homebrew', it will likely appear
+   # under the '/opt/local/Cellar' directory, which is not in the CMake search
+   # path.
+   IF( EXISTS /usr/local/Cellar )
+       message(STATUS "Detected use of 'Homebrew' for dependencies")
+       INCLUDE_DIRECTORIES(/usr/local/include)
+       LINK_DIRECTORIES(/usr/local/lib)
+   ENDIF()
 
 ENDIF(${APPLE})
 
